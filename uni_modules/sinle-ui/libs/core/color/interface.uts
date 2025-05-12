@@ -1,0 +1,120 @@
+export type RGB = {
+	/** 红色分量的值，范围0-255 */
+	r : number;
+	/** 绿色分量的值，范围0-255 */
+	g : number;
+	/** 蓝色分量的值，范围0-255 */
+	b : number;
+};
+export type RGBA = {
+	/** 红色分量的值，范围0-255 */
+	r : number;
+	/** 绿色分量的值，范围0-255 */
+	g : number;
+	/** 蓝色分量的值，范围0-255 */
+	b : number;
+	/** 透明度分量的值，范围0-1 */
+	a : number;
+};
+export type RGBAString = {
+	/** 红色分量的字符串值 */
+	r : string;
+	/** 绿色分量的字符串值 */
+	g : string;
+	/** 蓝色分量的字符串值 */
+	b : string;
+	/** 透明度分量的值，范围0-1 */
+	a : number;
+};
+export type HSL = {
+	/** 色调值，范围0-360 */
+	h : number;
+	/** 饱和度值，范围0-1 */
+	s : number;
+	/** 亮度值，范围0-1 */
+	l : number;
+};
+export type HSLA = {
+	/** 色调值，范围0-360 */
+	h : number;
+	/** 饱和度值，范围0-1 */
+	s : number;
+	/** 亮度值，范围0-1 */
+	l : number;
+	/** 透明度分量的值，范围0-1 */
+	a : number;
+};
+export type HSV = {
+	/** 色调值，范围0-360 */
+	h : number;
+	/** 饱和度值，范围0-1 */
+	s : number;
+	/** 明度值，范围0-1 */
+	v : number;
+};
+export type HSVA = {
+	/** 色调值，范围0-360 */
+	h : number;
+	/** 饱和度值，范围0-1 */
+	s : number;
+	/** 明度值，范围0-1 */
+	v : number;
+	/** 透明度分量的值，范围0-1 */
+	a : number;
+};
+export type HSB = {
+	/** 色调值，范围0-360 */
+	h : number;
+	/** 饱和度值，范围0-1 */
+	s : number;
+	/** 亮度值，范围0-1 */
+	b : number;
+};
+export type HSBA = {
+	/** 色调值，范围0-360 */
+	h : number;
+	/** 饱和度值，范围0-1 */
+	s : number;
+	/** 亮度值，范围0-1 */
+	b : number;
+	/** 透明度分量的值，范围0-1 */
+	a : number;
+};
+export type LColorInfo = {
+	/** 表示颜色解析是否成功 */
+	ok ?: boolean;
+	/** 颜色信息的格式 */
+	format ?: LColorFormats;
+	/** 红色分量的值，范围0-255 */
+	r : number;
+	/** 绿色分量的值，范围0-255 */
+	g : number;
+	/** 蓝色分量的值，范围0-255 */
+	b : number;
+	/** 透明度分量的值，范围0-1 */
+	a : number;
+};
+export type LColorFormats =
+	| 'rgb'
+	| 'prgb'
+	| 'hex'
+	| 'hex3'
+	| 'hex4'
+	| 'hex6'
+	| 'hex8'
+	| 'name'
+	| 'hsl'
+	| 'hsb'
+	| 'hsv';
+export type LColorOptions = {
+	/** 指定颜色解析的格式 */
+	format ?: LColorFormats;
+	/** 指定颜色渐变的类型 */
+	gradientType ?: string;
+};
+export type LGenerateOptions = {
+	/** 指定主题，可以是"dark"或"light" */
+	theme ?: 'dark' | 'light';
+	/** 指定背景颜色，生成色板将与背景颜色协调搭配 */
+	backgroundColor ?: string;
+};

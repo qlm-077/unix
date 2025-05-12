@@ -1,0 +1,586 @@
+<template>
+	<view class="sn-signature-contain"
+	:style="[containStylesC, customStyle]">
+		<sn-text 
+		align="center"
+		:text="text" 
+		:font="textFont"
+		:color="textColorC" 
+		:size="textSizeC"></sn-text>
+		<!-- #ifdef WEB -->
+		<view class="sn-signature-board"
+		ref="boardEle"
+		@touchstart="ontouchstart"
+		@touchend="ontouchend"
+		@touchcancel="ontouchend"
+		@touchmove="ontouchmove"
+		@mousedown="onmousedown"
+		:style="[boardStylesC, customStyle]">
+			<canvas class="sn-signature-canvas"
+			:id="id"
+			:style="[customCanvasStyle]"></canvas>
+		</view>
+		<!-- #endif -->
+		<!-- #ifndef WEB -->
+		<view class="sn-signature-board"
+		ref="boardEle"
+		@touchstart="ontouchstart"
+		@touchend="ontouchend"
+		@touchcancel="ontouchend"
+		@touchmove="ontouchmove"
+		:style="[boardStylesC, customStyle]">
+			<canvas class="sn-signature-canvas"
+			:id="id" 
+			:style="[customCanvasStyle]"></canvas>
+		</view>
+		<!-- #endif -->
+	</view>
+	<template v-if="showAction">
+		<slot name="action">
+			<sn-view
+			class="sn-signature-action-area"
+			:disabled="disabled"
+			:bgColor="bgColorC"
+			:borderRadius="borderRadiusC"
+			:style="[actionAreaStylesC, customActionAreaStyle]">
+				<sn-button v-if="showClear"
+				type="error"
+				level="second"
+				:text="clearText"
+				:disabled="disabled || historyList.length == 0"
+				@click="clear"
+				:style="[actionBtnStylesC]"></sn-button>
+				<sn-button v-if="showUndo"
+				:text="undoText"
+				:disabled="disabled || historyList.length == 0 || historyIndex < 0 || historyIndex == historyList.length - maxHistory - 1"
+				@click="undo"
+				:style="[actionBtnStylesC]"></sn-button>
+				<sn-button v-if="showRedo"
+				:text="redoText"
+				:disabled="disabled || historyList.length == 0 || historyIndex >= historyList.length - 1"
+				@click="redo"
+				:style="[actionBtnStylesC]"></sn-button>
+				<sn-button v-if="showConfirm"
+				type="primary" 
+				:text="confirmText"
+				:disabled="disabled"
+				@click="confirm"
+				:style="[actionBtnStylesC]"></sn-button>
+			</sn-view>
+		</slot>
+	</template>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-signature
+	 * @tutorial https://sinleui.pages.dev/components/sn-signature
+	 * @description  Signature 签名
+	 *
+	 *- 基于 canvas 的签名板，适配各端
+	 *
+	 *- 内置一套精美模版，提供 20+ 属性，支持插槽定制操作栏，任意搭配
+	 * @property {String} text    String | 签名板上的提示文本
+	 * @property {String} textFont    String | 提示文本的字体
+	 * @property {String} textColor    String | 提示文本颜色
+	 * @property {Number} penSize    Number | 笔触大小
+	 * @property {String} penColor    String | 笔触颜色
+	 * @property {String} height    String | 签名板高度
+	 * @property {String} bgColor    String | 签名板背景颜色
+	 * @property {Boolean} disabled    Boolean | 是否禁用签名板
+	 * @property {String} borderRadius    String | 签名板圆角大小
+	 * @property {String} buttonSpacing    String | 操作按钮之间的间距
+	 * @property {Number} maxHistory    Number | 最大历史记录数
+	 * @property {String} clearTip    String | 清空签名的提示信息
+	 * @property {Boolean} showClearTip    Boolean | 是否显示清空提示信息
+	 * @property {Boolean} showAction    Boolean | 是否显示操作按钮区域
+	 * @property {Boolean} showUndo    Boolean | 是否显示撤销按钮
+	 * @property {Boolean} showRedo    Boolean | 是否显示重做按钮
+	 * @property {Boolean} showConfirm    Boolean | 是否显示确定按钮
+	 * @property {Boolean} showClear    Boolean | 是否显示清空按钮
+	 * @property {String} undoText    String | 撤销按钮文本
+	 * @property {String} redoText    String | 重做按钮文本
+	 * @property {String} clearText    String | 清空按钮文本
+	 * @property {String} confirmText    String | 确定按钮文本
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义签名板样式
+	 * @property {UTSJSONObject} customCanvasStyle    UTSJSONObject | 自定义画布样式
+	 * @property {UTSJSONObject} customActionAreaStyle    UTSJSONObject | 自定义操作按钮区域样式
+	 * @event {Function} confirm   ()=>void | 确定事件
+	 * @event {Function} undo   ()=>void | 撤销事件
+	 * @event {Function} redo   ()=>void | 重做事件
+	 * @event {Function} clear   ()=>void | 清空事件
+	 */
+
+	// 依赖
+	import { $snui, useFormatProp } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-signature'
+	})
+	
+	type Point = {
+		x: number,
+		y: number
+	}
+	
+	type Line = Point[]
+	
+	// SinleUI 配置
+	const snu = $snui.utils;
+	const colors = $snui.colors
+	
+	// 事件注册
+	const emit = defineEmits(['confirm', 'undo', 'redo', 'clear'])
+	
+	// 组件属性
+	const props = defineProps({
+		text: {
+			type: String,
+			default: '请签名'
+		},
+		textFont: {
+			type: String,
+			default: ''
+		},
+		textColor: {
+			type: String,
+			default: ''
+		},
+		penSize: {
+			type: Number,
+			default: 3
+		},
+		penColor: {
+			type: String,
+			default: ''
+		},
+		height: {
+			type: String,
+			default: '150px'
+		},
+		bgColor: {
+			type: String,
+			default: '',
+		},
+		disabled: {
+			type: Boolean,
+			default: false
+		},
+		borderRadius: {
+			type: String,
+			default: '',
+		},
+		buttonSpacing: {
+			type: String,
+			default: '5px'
+		},
+		maxHistory: {
+			type: Number,
+			default: 20
+		},
+		clearTip: {
+			type: String,
+			default: '清空后数据无法找回，您确定要清空吗？',
+		},
+		showClearTip: {
+			type: Boolean,
+			default: true,
+		},
+		showAction: {
+			type: Boolean,
+			default: true,
+		},
+		showUndo: {
+			type: Boolean,
+			default: true,
+		},
+		showRedo: {
+			type: Boolean,
+			default: true,
+		},
+		showConfirm: {
+			type: Boolean,
+			default: true,
+		},
+		showClear: {
+			type: Boolean,
+			default: true,
+		},
+		undoText: {
+			type: String,
+			default: '撤销'
+		},
+		redoText: {
+			type: String,
+			default: '重做',
+		},
+		clearText: {
+			type: String,
+			default: '清空',
+		},
+		confirmText: {
+			type: String,
+			default: '确定',
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject as UTSJSONObject
+		},
+		customCanvasStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject as UTSJSONObject
+		},
+		customActionAreaStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject as UTSJSONObject
+		}
+	})
+	
+	// 基本变量
+	const id = snu.randomComId()
+	const dpr = ref(0)
+	const boardEle = ref(null as UniElement | null)
+	const context = ref(null as CanvasContext | null)
+	const ctx = ref(null as CanvasRenderingContext2D | null)
+	const canvasEle = ref(null as UniCanvasElement | null)
+	const boardWidth = ref(0)
+	const boardLeft = ref(0)
+	const boardTop = ref(0)
+	const historyList = ref<Line[]>([])
+	const historyIndex = ref(-1)
+	const dragging = ref(false)
+	const curLine = ref<Point[]>([] as Point[])
+	
+	const paramV = computed((): UTSJSONObject =>{
+		return {
+			penSize: props.penSize,
+			penColor: props.penColor,
+			height: props.height,
+			maxHistory: props.maxHistory,
+		}
+	})
+	
+	// 计算属性
+	const bgColorC = computed((): string => {
+		return useFormatProp('color', props.bgColor, colors.value.front)
+	})
+	
+	const textColorC = computed((): string => {
+		return useFormatProp('color', props.textColor, colors.value.line)
+	})
+	
+	const penColorC = computed((): string => {
+		return useFormatProp('color', props.penColor, colors.value.text)
+	})
+	
+	const textSizeC = computed((): string => {
+	  return snu.addPx(boardWidth.value/props.text.length*0.8)
+	})
+
+	
+	const borderRadiusC = computed((): string => {
+		return useFormatProp('radius', props.borderRadius, $snui.configs.radius.normal)
+	})
+	
+	const containStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('height', props.height)
+		styles.set('border-radius', borderRadiusC.value)
+		styles.set('background', bgColorC.value)
+		styles.set('transition-duration', $snui.configs.aniTime.normal)
+		return styles
+	})
+	
+	const boardStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('transition-duration', $snui.configs.aniTime.normal)
+		return styles
+	})
+	
+	const actionAreaStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('flex-direction', 'row')
+		styles.set('align-items', 'center')
+		styles.set('justify-content', 'flex-end')
+		styles.set('margin-top', '5px')
+		styles.set('padding', '10px')
+		return styles
+	})
+	
+	const actionBtnStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('margin-left', props.buttonSpacing)
+		return styles
+	})
+	
+	// 方法
+	
+	// 对输入值进行预处理，以适配多个平台
+	function fn(n: number): number{
+		// #ifndef APP
+		return n
+		// #endif
+		// #ifdef APP
+		return n/dpr.value
+		// #endif
+	}
+	
+	function initCtx(){
+		if (ctx.value != null){
+			ctx.value!.lineCap = 'round'
+			ctx.value!.lineJoin = 'round'
+			ctx.value!.lineWidth = fn(props.penSize)
+			ctx.value!.strokeStyle = penColorC.value
+			ctx.value!.fillStyle = penColorC.value
+		}
+	}
+	
+	function drawPoint(point: Point) {
+		if (ctx.value != null && curLine.value.length > 1){
+			let lastPoint = curLine.value[curLine.value.length - 2]
+			ctx.value!.beginPath()
+			ctx.value!.moveTo(fn(lastPoint.x), fn(lastPoint.y))
+			ctx.value!.lineTo(fn(point.x) , fn(point.y))
+			ctx.value!.stroke()
+			ctx.value!.closePath()
+			ctx.value!.save()
+		}
+	}
+	
+	
+	function drawLine(line: Point[]) {
+		if (ctx.value != null){
+			for (let i = 0;i < line.length;i++) {
+				curLine.value.push(line[i])
+				drawPoint(line[i])
+			}
+			curLine.value = [] as Point[]
+		}
+	}
+	
+	function drawHistories(){
+		if (ctx.value != null){
+			ctx.value!.strokeStyle = penColorC.value
+			ctx.value!.fillStyle = penColorC.value
+			ctx.value!.clearRect(0, 0, fn(canvasEle.value!.width), fn(canvasEle.value!.height))
+			for (let i = 0;i<= historyIndex.value;i++) {
+				drawLine(historyList.value[i])
+			}
+		}
+	}
+	
+	function undo() {
+		if (historyIndex.value < 0 || historyList.value.length == 0) return
+		if (ctx.value != null && historyList.value.length > 0 && historyIndex.value >= 0){
+			historyIndex.value--
+			drawHistories()
+			emit('undo')
+		}
+	}
+	
+	function redo() {
+		if (historyList.value.length == 0 || historyIndex.value >= historyList.value.length - 1) return
+		if (ctx.value != null && historyIndex.value <= historyList.value.length - 1){
+			historyIndex.value++
+			drawHistories()
+			emit('redo')
+		}
+	}
+			
+	
+	function _clear(){
+		if (ctx.value != null){
+			ctx.value!.clearRect(0, 0, canvasEle.value!.width, canvasEle.value!.height)
+		}
+		historyList.value = [] as Line[]
+		curLine.value = [] as Point[]
+		historyIndex.value = -1
+		emit('clear')
+	}
+	
+	function clear() {
+		if (props.showClearTip) {
+			uni.showModal({
+				title: '提示',
+				content: props.clearTip,
+				success: function (res) {
+					if (res.confirm) {
+						_clear()
+					}
+				}
+			})
+		} else {
+			_clear()
+		}
+	}
+	
+	function confirm (){
+		emit('confirm')
+	}
+	
+	function getBase64():string{
+		if (context.value != null){
+			return context.value!.toDataURL()
+		}
+		return ''
+	}
+	
+	function getPoint(x: number, y: number): Point{
+		return {
+			x: x - boardLeft.value,
+			y: y - boardTop.value
+		} as Point
+	}
+	
+	function setBoardNode(){
+		let node = boardEle.value?.getBoundingClientRect()
+		boardWidth.value = node?.width ?? 0
+		boardTop.value = node?.top ?? 0
+		boardLeft.value = node?.left ?? 0
+	}
+	
+	function _ontouchstart(x: number, y: number){
+		setBoardNode()
+		dragging.value = true
+		let point = getPoint(x, y)
+		curLine.value.push(point)
+	}
+	
+	function ontouchstart(e: UniTouchEvent) {
+		e.preventDefault()
+		let touch = e.touches[0]
+		_ontouchstart(touch.clientX, touch.clientY)
+	}
+	
+	function _ontouchmove(x: number, y: number) {
+		if (!dragging.value) return 
+		let point = getPoint(x, y)
+		curLine.value.push(point)
+		drawPoint(point)
+	}
+	
+	function ontouchmove(e: UniTouchEvent) {
+		e.preventDefault()
+		let touch = e.touches[0]
+		_ontouchmove(touch.clientX, touch.clientY)
+	}
+	
+	function ontouchend(e: UniEvent) {
+		if (curLine.value.length == 0) return
+		if (historyIndex.value + 1 < historyList.value.length) {
+			historyList.value = historyList.value.slice(0, historyIndex.value + 1)
+			historyList.value.push(curLine.value)
+			historyIndex.value++
+		} else {
+			historyIndex.value++
+			historyList.value.push(curLine.value)
+		}
+		
+		curLine.value = [] as Point[]
+		e.preventDefault()
+		dragging.value = false
+	}
+	
+	// #ifdef WEB
+	function onmousedown(e: UniMouseEvent) {
+		e.preventDefault()
+		_ontouchstart(e.clientX, e.clientY)
+	}
+	
+	function onmouseup(e: UniMouseEvent) {
+		ontouchend(e)
+	}
+	
+	function onmousemove(e: UniMouseEvent) {
+		_ontouchmove(e.clientX, e.clientY)
+		e.preventDefault()
+	}
+	// #endif
+	
+	function init(){
+		historyList.value = [] as Line[]
+		curLine.value = [] as Point[]
+		historyIndex.value = -1
+		uni.createCanvasContextAsync({
+		  id: id,
+		  success: (_context : CanvasContext) => {
+			context.value = _context
+		    ctx.value = _context.getContext('2d')!;
+		    canvasEle.value = ctx.value!.canvas;
+			
+		    // 处理高清屏逻辑
+			dpr.value = uni.getDeviceInfo().devicePixelRatio ?? 1;
+			canvasEle.value!.width = canvasEle.value!.offsetWidth * dpr.value;
+			canvasEle.value!.height = canvasEle.value!.offsetHeight * dpr.value;
+			ctx.value!.scale(dpr.value, dpr.value)
+			ctx.value!.restore()
+			 // 仅需调用一次，当调用 reset 方法后需要再次 scale
+			initCtx()
+			setBoardNode()
+		  }
+		})
+	}
+	
+	defineExpose({
+		undo,
+		redo,
+		clear,
+		getBase64
+	})
+	
+	watch(():string=>$snui.configs.app.theme,() => {
+		drawHistories()
+	})
+	
+	watch(paramV, ()=>{
+		nextTick(()=>{
+			init()
+		})
+	})
+	
+	onUpdated(()=>{
+		nextTick(()=>{
+			// #ifdef APP
+			dpr.value = uni.getDeviceInfo().devicePixelRatio ?? 1;
+			canvasEle.value!.width = canvasEle.value!.offsetWidth * dpr.value;
+			canvasEle.value!.height = canvasEle.value!.offsetHeight * dpr.value;
+			ctx.value!.scale(dpr.value, dpr.value)
+			ctx.value!.restore()
+			// #endif
+		})
+	})
+	
+	onMounted(()=>{
+		// #ifdef WEB
+		window.addEventListener('mouseup', onmouseup);
+		window.addEventListener('mousemove', onmousemove);
+		// #endif
+		nextTick(()=>{
+			init()
+		})
+	})
+
+</script>
+
+<style lang="scss">
+	.sn-signature {
+		&-contain {
+			align-items: center;
+			justify-content: center;
+		}
+		&-board {
+			position: absolute;
+			top: 0;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			background-color: transparent;
+			z-index: 1;
+		}
+		
+		&-canvas {
+			width: 100%;
+			height: 100%;
+		}
+	}
+</style>

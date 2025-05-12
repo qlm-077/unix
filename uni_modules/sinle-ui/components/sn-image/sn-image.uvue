@@ -1,0 +1,310 @@
+<template>
+	<view class="sn-image-contain"
+	ref="containEle"
+	:style="[stylesC, customStyle]">
+	<sn-view v-show="loaded" 
+	class="sn-image"
+	@click="onClick"
+	@dbclick="onDbclick"
+	@longpress="onLongpress"
+	:style="[stylesC, customStyle]">
+		<image class="sn-image-image"
+		:src="src"
+		:mode="mode"
+		:lazyLoad="lazyLoad"
+		:fadeShow="fadeShow"
+		@error="onError"
+		@load="onLoad"
+		:style="[imageStylesC, customImageStyle]"></image>
+	</sn-view>
+	<view v-if="!loaded" class="sn-image-unloaded"
+	:style="[loadingStylesC, customLoadingStyle]">
+		<sn-icon name="image-line"
+		:color="loadingIconColorC"></sn-icon>
+	</view>
+	</view>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-image
+	 * @tutorial https://sinleui.pages.dev/components/sn-image
+	 * @description Image 图片
+	 * 
+	 * - 相比于内置 `image` 组件更加方便使用。
+	 * 
+	 * - 支持图片加载占位、图片预览、懒加载（同 `image` 组件）、动画效果（同 `image` 组件）
+	 * 
+	 * - 默认为 aspectFit 模式。此模式支持根据父容器自动设置图片长宽、给定宽度自动计算长度，设置 height 属性后此功能失效
+	 * @property {String} width    String | 图片宽度（不填则自动铺满父元素）
+	 * @property {String} height    String | 图片高度（不填则自动根据`width`和图片内容计算）（不填`width`时也不得填`height`，反之则可以）
+	 * @property {String} src    String | 图片路径（网络路径、本地路径皆可）（本地路径支持`/static/xxx`，Android平台支持`file:///xxx`绝对路径以及ContentProvider的`content://xxx`）
+	 * @property {String} mode=[scaleToFill|aspectFit|aspectFill|widthFix|heightFix|top|bottom|center|left|right|topleft|topright|bottomleft|bottomright]    String | 图片裁剪、缩放方式。
+	 * @value scaleToFill 	缩放模式，不保持纵横比缩放图片，使图片的宽高完全拉伸至填满 image 元素
+	 * @value aspectFit 	缩放模式，保持纵横比缩放图片，使图片的长边能完全显示出来。也就是说，可以完整地将图片显示出来。
+	 * @value aspectFill 	缩放模式，保持纵横比缩放图片，只保证图片的短边能完全显示出来。也就是说，图片通常只在水平或垂直方向上拉伸，但不会超出 image 元素。
+	 * @value widthFix 	缩放模式，宽度不变，高度自动变化，保持原图宽高比不变
+	 * @value heightFix 	缩放模式，高度不变，宽度自动变化，保持原图宽高比不变
+	 * @value top 	缩放模式，不缩放图片，只显示图片的顶部区域
+	 * @value bottom 	缩放模式，不缩放图片，只显示图片的底部区域
+	 * @value center 	缩放模式，不缩放图片，只显示图片的中间区域
+	 * @value left 	缩放模式，不缩放图片，只显示图片的左边区域
+	 * @value right 	缩放模式，不缩放图片，只显示图片的右边区域
+	 * @value topleft 	缩放模式，不缩放图片，只显示图片的左上边区域
+	 * @value topright 	缩放模式，不缩放图片，只显示图片的右上边区域
+	 * @value bottomleft 	缩放模式，不缩放图片，只显示图片的左下边区域
+	 * @value bottomright 	缩放模式，不缩放图片，只显示图片的右下边区域
+	 * @property {String} borderRadius    String | 图片圆角大小
+	 * @property {String} loadingBgColor    String | 图片加载占位块背景颜色
+	 * @property {String} loadingIconColor    String | 图片加载占位块中的图标颜色
+	 * @property {String} loadingSize    String | 图片加载占位块尺寸
+	 * @property {Boolean} lazyLoad    Boolean | 图片懒加载。只针对page与scroll-view下的image有效。同内置[`image`](https://doc.dcloud.net.cn/uni-app-x/component/image.html#%E5%B1%9E%E6%80%A7)
+	 * @property {Boolean} fadeShow    Boolean | 图片显示动画效果。同内置[`image`](https://doc.dcloud.net.cn/uni-app-x/component/image.html#%E5%B1%9E%E6%80%A7)
+	 * @property {Boolean} enablePreview    Boolean | 点击后调用内置的uni.previewImage进行图片预览
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义图片容器样式
+	 * @property {UTSJSONObject} customImageStyle    UTSJSONObject | 自定义图片（内置`image`）样式
+	 * @property {UTSJSONObject} customLoadingStyle    UTSJSONObject | 自定义图片加载占位块样式
+	 * @event {Function} error   (event:UniImageErrorEvent) | 加载错误时触发
+	 * @event {Function} load   (event:UniImageLoadEvent) | 加载成功时触发
+	 * @event {Function} click   (event:UniPointerEvent) | 单击图片时触发
+	 * @event {Function} dbclick   (event:UniPointerEvent) | 双击图片时触发
+	 * @event {Function} longpress   (event:UniTouchEvent) | 长按图片时触发
+	 */
+	// 依赖
+	import { $snui, SnPointerEvent, useResize, SnTouchEvent, useFormatProp } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-image'
+	})
+	
+	// SinleUI 配置
+	const snu = $snui.utils;
+	const colors = $snui.colors
+	const instance = getCurrentInstance()!
+	
+	// 事件注册
+	const emit = defineEmits(['error','load','click', 'dbclick', 'longpress'])
+	
+	// 组件属性
+	const props = defineProps({
+		width: {
+			type: String,
+			default: ''
+		},
+		height: {
+			type: String,
+			default: ''
+		},
+		src: {
+			type: String,
+			default: ''
+		},
+		mode: {
+			type: String,
+			default: 'aspectFit'
+		},
+		borderRadius: {
+			type: String,
+			default: ''
+		},
+		loadingBgColor: {
+			type: String,
+			default: ''
+		},
+		loadingSize: {
+			type: String,
+			default: '80px'
+		},
+		lazyLoad: {
+			type: Boolean,
+			default: false
+		},
+		fadeShow: {
+			type: Boolean,
+			default: true
+		},
+		enablePreview: {
+			type: Boolean,
+			default: false
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customImageStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customLoadingStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+	})
+	
+	// 基本变量
+	const failed = ref(false)
+	const loaded = ref(false)
+	const width = ref('auto')
+	const height = ref('auto')
+	const canUpdateResize = ref(false)
+	const imageDetail = ref({
+		width: 0,
+		height: 0
+	} as UniImageLoadEventDetail)
+	const containEle = ref(null as UniElement | null)
+	
+	//计算属性
+	const customWidth = computed(():boolean=>{
+		return props.width != 'auto' && props.width != ''
+	})
+	
+	const customHeight = computed(():boolean=>{
+		return props.height != 'auto' && props.height != ''
+	})
+	
+	const fullMode = computed((): boolean =>props.mode == 'aspectFit'&&props.height=='')
+	
+	const loadingBgColorC = computed(():string=>{
+		return useFormatProp('color', props.loadingBgColor, colors.value.info)
+	})
+	
+	const borderRadiusC = computed(():string=>{
+		return useFormatProp('radius', props.borderRadius, $snui.configs.radius.small)
+	})
+	
+	const loadingIconColorC = computed(():string=>{
+		return useFormatProp('color', props.loadingBgColor, colors.value.infoDark)
+	})
+	
+	const stylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		if (fullMode.value) {
+			if (customWidth.value) {
+				styles.set('width', width.value)
+				styles.set('height', height.value)
+			} else {
+				styles.set('flex', '1')
+			}
+		} else {
+			styles.set('width', width.value)
+			styles.set('height', height.value)
+		}
+		styles.set('border-radius', borderRadiusC.value)
+		styles.set('transition-duration',$snui.configs.aniTime.normal)
+		return styles
+	})
+	
+	const imageStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('width', width.value)
+		styles.set('height', height.value)
+		styles.set('border-radius', borderRadiusC.value)
+		styles.set('transition-duration',$snui.configs.aniTime.normal)
+		return styles
+	})
+	
+	const loadingStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('background', loadingBgColorC.value)
+		styles.set('width', props.loadingSize)
+		styles.set('height', props.loadingSize)
+		styles.set('border-radius', borderRadiusC.value)
+		styles.set('transition-duration',$snui.configs.aniTime.normal)
+		return styles
+	})
+	
+	// 方法
+	function onError(event: UniImageErrorEvent) {
+		emit('error', event)
+		failed.value = true
+	}
+	
+	function resize(){
+		let detail = imageDetail.value
+		if (detail.width != 0){
+			nextTick(()=>{
+				let node = containEle.value?.getBoundingClientRect()
+				if (node != null) {
+					if (node!.width != null){
+						width.value = `${node.width!}px`
+						height.value = `${node.width! * (detail.height / detail.width)}px`
+					}
+				}
+			})
+		}
+	}
+	
+	function onLoad(event: UniImageLoadEvent) {
+		loaded.value = true
+		emit('load', event)
+		if (fullMode.value){
+			nextTick(()=>{
+				imageDetail.value = event.detail
+				resize()
+				setTimeout(()=>{
+					resize()
+				}, 3000)
+			})
+			canUpdateResize.value = true
+		}
+	}
+	
+	function onClick(event : SnPointerEvent) {
+		snu.debounce(() => {
+			if (props.enablePreview && !failed.value) {
+				uni.previewImage({
+					urls: [props.src]
+				})
+			}
+			emit('click', event.event)
+		}, 300)
+	}
+	
+	function onDbclick(event : SnPointerEvent) {
+		snu.debounce(() => {
+			emit('dbclick', event.event)
+		}, 300)
+	}
+	
+	function onLongpress(event: SnTouchEvent) {
+		emit('longpress', event)
+	}
+	
+
+	onMounted(()=>{
+		if (fullMode.value){
+			if (customWidth.value){
+				width.value = props.width
+			}
+		} else {
+			width.value = props.width
+			height.value = props.height
+		}
+		useResize(containEle.value, ()=>{
+			if (canUpdateResize.value) {
+				resize()
+			}
+		})
+	})
+	
+</script>
+
+<style lang="scss">
+	.sn-image {
+		width: auto;
+		height: auto;
+		&-image {
+			width: 100%;
+			height: auto;
+		}
+				
+		&-contain {
+			align-items: center;
+			justify-content: center;
+		}
+		&-unloaded {
+			align-items: center;
+			justify-content: center;
+		}
+	}
+</style>

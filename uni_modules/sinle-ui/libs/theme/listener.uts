@@ -1,0 +1,33 @@
+import { $snui } from '../../index.uts'
+
+function updateTheme() {
+	if ($snui.configs.app.autoTheme) {
+		$snui.configs.app.theme = $snui.utils.getOsTheme()
+		$snui.configs.app.autoTheme = true
+	}
+}
+
+export function themeListener() {
+	updateTheme()
+	// #ifdef APP
+	uni.onOsThemeChange((res)=>{
+		if ($snui.configs.app.autoTheme) {
+			$snui.configs.app.theme = res.osTheme
+			$snui.configs.app.autoTheme = true
+		}
+	})
+	// #endif
+
+	// #ifdef WEB
+	window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', (event) => {
+		if (event.matches) {
+			updateTheme()
+		}
+	})
+	window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (event) => {
+		if (event.matches) {
+			updateTheme()
+		}
+	})
+	// #endif
+}

@@ -1,0 +1,317 @@
+<template>
+	<sn-overlay class="sn-actionsheet-overlay"
+	ref="overlayEle"
+	:aniTime="`${aniTimeC}ms`"
+	:maskClose="maskCloseC"
+	:opacity="maskOpacityC"
+	@clickMask="clickMask" 
+	:customStyle="overlayStylesC">
+		<view class="sn-actionsheet-contain"
+		:class="sheetClassesC"
+		:style="sheetContainStylesC"
+		@click.stop>
+			<view class="sn-actionsheet"
+			:style="[sheetStylesC, customStyleC]">
+				<sn-text v-if="showTitle"
+				align="center"
+				:text="titleC"
+				:color="titleColorC"
+				:size="titleSizeC"
+				style="padding: 15px;">
+				</sn-text>
+				<sn-menu-item v-for="(e, index) in (config.actions as SnActionsheetItem[])"
+				textAlign="center"
+				:padding="itemPaddingC"
+				:key="index"
+				:text="e.text"
+				:bgColor="bgColorC"
+				:disabled="(e.disabled ?? false) || disabledC"
+				:activeBgColor="activeBgColorC"
+				:textColor="e.color ?? colors.primary"
+				:textSize="itemTextSizeC"
+				:style="[{
+					borderTop: (showTitle||index!=0)? `0.5px solid ${lineColorC}`:''
+				} as Map<string, any>]"
+				@click="clickItem(index)">
+				</sn-menu-item>
+			</view>
+			<view class="sn-actionsheet"
+			v-if="showCancelC"
+			:style="[sheetStylesC, 'margin-top:6px;', customStyleC]">
+				<sn-menu-item
+				textAlign="center"
+				:padding="itemPaddingC"
+				:bgColor="bgColorC"
+				:activeBgColor="activeBgColorC"
+				:borderRadius="borderRadiusC"
+				:text="cancelTextC"
+				:disabled="disabledC"
+				:textColor="colors.error"
+				:textSize="itemTextSizeC"
+				@click="cancel">
+				</sn-menu-item>
+			</view>
+		</view>
+	</sn-overlay>
+</template>
+
+<script setup>
+	// 依赖
+	import { $snui, useFormatProp, SnActionsheetItem, SnError, SnShowActionsheetConfig } from '../../index.uts'
+	import { frameStore } from '../../libs/core/store/index.uts'
+	// #ifdef APP-ANDROID
+	import { __setGrayMode } from '../../libs/private/index.uts'
+	// #endif
+	
+	// SinleUI 配置
+	const snu = $snui.utils;
+	const colors = $snui.colors
+	
+	//基本变量
+	const id = ref('')
+	const showSheet = ref(false)
+	const overlayEle = ref(null as SnOverlayComponentPublicInstance | null)
+	const instance = getCurrentInstance()!
+	const config = reactive({
+		actions: [] as SnActionsheetItem[],
+	} as SnShowActionsheetConfig)
+	const success = ref(null as ((tapIndex : number) => void) | null)
+	const fail = ref(null as ((error : SnError) => void) | null)
+	const complete = ref(null as ((res: any) => void) | null)
+	
+	
+	// 计算属性
+	const maskOpacityC = computed((): number => {
+		return config.maskOpacity ?? 0.3
+	})
+	
+	const titleC = computed((): string => {
+		return useFormatProp('other', config.title ?? '', '')
+	})
+	
+	const aniOriginTime = computed(() : string => {
+		return useFormatProp('aniTime', config.aniTime ?? '', $snui.configs.aniTime.long)
+	})	
+	
+	const itemPaddingC = computed((): string => {
+		return useFormatProp('other', config.itemPadding ?? '', '14px 10px')
+	})
+	
+	const maskCloseC = computed((): boolean => {
+		return config.maskClose ?? true
+	})
+	
+	const disabledC = computed((): boolean => {
+		return config.disabled ?? false
+	})
+	
+	const preventBackC = computed((): boolean => {
+		return config.preventBack ?? false
+	})
+	
+	const customStyleC = computed((): UTSJSONObject => {
+		return config.customStyle ?? {}
+	})
+	
+	const showCancelC = computed((): boolean => {
+		return config.showCancel ?? true
+	})
+	
+	
+	const cancelTextC = computed((): string => {
+		return useFormatProp('other', config.cancelText ?? '', '取消')
+	})
+	
+	const aniTimeC = computed(() : number => {
+		let aniTime = parseInt(aniOriginTime.value)
+		return aniTime > 100 ? aniTime- 100 : aniTime
+	})
+	const theme = computed((): string => $snui.configs.app.theme)
+	
+	const showTitle = computed((): boolean => {
+		return !snu.isEmpty(titleC.value)
+	})
+	
+	const titleSizeC = computed((): string => {
+		return useFormatProp('font', config.titleSize ?? '', $snui.configs.font.size(2))
+	})
+		
+	const titleColorC = computed((): string => {
+		return useFormatProp('color', config.titleColor ?? '', colors.value.title)
+	})
+	
+	const bgColorC = computed((): string => {
+		return useFormatProp('color', config.bgColor ?? '', colors.value.info)
+	})
+	
+	const lineColorC = computed((): string => {
+		return colors.value[theme.value=='light'?'lineDark':'line'] as string
+	})
+	
+	const activeBgColorC = computed((): string => {
+		return colors.value[theme.value=='light'?'infoActive':'infoActive'] as string
+	})
+	
+	const itemTextSizeC = computed((): string => {
+		return useFormatProp('font', config.itemTextSize ?? '', $snui.configs.font.size(3))
+	})
+	
+	const borderRadiusC = computed(():string=>{
+		return useFormatProp('radius', config.borderRadius ?? '', $snui.configs.radius.normal)
+	})
+	
+	const sheetContainStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('transition-duration',aniOriginTime.value)
+		return styles
+	}) 
+	
+	const sheetStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('background', bgColorC.value)
+		styles.set('border-radius', borderRadiusC.value)
+		return styles
+	})
+	
+	const overlayStylesC = computed((): UTSJSONObject=>{
+		return {
+			justifyContent: 'flex-end'
+		}
+	})
+	
+	const sheetClassesC = computed((): Map<string, any>=>{
+		let classes = new Map<string, any>()
+		classes.set('animation', parseInt(aniOriginTime.value)> 0)
+		classes.set('hover', showSheet.value)
+		return classes
+	})
+	
+	// 方法
+	function open() {
+		overlayEle.value?.open?.()
+		snu.throttle(()=>{
+			showSheet.value = true
+		}, 20, id.value)
+	}
+	
+	function close() {
+		overlayEle.value?.close?.()
+		showSheet.value = false;
+		snu.throttle(()=>{
+			uni.closeDialogPage({
+				dialogPage: instance.proxy!.$page
+			})
+		}, aniTimeC.value, 'previewImage')
+	}
+	
+	function clickMask() {
+		if (!maskCloseC.value) return
+		let res = new SnError('utils', 'showActionsheet', 1)
+		fail.value?.(res)
+		complete.value?.(res)
+		close()
+	}
+	
+	function clickItem(index: number){
+		if (index >= config.actions.length || disabledC.value) return
+		let e = config.actions[index] as SnActionsheetItem
+		if (e.disabled ?? false) return
+		
+		let res = index
+		success.value?.(res)
+		complete.value?.(res)
+		close()
+	}
+	
+	function cancel() {
+		if (disabledC.value) return
+		let res = new SnError('utils', 'showActionsheet', 1)
+		fail.value?.(res)
+		complete.value?.(res)
+		close()
+	}
+	
+	onBackPress((_):boolean=>{
+		if (showSheet.value) {
+			if (!preventBackC.value){
+				let res = new SnError('utils', 'showActionsheet', 1)
+				fail.value?.(res)
+				complete.value?.(res)
+				close()
+			}
+			return true
+		} else {
+			return false
+		}
+	})
+	
+	onLoad((options)=>{
+		if (options['id'] != null) {
+			id.value = options['id'] as string
+			let __config = frameStore.get(`DIALOGPAGE_ACTIONSHEET_${options['id']}`)
+			if (__config != null) {
+				let tmp = __config as SnShowActionsheetConfig
+				config.title = tmp.title
+				config.actions = tmp.actions
+				config.showCancel = tmp.showCancel
+				config.cancelText = tmp.cancelText
+				config.titleColor = tmp.titleColor
+				config.titleSize = tmp.titleSize
+				config.bgColor = tmp.bgColor
+				config.itemTextSize = tmp.itemTextSize
+				config.itemPadding = tmp.itemPadding
+				config.borderRadius = tmp.borderRadius
+				config.aniTime = tmp.aniTime
+				config.maskOpacity = tmp.maskOpacity
+				config.preventBack = tmp.preventBack
+				config.disabled = tmp.disabled
+				config.maskClose = tmp.maskClose
+				config.customStyle = tmp.customStyle
+				success.value = tmp.success
+				fail.value = tmp.fail
+				complete.value = tmp.complete
+			}
+		}
+	})
+	
+	onUnload(()=>{
+		frameStore.delete(`DIALOGPAGE_ACTIONSHEET_${id.value}`)
+	})
+	
+	onReady(()=>{
+		/**
+		 * 针对 DialogPage 专门适配哀悼模式
+		 */
+		let enabled = $snui.configs.app.grayMode
+		// #ifdef APP-ANDROID
+		__setGrayMode(enabled, instance.proxy!.$page.getAndroidView());
+		// #endif
+		// #ifdef WEB
+		window.document.body.style.filter = enabled ? 'grayscale(100%)' : ''
+		// #endif
+		open()
+	})
+</script>
+
+<style lang="scss">
+	.sn-actionsheet {
+		margin: 0 auto;
+		max-width: 350px;
+		width: 85%;
+		min-height: 20px;
+		transition-property: transform, background-color, opacity, border-radius;
+	
+		&-overlay {
+			align-items: center;
+		}
+		
+		&-contain.animation {
+			transform: translateY(100%);
+			opacity: 0;
+			&.hover {
+				transform: translateY(-25px);
+				opacity: 1;
+			}
+		}
+	}
+</style>

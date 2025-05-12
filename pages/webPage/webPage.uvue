@@ -1,0 +1,33 @@
+<template>
+	<web-view :src="webUrl" id="webView" @message="webMsg"></web-view>
+</template>
+
+<script setup>
+	import { locationInfo } from '../../store'
+	const { proxy } = getCurrentInstance()!
+	const webUrl = ref('')
+	let webView = ref<WebviewContext | null>(null)
+	onLoad((options) => {
+		webUrl.value = options['url'] ?? ''
+	})
+
+	onReady(() => {
+		webView.value = uni.createWebviewContext("webView", proxy)
+	})
+	const webMsg = (event : UniWebViewMessageEvent) => {
+		let state = event.detail.data[0].msg
+		if (state == 'OK') {
+			let { longitude, latitude } = locationInfo.value!
+			let data = {
+				lng: longitude,
+				lat: latitude
+			}
+			// webView.value?.evalJS(`init(${data}})`)
+			webView.value?.evalJS(`init(${JSON.stringify(data)})`)
+		}
+	}
+</script>
+
+<style>
+
+</style>

@@ -1,0 +1,84 @@
+import { $snui } from '../../index.uts'
+
+type varPropType = 'color' | 'font' | 'aniTime' | 'radius' | 'other'
+
+const otherVars = computed((): Map<string, string> => {
+	let vars = new Map<string, string>()
+	vars.set('topbarHeight', $snui.configs.page.topbarHeight)
+	return vars
+})
+
+/**
+ * @name 格式化组件属性
+ * @description 根据组件属性类型和值，返回相应的格式化属性值。支持 SinleUI 变量。
+ * @param {varPropType} type - 属性类型。
+ * @param {string} value - 属性的值。
+ * @param {string} defaultValue - 默认值。
+ * @returns {string} 返回格式化后的属性值。
+ */
+
+export function useFormatProp(type: varPropType,value: string, defaultValue: string): string  {
+	if (value.trim() == '') return defaultValue
+	if (!value.startsWith('$')) return value
+	let name = value.slice(1)
+	if (name.trim() == '') return defaultValue
+	switch (type) {
+		case 'color':
+			return ($snui.colors.value[name] ?? defaultValue) as string
+		case 'font':
+			if ($snui.utils.isNumberString(name)) {
+				return $snui.configs.font.size(parseInt(name))
+			} else {
+				if (name == 'baseSize'){
+					return $snui.configs.font.baseSize
+				} else if (name=='mainFamily') {
+					return $snui.configs.font.mainFamily
+				}
+				return defaultValue
+			}
+		case 'radius':
+			switch (name){
+				case 'baseSize':
+					return $snui.configs.radius.baseSize
+				case 'normal':
+					return $snui.configs.radius.normal
+				case 'small':
+					return $snui.configs.radius.small
+				case 'large':
+					return $snui.configs.radius.large
+				case 'xlarge':
+					return $snui.configs.radius.xlarge
+				case 'xsmall':
+					return $snui.configs.radius.xsmall
+				case 'xxlarge':
+					return $snui.configs.radius.xxlarge
+				case 'xxsmall':
+					return $snui.configs.radius.xxsmall
+				case 'circle':
+					return $snui.configs.radius.circle
+				default:
+					return defaultValue
+			}
+		case 'aniTime':
+			switch (name){
+				case 'baseTime':
+					return $snui.configs.aniTime.baseTime
+				case 'normal':
+					return $snui.configs.aniTime.normal
+				case 'short':
+					return $snui.configs.aniTime.short
+				case 'long':
+					return $snui.configs.aniTime.long
+				case 'xlong':
+					return $snui.configs.aniTime.xlong
+				default:
+					return defaultValue
+			}
+		case 'other':
+			if (otherVars.value.has(name)) {
+				return otherVars.value.get(name) as string
+			}
+			return value
+	}
+	return value
+}

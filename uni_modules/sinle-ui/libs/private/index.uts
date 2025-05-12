@@ -1,0 +1,62 @@
+// #ifdef APP-ANDROID
+import ColorMatrix from "android.graphics.ColorMatrix"
+import ColorMatrixColorFilter from "android.graphics.ColorMatrixColorFilter"
+import Paint from "android.graphics.Paint"
+import View from "android.view.View"
+// #endif
+
+const grayMode = ref(false)
+
+// #ifdef APP-ANDROID
+
+export function __setGrayMode(enabled : boolean, rootView: View | null = null) {
+	let view = null as View | null
+	if (rootView == null) {
+		const activity = UTSAndroid.getUniActivity()
+		if (activity == null) return
+		view = activity!.window.decorView
+	} else {
+		view = rootView
+	}
+	
+	const grayPaint = new Paint()
+	const grayMatrix = new ColorMatrix()
+
+	if (enabled) {
+		grayMatrix.setSaturation(0.0.toFloat())
+		grayPaint.colorFilter = new ColorMatrixColorFilter(grayMatrix)
+		view.setLayerType(View.LAYER_TYPE_HARDWARE, grayPaint)
+	} else {
+		view.setLayerType(View.LAYER_TYPE_NONE, null)
+	}
+}
+
+
+
+export class GrayAcvitiyLifeCycleCallback extends UniActivityLifeCycleCallback {
+	
+	constructor() {
+		super()
+	}
+	override onResume(params : UniActivityParams) {
+		__setGrayMode(grayMode.value, null);
+	}
+}
+
+const hasSetGrayCallback = ref(false)
+// #endif
+
+
+
+export function setGrayMode(enabled : boolean) {
+	grayMode.value = enabled
+	// #ifdef APP-ANDROID
+	__setGrayMode(enabled, null)
+	if (!hasSetGrayCallback.value) {
+		UTSAndroid.onActivityCallback(new GrayAcvitiyLifeCycleCallback())
+	}
+	// #endif
+	// #ifndef APP
+	window.document.body.style.filter = enabled ? 'grayscale(100%)' : ''
+	// #endif
+}

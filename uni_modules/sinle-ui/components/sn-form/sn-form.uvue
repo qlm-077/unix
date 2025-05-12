@@ -1,0 +1,187 @@
+<template>
+	<view class="sn-form"
+	:style="[customStyle]">
+		<slot></slot>
+	</view>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-form
+	 * @tutorial https://sinleui.pages.dev/components/sn-form
+	 * @description Form 表单
+	 * 
+	 * - 用于数据收集及验证。
+	 * 
+	 * - 内置的数据验证器提供了丰富的场景支持，使得数据校验变得异常容易。同时支持自定义数据校验，满足您的各种需求。
+	 * 
+	 * - 分为两个组件：`sn-form` 和  `sn-form-item` 。
+	 * 
+	 * - `sn-form-item` 可以独立使用，但独立使用时功能和样式受一定限制
+	 * @property {UTSJSONObject} vModel    UTSJSONObject | 表单数据（每一个健对应`sn-form-item`的`field`属性，值即为表单组件的`v-model`）
+	 * @property {String} type=[embed|float]    String | 表单项样式类型。分为`embed`（嵌入式）和`float`（浮动式）
+	 * @value embed    嵌入式
+	 * @value float    浮动式
+	 * @property {String} labelColor    String | 表单项标题颜色
+	 * @property {String} labelSize    String | 表单项标题字体大小
+	 * @property {String} labelWidth    String | 表单项标题宽度
+	 * @property {Boolean} showError    Boolean | 是否显示校验错误提示
+	 * @property {Boolean} showBorder    Boolean | 是否显示表单项分割线（仅`embed`模式生效）
+	 * @property {Boolean} triggerChange    Boolean | 是否启用数据变化自动校验
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义表单样式
+	 * @event {Function} submited   ()=>void | 提交成功时触发
+	 * @event {Function} change   (value:UTSJSONObject)=>void | 数据变化时触发
+	 */
+	// 依赖
+	import { $snui, SnFormItemData, SnFormItemVerifyResult, SnFormValidResult, useFormatProp } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-form'
+	})
+	
+	// SinleUI 配置
+	const snu = $snui.utils;
+	const colors = $snui.colors
+	
+	// 事件注册
+	const emit = defineEmits(['submited', 'change'])
+	
+	const model = defineModel({
+		type: Object as PropType<UTSJSONObject>, 
+		default: {} as UTSJSONObject
+	})
+	
+	// 组件属性
+	const props = defineProps({
+		type: {
+			type: String,
+			default: 'embed'
+		},
+		showError: {
+			type: Boolean,
+			default: true
+		},
+		labelColor: {
+			type: String,
+			default: ''
+		},
+		labelSize: {
+			type: String,
+			default: ''
+		},
+		labelWidth: {
+			type: String,
+			default: 'auto'
+		},
+		showBorder: {
+			type: Boolean,
+			default: true
+		},
+		triggerChange: {
+			type: Boolean,
+			default: false
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject as UTSJSONObject
+		}
+	})
+	
+	// 基本变量
+	const fieldList = ref([] as SnFormItemData[])
+	const childrenList = ref([] as SnFormItemComponentPublicInstance[])
+	
+	// 计算属性
+	
+	const typeC = computed(():string=>{
+		let types = ['embed','float']
+		return types.includes(props.type) ? props.type : 'embed'
+	})
+	
+	const labelColorC = computed((): string => {
+		return useFormatProp('color', props.labelColor, colors.value.textLight)
+	})
+	
+	const labelSizeC = computed((): string => {
+		return useFormatProp('font', props.labelSize, $snui.configs.font.size(3))
+	})
+	
+	const showBorderC = computed((): boolean => props.showBorder)
+	const showErrorC = computed((): boolean => props.showError)
+	provide('type', typeC)
+	provide('labelColor', labelColorC)
+	provide('labelSize', labelSizeC)
+	provide('showBorder', showBorderC)
+	provide('showError', showErrorC)
+	
+	// 方法
+	function valid(callback: SnFormValidResult) {
+		let allow = true
+		let verifyRes = [] as SnFormItemVerifyResult[]
+		fieldList.value.forEach((item: SnFormItemData)=>{
+			let field = item.field
+			let value = (model.value as UTSJSONObject)[field]
+			if (value != null){
+				let _item = fieldList.value.find((it: SnFormItemData):boolean => it.field == field)
+				if (_item != null){
+					item.instance.$callMethod('verify', value, (res: SnFormItemVerifyResult)=>{
+						if (!res.valid) {
+							allow = false
+							verifyRes.push(res)
+						}
+					})
+				}
+			} else {
+				allow = false
+			}
+		})
+		if (allow){
+			if (callback.success != null) {
+				callback.success!()
+			}
+		} else{
+			if (callback.fail != null) {
+				callback.fail!(verifyRes)
+			}
+		}
+	}
+	
+	function submit(callback: SnFormValidResult){
+		valid({
+			success: ()=>{
+				if (callback.success != null) {
+					emit('submited')
+					callback.success!()
+				}
+			},
+			fail: (failResults: SnFormItemVerifyResult[])=>{
+				if (callback.fail != null) {
+					callback.fail!(failResults)
+				}
+			}
+		} as SnFormValidResult)
+	}
+	
+	function register(item: SnFormItemData){
+		fieldList.value.push(item)
+		childrenList.value.push(item.instance as SnFormItemComponentPublicInstance)
+	}
+	
+	defineExpose({
+		submit,
+		register
+	})
+	
+	watch(model, (value: UTSJSONObject)=>{
+		emit('change', value)
+		if (props.triggerChange){
+			valid({} as SnFormValidResult)
+		}
+	}, {
+		deep: true
+	})
+</script>
+
+<style lang="scss">
+		
+</style>

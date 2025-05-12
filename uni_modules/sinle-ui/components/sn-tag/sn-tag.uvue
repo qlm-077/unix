@@ -1,0 +1,321 @@
+<template>
+	<view v-if="showTag" 
+	class="sn-tag" 
+	ref="tagEle"
+	:style="[tagStylesC, customStyle]">
+		<sn-loading v-if="loadingC"
+		class="sn-tag-loading-noround" 
+		:color="iconColorC"></sn-loading>
+		<slot>
+			<sn-text class="sn-tag-text" 
+			:text="text" 
+			:color="textColorC"
+			:size="textSizeC" 
+			:style="[{
+				transitionDuration: $snui.configs.aniTime.normal
+			},customTextStyle]"></sn-text>
+		</slot>
+		<sn-button v-if="closable"
+		class="sn-tag-close" 
+		level="least"
+		bgColor="$transparent"
+		:activeBgColor="closeButtonActiveBgColorC"
+		round
+		:roundSize="closeBtnSizeC"
+			@click="showTag = false">
+			<sn-icon name="close-fill" 
+			:color="iconColorC"
+			:size="iconSizeC"></sn-icon>
+		</sn-button>
+	</view>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-tag
+	 * @tutorial https://sinleui.pages.dev/components/sn-tag
+	 * @description  Tag  标签
+	 *
+	 *- 标签组件，用于标记和分类。
+	 * @property {Boolean} loading    Boolean | 是否加载状态
+	 * @property {Boolean} closable    Boolean | 是否可关闭
+	 * @property {Boolean} disabled    Boolean | 是否禁用
+	 * @property {String} text    String | 标签内文本内容
+	 * @property {String} align    String | 标签内文本对齐方向
+	 * @property {String} type=[info|primary|success|error|warning]    String | 标签主题样式类型（下列自定义颜色默认为空，主题默认颜色与自定义颜色冲突时，以自定义颜色为主）
+	 * @value info 信息
+	 * @value primary 主要
+	 * @value success 成功
+	 * @value error 错误
+	 * @value warning 警告
+	 * @property {String} level=[first|second|third|least]    String | 标签等级（下列自定义颜色默认为空，主题默认颜色与自定义颜色冲突时，以自定义颜色为主）
+	 * @value first 第一等级
+	 * @value second 第二等级
+	 * @value third 第三等级
+	 * @value least 最小等级
+	 * @property {String} textColor    String | 标签文本颜色
+	 * @property {String} disabledTextColor    String | 禁用状态下标签文本颜色
+	 * @property {String} bgColor    String | 标签背景颜色
+	 * @property {String} borderRadius    String | 标签圆角大小
+	 * @property {String} disabledBgColor    String | 禁用状态下标签背景颜色
+	 * @property {String} textSize    String | 标签文本大小
+	 * @property {String} iconColor    String | 关闭图标和加载图标颜色
+	 * @property {String} disabledIconColor    String | 禁用状态下关闭图标和加载图标颜色
+	 * @property {String} iconSize    String | 关闭图标和加载图标大小
+	 * @property {UTSJSONObject} customTextStyle    UTSJSONObject | 自定义标签内文本样式
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义标签样式
+	 */
+
+	// 依赖
+	import { $snui, useFormatProp } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-tag'
+	})
+	
+	// SinleUI 配置
+	const colors = $snui.colors
+	const snu = $snui.utils
+
+	// 组件属性
+	const props = defineProps({
+		text: {
+			type: String,
+			default: ""
+		},
+		align: {
+			type: String,
+			default: "center"
+		},
+		type: {
+			type: String,
+			default: "info"
+		},
+		level: {
+			type: String,
+			default: "first"
+		},
+		bgColor: {
+			type: String,
+			default: ""
+		},
+		borderRadius: {
+			type: String,
+			default: ""
+		},
+		disabledBgColor: {
+			type: String,
+			default: ""
+		},
+		textColor: {
+			type: String,
+			default: ""
+		},
+		disabledTextColor: {
+			type: String,
+			default: ""
+		},
+		textSize: {
+			type: String,
+			default: ''
+		},
+		disabled: {
+			type: Boolean,
+			default: false
+		},
+		loading: {
+			type: Boolean,
+			default: false
+		},
+		closable: {
+			type: Boolean,
+			default: false
+		},
+		iconSize: {
+			type: String,
+			default: ''
+		},
+		iconColor: {
+			type: String,
+			default: ""
+		},
+		disabledIconColor: {
+			type: String,
+			default: ""
+		},
+		customTextStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+	})
+
+	// 基本变量
+	const tagEle = ref(null as UniElement | null)
+	const showTag = ref(true)
+
+	// 计算属性
+	const levelC = computed(() : string => {
+		let levels = ['first', 'second', 'third', 'least']
+		return levels.includes(props.level) ? props.level : 'first'
+	})
+
+	const typeC = computed(() : string => {
+		let types = ['info', 'warning', 'error', 'success', 'primary']
+		return types.includes(props.type) ? props.type : 'info'
+	})
+
+	const borderC = computed(() : string => {
+		return levelC.value == 'least' ? `1px solid ${colors.value[`line`] as string}` : ''
+	})
+	
+	const textSizeC = computed((): string => {
+		return useFormatProp('font', props.textSize, $snui.configs.font.size(2))
+	})
+	
+	const iconSizeC = computed((): string => {
+		return useFormatProp('font', props.iconSize, $snui.configs.font.size(3))
+	})
+	
+	const borderRadiusC = computed((): string => {
+		return useFormatProp('radius', props.borderRadius, $snui.configs.radius.small)
+	})
+	
+	const propBgColorC = computed((): string => {
+		return useFormatProp('color', props.bgColor, '')
+	})
+	
+	const propDisabledBgColorC = computed((): string => {
+		return useFormatProp('color', props.disabledBgColor, '')
+	})
+	
+	const propTextColorC = computed((): string => {
+		return useFormatProp('color', props.textColor, '')
+	})
+	
+	const propDisabledTextColorC = computed((): string => {
+		return useFormatProp('color', props.disabledTextColor, '')
+	})
+	
+	const propIconColorC = computed((): string => {
+		return useFormatProp('color', props.iconColor, '')
+	})
+	
+	const propDisabledIconColorC = computed((): string => {
+		return useFormatProp('color', props.disabledIconColor, '')
+	})
+
+	const bgColorC = computed(() : string => {
+		if (!props.disabled) {
+			if (snu.isEmpty(propBgColorC.value)) {
+				switch (levelC.value) {
+					case 'first':
+						return colors.value[`${typeC.value}`] as string
+					case 'second':
+						return colors.value[`${typeC.value}Light`] as string
+					case 'third':
+						return colors.value.info as string
+					case 'least':
+						return 'transparent'
+					default:
+						return colors.value[`${typeC.value}`] as string
+				}
+			} else {
+				return propBgColorC.value
+			}
+		} else {
+			return snu.isEmpty(propDisabledBgColorC.value) ? colors.value.disabled as string : propDisabledBgColorC.value
+		}
+	})
+	
+	const closeButtonActiveBgColorC = computed((): string=>{
+		let theme = $snui.configs.app.theme
+		let color = (theme == 'light' || typeC.value != 'info') ? 0 : 255
+		return `rgba(${color},${color},${color},${color==0?0.05:0.2})`
+	})
+
+	const textColorC = computed(() : string => {
+		{
+			if (!(props.disabled)) {
+				if (snu.isEmpty(propTextColorC.value)) {
+					if (levelC.value == 'first' || typeC.value == 'info') {
+						return colors.value[`${typeC.value}Text`] as string
+					} else {
+						return colors.value[`${typeC.value}`] as string
+					}
+				} else {
+					return propTextColorC.value
+				}
+			} else {
+				return snu.isEmpty(propDisabledTextColorC.value) ? colors.value.disabledText : propDisabledTextColorC.value
+			}
+		}
+	})
+
+	const iconColorC = computed(() : string => {
+		if (!(props.disabled)) {
+			return snu.isEmpty(propIconColorC.value) ? textColorC.value : propIconColorC.value
+		} else {
+			return snu.isEmpty(propDisabledIconColorC.value) ? textColorC.value : propDisabledIconColorC.value
+		}
+	})
+	
+	const closeBtnSizeC = computed(():string=>{
+		return (snu.getPx(iconSizeC.value) + 4).toString()+'px'
+	})
+	
+	const tagStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('background', bgColorC.value)
+		styles.set('border-radius',borderRadiusC.value)
+		styles.set('border', borderC.value)
+		styles.set('justifyContent', props.align=='center'?'center':(props.align=='right'?'flex-end':'flex-start'))
+		styles.set('padding', `5px 8px`)
+		styles.set('transition-duration',$snui.configs.aniTime.normal)
+		return styles
+	})
+	
+	
+	// 动态操作 DOM 以添加 Loading 动画
+	const loadingC = computed(():boolean=>props.loading)
+	
+	watch(loadingC, (nv : boolean) => {
+		if (tagEle.value != null) {
+			let ele = tagEle.value as UniElement
+			let width = ele.getBoundingClientRect().width
+			let size = parseInt(textSizeC.value)
+			ele.style.setProperty('width', (width as number) + (nv ? size : -size))
+		}
+	})
+</script>
+
+<style lang="scss">
+	.sn-tag {
+		display: flex;
+		flex-direction: row;
+		justify-content: center;
+		align-items: center;
+		transition-property: background-color, border, border-radius;
+
+		&__closed {
+			transform: scale(0.0001);
+		}
+
+		&-close {
+			margin-left: 10px;
+		}
+
+		&-text {
+			lines: 1;
+			text-overflow: ellipsis;
+			background-color: transparent;
+		}
+
+		&-loading-noround {
+			margin-right: 5px;
+		}
+	}
+</style>

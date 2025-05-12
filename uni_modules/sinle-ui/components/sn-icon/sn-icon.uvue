@@ -1,0 +1,91 @@
+<template>
+	<text class="sn-icon" 
+	:style="[iconStylesC, customStyle]">{{unicodes}}</text>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-icon
+	 * @tutorial https://sinleui.pages.dev/components/sn-icon
+	 * @description Icon 图标
+	 * 
+	 * - 内置开源图标库 [Remix Icon](https://remixicon.com/)。
+	 * @property {String} name    String | 图标名称（不需要加前缀），支持多个图标，逗号隔开
+	 * @property {String} font    String | 图标字体名
+	 * @property {String} color    String | 图标颜色
+	 * @property {String} size    String | 图标大小
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义图标样式
+	 */
+	// 依赖
+	import { iconData } from './icons.uts'
+	import { $snui, useFormatProp } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-icon'
+	})
+	
+	// SinleUI 配置
+	const colors = $snui.colors
+
+	// 组件属性
+	const props = defineProps({
+		name: {
+			type: String,
+			default: ''
+		},
+		font: {
+			type: String,
+			default: 'remixicon'
+		},
+		color: {
+			type: String,
+			default: ''
+		},
+		size: {
+			type: String,
+			default: ''
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+	})
+
+	// 计算属性
+	const unicodes = computed(() : string => {
+		let names = (props.name).match(/[^,]+/gsim) ?? [] as string[]
+		let res = ''
+
+		for (let i = 0; i < names.length; i++) {
+			let codes = iconData.find((item : UTSJSONObject) : boolean => { return item['name'] == names[i] })
+			if (codes !== null) {
+				res += codes['unicode'] as string
+			}
+		}
+		return res
+	})
+	
+	const colorC = computed((): string => {
+		return useFormatProp('color', props.color,colors.value.text)
+	})
+	
+	const sizeC = computed((): string => {
+		return useFormatProp('font', props.size, $snui.configs.font.size(5))
+	})
+	
+	const iconStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('color', colorC.value)
+		styles.set('fontFamily', props.font)
+		styles.set('fontSize', sizeC.value)
+		styles.set('transition-duration',$snui.configs.aniTime.normal)
+		return styles
+	})
+
+</script>
+
+<style lang="scss">
+	.sn-icon {
+		transition-property: color, font-size, transform;
+	}
+</style>

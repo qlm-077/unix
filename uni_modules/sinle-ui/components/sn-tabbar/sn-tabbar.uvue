@@ -1,0 +1,547 @@
+<template>
+	<view class="sn-tabbar-contain"
+	:style="hasPages&&showPages?[containStylesC,customContainStyle]:[customContainStyle]">
+		<view v-if="$slots['1']!=null&&page1If"
+		v-show="curShow==1"
+		class="sn-tabbar-page">
+			<slot name="1"/>
+		</view>
+		<view v-if="$slots['2']!=null&& page2If"
+		v-show="curShow==2"
+		class="sn-tabbar-page">
+			<slot name="2"/>
+		</view>
+		<view v-if="$slots['3']!=null && page3If"
+		v-show="curShow==3"
+		class="sn-tabbar-page">
+			<slot name="3"/>
+		</view>
+		<view v-if="$slots['4']!=null && page4If"
+		v-show="curShow==4"
+		class="sn-tabbar-page">
+			<slot name="4"/>
+		</view>
+		<view v-if="$slots['5']!=null && page5If"
+		v-show="curShow==5"
+		class="sn-tabbar-page">
+			<slot name="5"/>
+		</view>
+		<view v-if="$slots['6']!=null && page6If"
+		v-show="curShow==6"
+		class="sn-tabbar-page">
+			<slot name="6"/>
+			</view>
+		<view v-if="$slots['7']!=null && page7If"
+		v-show="curShow==7"
+		class="sn-tabbar-page">
+			<slot name="7"/>
+		</view>
+		<view v-if="$slots['8']!=null && page8If"
+		v-show="curShow==8"
+		class="sn-tabbar-page">
+			<slot name="8"/>
+		</view>
+		<view v-if="$slots['9']!=null && page9If"
+		v-show="curShow==9"
+		class="sn-tabbar-page">
+			<slot name="9"/>
+		</view>
+		<view v-if="$slots['10']!=null && page10If"
+		v-show="curShow==10"
+		class="sn-tabbar-page">
+			<slot name="10"/>
+		</view>
+		<view class="sn-tabbar-bar-wrap"
+		ref="barWrapEle"
+		:style="tabbarWrapStylesC">
+			<sn-view class="sn-tabbar-bar"
+			ref="barEle"
+			aniTime="0ms"
+			:disabled="disabled"
+			:style="[tabbarStylesC, customStyle]">
+				<view class="sn-tabbar-bar-item"
+				ref="itemEles"
+				v-for="(e, index) in (data as SnTabbarItem[])"
+				@click="clickTab(index)"
+				:style="[itemStylesC, {
+					background: curShow == index+1 ? itemActiveBgColorC : itemBgColorC,
+					marginLeft: index == 0 ? '0px' : itemSpacingHalf,
+					marginRight: index == data.length-1 ? '0px' : itemSpacingHalf
+				} as Map<string, any>]">
+					<template v-if="e.badge == null">
+						<sn-avatar v-if="(e?.image ?? '')!=''"
+						:src="curShow == index+1 ? (e?.activeImage ?? (e?.image ?? '')) : (e?.image ?? '')"
+						:size="imageSize"></sn-avatar>
+						<sn-icon v-else-if="(e?.icon ?? '')!=''"
+						:name="curShow == index+1 ? (e?.activeIcon ?? (e?.icon ?? '')) : (e?.icon ?? '')"
+						:color="curShow == index+1 ? activeIconColorC : iconColorC"
+						:size="iconSizeC"
+						:style="iconStylesC"></sn-icon>
+						<sn-text v-if="(e?.text ?? '')!=''" 
+						:color="curShow == index+1 ? activeTextColorC : textColorC"
+						:text="curShow == index+1 ? (e?.activeText ?? (e?.text ?? '')) : (e?.text ?? '')"
+						:size="textSizeC"></sn-text>
+					</template>
+					<sn-badge v-else
+					:value="e.badge!.value ?? 0"
+					:max="e.badge!.max ?? -1"
+					:size="e.badge!.size ?? ''"
+					:offset="e.badge!.offset ?? ''"
+					:mode="e.badge!.mode ?? 'number'"
+					:text="e.badge!.text ?? ''"
+					:showZero="e.badge!.showZero ?? false"
+					:textColor="e.badge!.textColor ?? ''"
+					:bgColor="e.badge!.bgColor ?? ''"
+					style="flex-direction: column;">
+						<sn-avatar v-if="(e?.image ?? '')!=''"
+						:src="curShow == index+1 ? (e?.activeImage ?? (e?.image ?? '')) : (e?.image ?? '')"
+						:size="imageSize"></sn-avatar>
+						<sn-icon v-else-if="(e?.icon ?? '')!=''"
+						:name="curShow == index+1 ? (e?.activeIcon ?? (e?.icon ?? '')) : (e?.icon ?? '')"
+						:color="curShow == index+1 ? activeIconColorC : iconColorC"
+						:size="iconSizeC"
+						:style="iconStylesC"></sn-icon>
+						<sn-text v-if="(e?.text ?? '')!=''" 
+						:color="curShow == index+1 ? activeTextColorC : textColorC"
+						:text="curShow == index+1 ? (e?.activeText ?? (e?.text ?? '')) : (e?.text ?? '')"
+						:size="textSizeC"></sn-text>
+					</sn-badge>
+				</view>
+			</sn-view>
+		</view>
+	</view>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-tabbar
+	 * @tutorial https://sinleui.pages.dev/components/sn-tabbar
+	 * @description  Tabbar  底部导航栏
+	 *
+	 * - 支持字体图标、图片，样式自由可调，可以设置角标
+	 *
+	 * - 支持拦截鉴权，详见 Demo
+	 *
+	 * - 最大支持5个子项
+	 * 
+	 * @property {Array<[SnTabbarItem](https://sinleui.pages.dev/api/types/components#sntabbaritem)>} data    Array<[SnTabbarItem](https://sinleui.pages.dev/api/types/components#sntabbaritem)> | 底部导航栏数据，每一项都需与插槽一一匹配，最大5项
+	 * @property {Number} index    Number | 首次加载时显示的页面索引（注意，索引从1开始一直到5，插槽名称也是一样）
+	 * @property {Boolean} fixed    Boolean | 是否固定底部（一般开发不会用到此属性，除非你有Demo中那样的展示需求）
+	 * @property {Boolean} showPages    Boolean | 是否显示子页面（一般开发不会用到此属性，除非你有Demo中那样的展示需求）
+	 * @property {String} imageSize    String | 子项图片大小
+	 * @property {String} padding    String | 内边距
+	 * @property {String} margin    String | 外边距
+	 * @property {String} bgColor    String | 背景颜色
+	 * @property {String} itemBorderRadius    String | 子项边框圆角大小（一般情况不需要设置，组件内部会根据导航栏圆角自动计算最合适的大小）
+	 * @property {String} itemPadding    String | 子项内边距
+	 * @property {String} itemSpacing    String | 各子项之间的间距
+	 * @property {String} itemBgColor    String | 子项背景颜色
+	 * @property {String} itemActiveBgColor    String | 选中时子项的背景颜色
+	 * @property {String} border    String | 导航栏边框
+	 * @property {String} borderRadius    String | 导航栏圆角大小
+	 * @property {String} textColor    String | 子项文本颜色
+	 * @property {String} textSize    String | 子项文本大小
+	 * @property {String} activeTextColor    String | 选中时子项文本颜色
+	 * @property {String} iconColor    String | 子项图标颜色
+	 * @property {String} iconSize    String | 子项图标大小
+	 * @property {String} activeIconColor    String | 选中时子项图标颜色
+	 * @property {Boolean} disabled    Boolean | 是否禁用导航栏
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义样式（仅导航栏）
+	 * @property {UTSJSONObject} customContainStyle    UTSJSONObject | 自定义容器样式（包含子页面和底部导航栏）
+	 * @event {Function} change   (index:number)=>void | 页面切换时触发
+	 * @event {Function} heightchange   (height:number)=>void | 底部导航栏高度变化时触发
+	 */
+
+	// 依赖
+	import { $snui, SnTabbarItem, useResize, SnBadgeParams, useFormatProp } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-tabbar'
+	})
+	
+	// SinleUI 配置
+	const snu = $snui.utils;
+	const colors = $snui.colors
+	const instance = getCurrentInstance()!
+	
+	// 事件注册
+	const emit = defineEmits(['change', 'heightchange'])
+	
+	const heightModel = defineModel('height', {
+		type: String,
+		default: ''
+	})
+	
+	// 组件属性
+	const props = defineProps({
+		data: {
+			type: Array as PropType<SnTabbarItem[]>,
+			default: [] as SnTabbarItem[]
+		},
+		// 首次加载时显示的页面
+		index: {
+			type: Number,
+			default: 1
+		},
+		imageSize: {
+			type: String,
+			default: '35px'
+		},
+		fixed: {
+			type: Boolean,
+			default: true
+		},
+		padding: {
+			type: String,
+			default: '5px'
+		},
+		margin: {
+			type: String,
+			default: '0px'
+		},
+		bgColor: {
+			type: String,
+			default: ''
+		},
+		itemBorderRadius: {
+			type: String,
+			default: ''
+		},
+		itemPadding: {
+			type: String,
+			default: '0px'
+		},
+		itemSpacing: {
+			type: String,
+			default: '0px'
+		},
+		itemBgColor: {
+			type: String,
+			default: ''
+		},
+		itemActiveBgColor: {
+			type: String,
+			default: ''
+		},
+		border: {
+			type: String,
+			default: ''
+		},
+		borderRadius: {
+			type: String,
+			default: '0'
+		},
+		textColor: {
+			type: String,
+			default: ''
+		},
+		textSize: {
+			type: String,
+			default: ''
+		},
+		activeTextColor: {
+			type: String,
+			default: '',
+		},
+		iconColor: {
+			type: String,
+			default: '',
+		},
+		iconSize: {
+			type: String,
+			default: ''
+		},
+		activeIconColor: {
+			type: String,
+			default: '',
+		},
+		showPages: {
+			type: Boolean,
+			default: true,
+		},
+		disabled: {
+			type: Boolean,
+			default: false,
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject as UTSJSONObject
+		},
+		customContainStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject as UTSJSONObject
+		}
+	})
+	
+	// 基本变量
+	const page1If = ref(false)
+	const page2If = ref(false)
+	const page3If = ref(false)
+	const page4If = ref(false)
+	const page5If = ref(false)
+	const page6If = ref(false)
+	const page7If = ref(false)
+	const page8If = ref(false)
+	const page9If = ref(false)
+	const page10If = ref(false)
+	const curShow = ref(0)
+	const safeAreaBottom = ref(0)
+	const barWrapEle = ref(null as UniElement | null)
+	const barEle = ref(null as SnViewComponentPublicInstance | null)
+	const itemEles = ref(null as UniElement[] | null)
+	const barWidth = ref(0)
+	const itemWidth = ref(0)
+	const barWrapHeight = ref(0)
+	
+	watch(barWrapHeight, (n: number, o: number) =>{
+		if (n != o) {
+			heightModel.value = `${n}px`
+			emit('heightchange', n)
+		}
+	})
+	
+	// 计算属性
+	
+	const itemSpacingHalf = computed(():string=>{
+		return snu.addPx(snu.getPx(props.itemSpacing) / 2)
+	})
+	
+	const hasPages = computed(():boolean=>{
+		let slots = useSlots()
+		let res = false
+		// #ifdef WEB
+		res = slots.hasOwnProperty('1') || slots.hasOwnProperty('2') || slots.hasOwnProperty('3') || slots.hasOwnProperty('4') || slots.hasOwnProperty('5') || slots.hasOwnProperty('6') || slots.hasOwnProperty('7') || slots.hasOwnProperty('8') || slots.hasOwnProperty('9') || slots.hasOwnProperty('10')
+		// #endif
+		// #ifndef WEB
+		res = slots.size > 0
+		// #endif
+		return res
+	})
+	
+	const borderRadiusC = computed(():string=>{
+		return useFormatProp('radius', props.borderRadius, '0px')
+	})
+	
+	const itemBorderRadiusC = computed(():string=>{
+		return useFormatProp('radius', props.itemBorderRadius, snu.addPx(snu.getInnerRadius(barWidth.value, snu.getPx(borderRadiusC.value), itemWidth.value)))
+	})
+	
+	const bgColorC = computed(():string=>{
+		return useFormatProp('color', props.bgColor, colors.value.front)
+	})
+	
+	const textSizeC = computed(():string=>{
+		return useFormatProp('font', props.textSize, $snui.configs.font.size(0))
+	})
+	
+	const iconSizeC = computed(():string=>{
+		return useFormatProp('font', props.iconSize, $snui.configs.font.size(4))
+	})
+	
+	const textColorC = computed(():string=>{
+		return useFormatProp('color', props.textColor, colors.value.text)
+	})
+	
+	const activeTextColorC = computed(():string=>{
+		return useFormatProp('color', props.activeTextColor, colors.value.primary)
+	})
+	
+	const iconColorC = computed(():string=>{
+		return useFormatProp('color', props.iconColor, colors.value.text)
+	})
+	
+	const activeIconColorC = computed(():string=>{
+		return useFormatProp('color', props.activeIconColor, colors.value.primary)
+	})
+	
+	const itemBgColorC = computed(():string=>{
+		return useFormatProp('color', props.itemBgColor, colors.value.transparent)
+	})
+	
+	const itemActiveBgColorC = computed(():string=>{
+		return useFormatProp('color', props.itemActiveBgColor, colors.value.transparent)
+	})
+	
+	const tabbarWrapStylesC = computed(():Map<string,any>=>{
+		let styles = new Map<string,any>()
+		styles.set('position', props.fixed ? 'fixed' : 'flex')
+		styles.set('background', colors.value.transparent)
+		styles.set('padding-bottom', snu.addPx(safeAreaBottom.value))
+		return styles
+	})
+	
+	const tabbarStylesC = computed(():Map<string,any>=>{
+		let styles = new Map<string,any>()
+		styles.set('flex-direction', 'row')
+		styles.set('margin', props.margin)
+		styles.set('margin-top', '0px')
+		styles.set('padding', props.padding)
+		styles.set('border', props.border)
+		styles.set('background', bgColorC.value)
+		styles.set('border-radius', borderRadiusC.value)
+		styles.set('transition-duration', $snui.configs.aniTime.normal)
+		return styles
+	})
+	
+	const iconStylesC = computed(():Map<string,any>=>{
+		let styles = new Map<string,any>()
+		styles.set('transition-duration', '0ms !important')
+		return styles
+	})
+	
+	const containStylesC = computed(():Map<string,any>=>{
+		let styles = new Map<string,any>()
+		styles.set('position', 'absolute')
+		styles.set('top', '0')
+		styles.set('left', '0')
+		styles.set('right', '0')
+		styles.set('bottom', '0')
+		return styles
+	})
+	
+	const itemStylesC = computed(():Map<string,any>=>{
+		let styles = new Map<string,any>()
+		styles.set('padding', props.itemPadding)
+		styles.set('border-radius', itemBorderRadiusC.value)
+		return styles
+	})
+	
+	const layoutAttr = computed(():Map<string,any>=>{
+		let attr = new Map<string,any>()
+		attr.set('margin', props.margin)
+		attr.set('padding', props.padding)
+		attr.set('itemPadding', props.itemPadding)
+		attr.set('textSize', textSizeC.value)
+		attr.set('iconSize', iconSizeC.value)
+		return attr
+	})
+	
+	// 方法
+	function setVIf(index: number){
+		switch (index){
+			case 1:
+				page1If.value = true
+				break
+			case 2:
+				page2If.value = true
+				break
+			case 3:
+				page3If.value = true
+				break
+			case 4:
+				page4If.value = true
+				break
+			case 5:
+				page5If.value = true
+				break
+			case 6:
+				page6If.value = true
+				break
+			case 7:
+				page7If.value = true
+				break
+			case 8:
+				page8If.value = true
+				break
+			case 9:
+				page9If.value = true
+				break
+			case 10:
+				page10If.value = true
+				break
+		}
+	}
+	
+	function getBarWrapHeight(){
+		nextTick(()=>{
+			uni.createSelectorQuery().in(instance.proxy!).select('.sn-tabbar-bar-wrap').boundingClientRect().exec((res)=>{
+				if (res.length > 0) {
+					let node = res[0] as NodeInfo
+					barWrapHeight.value = node?.height ?? 0
+					
+				}
+			})
+		})
+	}
+	
+	function changeToIndex(index: number){
+		let rIndex = index - 1
+		if (rIndex < 0 || rIndex >= props.data.length) return
+		let tab = props.data[rIndex] as SnTabbarItem
+		if (tab.interceptor != null){
+			let page = tab.interceptor?.() ?? true
+			if (!page){
+				return
+			}
+		}
+		curShow.value = index
+		setVIf(index)
+		emit('change', index)
+	}
+	
+	function clickTab(index: number) {
+		if (props.disabled) return
+		changeToIndex(index+1)
+	}
+	
+	function getNodeInfo(){
+		if (barEle.value == null || itemEles.value == null || (itemEles.value?.length ?? 0) == 0) return
+		let barNode = barEle.value!.$el!.getBoundingClientRect()!
+		let itemNode = itemEles.value![0]!.getBoundingClientRect()!
+		barWidth.value = Math.min(barNode.width ?? 0, barNode.height ?? 0)
+		itemWidth.value = Math.min(itemNode.width ?? 0, itemNode.height ?? 0);
+	}
+	
+	defineExpose({
+		changeToIndex
+	})
+	
+	onBeforeMount(()=>{
+		let firstIndex = Math.min(Math.max(props.index, 1), 5)
+		changeToIndex(firstIndex)
+		const windowInfo = uni.getWindowInfo()
+		safeAreaBottom.value = windowInfo.safeAreaInsets.bottom ?? 0
+	})
+	
+	watch(layoutAttr, ()=>{
+		getBarWrapHeight()
+	})
+	
+	onMounted(()=>{
+		nextTick(()=>{
+			getNodeInfo()
+			getBarWrapHeight()
+		})
+		useResize(barWrapEle.value, ()=>{
+			getNodeInfo()
+			getBarWrapHeight()
+		})
+	})
+</script>
+
+<style lang="scss">
+	.sn-tabbar {
+		&-page {
+			top: 0;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			position: absolute;
+		}
+		
+		&-bar {
+			&-wrap {
+				bottom: 0;
+				left: 0;
+				right: 0;
+			}
+			
+			&-item {
+				flex: 1;
+				align-items: center;
+				justify-content: center;
+				overflow: visible;
+			}
+		}
+	}
+</style>

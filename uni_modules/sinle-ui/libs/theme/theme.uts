@@ -1,0 +1,146 @@
+import { SnColorBase } from '../types/index.uts'
+
+export const colorsLight = ref({
+	transparent: "rgba(255,255,255,0)",
+	page: "#f9f9f9",
+	front: "#fff",
+	dark: "#000",
+	disabled: "#eeeef1",
+	disabledText: "#cccccc",
+	disabledDark: "#e3e3e8",
+	disabledDarkText: "#bdbdbd",
+	line: "#f1f1f2",
+	lineDark: "#e7e7e9",
+	lineText: "#cacacb",
+	title: "#191919",
+	text: "#2b2b2b",
+	textLight: "#999999",
+	info: "#f7f7f8",
+	infoActive: "#efeff1",
+	infoText: "#000",
+	infoLight: "#fafafa",
+	infoLightActive: "#f0f0f1",
+	infoLightText: "#f7f7f8",
+	infoDark: "#d6d6db",
+	infoDarkActive: "#e9e9ec",
+	infoDarkText: "#000",
+	primary: "#4d82ff",
+	primaryActive: "#73a2ff",
+	primaryText: "#fff",
+	primaryLight: "#e4effd",
+	primaryLightActive: "#dde8f5",
+	primaryLightText: "#4d82ff",
+	primaryDark: "#3662d9",
+	primaryDarkActive: "#4d82ff",
+	primaryDarkText: "#fff",
+	success: "#39c478",
+	successActive: "#5cd18d",
+	successText: "#fff",
+	successLight: "#c6f1d5",
+	successLightActive: "#c0eacf",
+	successLightText: "#39c478",
+	successDark: "#269e60",
+	successDarkActive: "#39c478",
+	successDarkText: "#fff",
+	error: "#fc5454",
+	errorActive: "#ff7f7a",
+	errorText: "#fff",
+	errorLight: "#ffdcd8",
+	errorLightActive: "#f7d5d2",
+	errorLightText: "#fc5454",
+	errorDark: "#d63c41",
+	errorDarkActive: "#fc5454",
+	errorDarkText: "#fff",
+	warning: "#f6b142",
+	warningActive: "#ffcb6b",
+	warningText: "#000",
+	warningLight: "#fff1cd",
+	warningLightActive: "#f7eac7",
+	warningLightText: "#f6b142",
+	warningDark: "#cf8b2d",
+	warningDarkActive: "#f6b142",
+	warningDarkText: "#000",
+	toast: "#4c4c4c"
+} as SnColorBase)
+
+export const colorsDark = ref({
+	transparent: "rgba(0,0,0,0)",
+	page: "#000",
+	front: "#181a1b",
+	dark: "#fff",
+	disabled: "#161617",
+	disabledText: "#313135",
+	disabledDark: "#1f1f23",
+	disabledDarkText: "#333338",
+	line: "#333333",
+	lineDark: "#262626",
+	lineText: "#5c5d61",
+	title: "#fff",
+	text: "#f1f1f1",
+	textLight: "#d9d9d9",
+	info: "#28292a",
+	infoActive: "#323334",
+	infoText: "#fff",
+	infoLight: "#393b3c",
+	infoLightActive: "#464749",
+	infoLightText: "#fff",
+	infoDark: "#141415",
+	infoDarkActive: "#1e1f1f",
+	infoDarkText: "#fff",
+	primary: "#4d82ff",
+	primaryActive: "#73a2ff",
+	primaryText: "#fff",
+	primaryLight: "#09293f",
+	primaryLightActive: "#0e4162",
+	primaryLightText: "#4d82ff",
+	primaryDark: "#3662d9",
+	primaryDarkActive: "#4d82ff",
+	primaryDarkText: "#fff",
+	success: "#39c478",
+	successActive: "#5cd18d",
+	successText: "#fff",
+	successLight: "#174828",
+	successLightActive: "#21693a",
+	successLightText: "#39c478",
+	successDark: "#269e60",
+	successDarkActive: "#39c478",
+	successDarkText: "#fff",
+	error: "#fc5454",
+	errorActive: "#ff7f7a",
+	errorText: "#fff",
+	errorLight: "#4e2723",
+	errorLightActive: "#6a352f",
+	errorLightText: "#fc5454",
+	errorDark: "#d63c41",
+	errorDarkActive: "#fc5454",
+	errorDarkText: "#fff",
+	warning: "#f6b142",
+	warningActive: "#ffcb6b",
+	warningText: "#000",
+	warningLight: "#776126",
+	warningLightActive: "#977c30",
+	warningLightText: "#f6b142",
+	warningDark: "#cf8b2d",
+	warningDarkActive: "#f6b142",
+	warningDarkText: "#000",
+	toast: "#4c4c4c"
+} as SnColorBase)
+
+type themeType = 'light' | 'dark'
+
+export function _setColor(theme : themeType = 'light', key : string, value : string) {
+	if (theme == 'light') {
+		colorsLight.value[key] = value
+	}
+	if (theme == 'dark') {
+		colorsDark.value[key] = value
+	}
+}
+
+export function _setColorSet(theme: themeType = 'light',colors: SnColorBase) {
+	let colorsMap = (JSON.parse(JSON.stringify(colors)) as UTSJSONObject).toMap() as Map<string, string>
+	colorsMap.forEach((v: string, k: string)=>{
+		_setColor(theme, k, v)
+	})
+}
+

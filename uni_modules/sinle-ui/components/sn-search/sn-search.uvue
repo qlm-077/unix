@@ -1,0 +1,382 @@
+<template>
+	<view class="sn-search-contain"
+	:style="[customStyle]">
+		<!-- #ifdef WEB -->
+		<sn-input v-model="model"
+		confirmType="search"
+		:type="type"
+		:padding="padding"
+		:inputmode="inputmode"
+		:placeholder="placeholder"
+		:bgColor="bgColorC"
+		:textColor="textColor"
+		:clearable="clearable"
+		:disabled="disabled"
+		:focus="focus"
+		:loading="loading"
+		:readonly="readonly"
+		:textSize="textSize"
+		:activeBgColor="activeBgColorC"
+		:activeBorderColor="activeBorderColor"
+		:showBorder="showBorder"
+		:showActiveBorder="showActiveBorder"
+		:borderRadius="borderRadius"
+		:borderColor="borderColor"
+		:borderWidth="borderWidth"
+		:prefixIcon="prefixIcon"
+		:suffixIcon="suffixIcon"
+		:cursorColor="cursorColorC"
+		@suffix-click="suffixClick"
+		@focus="onFocus"
+		@blur="onBlur"
+		@confirm="onConfirm"
+		:style="[inputStylesC, customInputStyle]">
+			<template #prefix>
+				<slot name="prefix"></slot>
+			</template>
+			<template #suffix>
+				<slot name="suffix"></slot>
+			</template>
+		</sn-input>
+		<!-- #endif -->
+		<!-- #ifdef APP -->
+		<sn-input v-model="(model as string)"
+		confirmType="search"
+		:type="type"
+		:padding="padding"
+		:inputmode="inputmode"
+		:placeholder="placeholder"
+		:bgColor="bgColorC"
+		:textColor="textColor"
+		:clearable="clearable"
+		:disabled="disabled"
+		:loading="loading"
+		:focus="focus"
+		:readonly="readonly"
+		:textSize="textSize"
+		:activeBgColor="activeBgColorC"
+		:activeBorderColor="activeBorderColor"
+		:showBorder="showBorder"
+		:showActiveBorder="showActiveBorder"
+		:borderRadius="borderRadius"
+		:borderColor="borderColor"
+		:borderWidth="borderWidth"
+		:prefixIcon="prefixIcon"
+		:suffixIcon="suffixIcon"
+		:cursorColor="cursorColorC"
+		@suffix-click="suffixClick"
+		@focus="onFocus"
+		@blur="onBlur"
+		@confirm="onConfirm"
+		:style="[inputStylesC, customInputStyle]">
+			<template #prefix>
+				<slot name="prefix"></slot>
+			</template>
+			<template #suffix>
+				<slot name="suffix"></slot>
+			</template>
+		</sn-input>
+		<!-- #endif -->
+		<sn-text v-if="showCancel"
+		align="center"
+		ellipsis="clip"
+		:lines="1"
+		:text="cancelText"
+		:size="cancelTextSizeC"
+		:color="cancelTextColorC"
+		@click="cancelClick"
+		:style="[cancelStylesC, customCancelStyle]"></sn-text>
+	</view>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-search
+	 * @tutorial https://sinleui.pages.dev/components/sn-search
+	 * @description  Search 搜索框
+	 *
+	 *- Search 是基于 Input 的二次封装，比 Input 更为简洁，更方便实现一个搜索框
+	 *
+	 *- 支持输入模式、背景颜色、边框颜色等属性。
+	 * @property {String} vModel    String | 输入框的值
+	 * @property {String} placeholder    String | 输入框占位文本
+	 * @property {String} type=[text|number|digit|tel]    String | 输入框类型。同[`input`](https://doc.dcloud.net.cn/uni-app-x/component/input.html#%E5%B1%9E%E6%80%A7)。
+	 * @value text 文本输入
+	 * @value number 数字输入
+	 * @value digit 整数输入
+	 * @value tel 电话输入
+	 * @property {String} inputmode=[none|text|decimal|numeric|tel|search|email|url]    String | 输入模式。同[`input`](https://doc.dcloud.net.cn/uni-app-x/component/input.html#%E5%B1%9E%E6%80%A7)。
+	 * @value none 无虚拟键盘
+	 * @value text 文本键盘
+	 * @value decimal 小数点键盘
+	 * @value numeric 数字键盘
+	 * @value tel 电话键盘
+	 * @value search 搜索键盘
+	 * @value email 电子邮件键盘
+	 * @value url URL键盘
+	 * @property {String} padding    String | 输入框内边距
+	 * @property {String} textColor    String | 输入文本颜色
+	 * @property {String} textSize    String | 输入文本大小
+	 * @property {Boolean} loading    Boolean | 是否显示加载状态
+	 * @property {Boolean} disabled    Boolean | 是否禁用输入框
+	 * @property {Boolean} readonly    Boolean | 是否只读
+	 * @property {Boolean} clearable    Boolean | 是否显示清除按钮
+	 * @property {Boolean} focus    Boolean | 是否获得焦点
+	 * @property {Boolean} showBorder    Boolean | 是否显示边框
+	 * @property {Boolean} showActiveBorder    Boolean | 是否在输入时显示活动边框
+	 * @property {Boolean} showCancel    Boolean | 是否显示取消按钮
+	 * @property {String} cancelText    String | 取消按钮文本
+	 * @property {String} cancelTextSize    String | 取消按钮文本大小
+	 * @property {String} cancelTextColor    String | 取消按钮文本颜色
+	 * @property {String} bgColor    String | 输入框背景颜色
+	 * @property {String} activeBgColor    String | 活动状态下的背景颜色
+	 * @property {String} activeBorderColor    String | 活动状态下的边框颜色
+	 * @property {String} borderRadius    String | 输入框圆角大小
+	 * @property {String} borderColor    String | 输入框边框颜色
+	 * @property {String} borderWidth    String | 输入框边框宽度
+	 * @property {String} activeBorder    String | 活动状态下的边框样式
+	 * @property {String} cursorColor    String | 光标颜色
+	 * @property {String} prefixIcon    String | 前置图标名称
+	 * @property {String} suffixIcon    String | 后置图标名称
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义搜索框样式
+	 * @property {UTSJSONObject} customInputStyle    UTSJSONObject | 自定义内部输入框样式
+	 * @event {Function} focus   (event:UniInputFocusEven)=>void | 输入框聚焦时触发，`event.detail={value,height}`，height为键盘高度
+	 * @event {Function} blur   (event:UniInputBlurEvent)=>void | 输入框失去焦点时触发，`event.detail={value:value}`
+	 * @event {Function} confirm   (event:UniInputConfirmEvent)=>void | 点击完成按钮时触发，`event.detail={value:value}`
+	 * @event {Function} cancel   ()=>void | 点击取消按钮时触发
+	 * @event {Function} change   (data:string)=>void | 数据变化时触发
+	 * @event {Function} suffixClick   ()=>void | 点击后置图标时触发
+	 */
+
+	// 依赖
+	import { $snui, useFormatProp } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-search'
+	})
+	
+	// SinleUI 配置
+	const snu = $snui.utils;
+	const colors = $snui.colors
+	
+	// 事件注册
+	const emit = defineEmits(['change', 'suffix-click', 'focus', 'blur', 'confirm', 'cancel'])
+	
+	const model = defineModel({
+		type: String,
+		default: '',
+	})
+	
+	watch(model, (value : number) => {
+		emit('change', value)
+	})
+	
+	// 组件属性
+	const props = defineProps({
+		placeholder: {
+			type: String,
+			default: '请输入搜索内容',
+		},
+		type: {
+			type: String,
+			default: 'text'
+		},
+		inputmode: {
+			type: String,
+			default: 'search'
+		},
+		padding: {
+			type: String,
+			default: '4px 10px'
+		},
+		textColor: {
+			type: String,
+			default: '',
+		},
+		textSize: {
+			type: String,
+			default: '',
+		},
+		focus: {
+			type: Boolean,
+			default: false
+		},
+		loading: {
+			type: Boolean,
+			default: false
+		},
+		disabled: {
+			type: Boolean,
+			default: false
+		},
+		readonly: {
+			type: Boolean,
+			default: false
+		},
+		clearable: {
+			type: Boolean,
+			default: false
+		},
+		showBorder: {
+			type: Boolean,
+			default: true
+		},
+		showActiveBorder: {
+			type: Boolean,
+			default: true
+		},
+		showCancel: {
+			type: Boolean,
+			default: true,
+		},
+		fixCancel: {
+			type: Boolean,
+			default: false,
+		},
+		cancelText: {
+			type: String,
+			default: '取消',
+		},
+		cancelTextSize: {
+			type: String,
+			default: '',
+		},
+		cancelTextColor: {
+			type: String,
+			default: '',
+		},
+		bgColor: {
+			type: String,
+			default: '',
+		},
+		activeBgColor: {
+			type: String,
+			default: '',
+		},
+		activeBorderColor: {
+			type: String,
+			default: 'transparent'
+		},
+		borderRadius: {
+			type: String,
+			default: '',
+		},
+		borderColor: {
+			type: String,
+			default: 'transparent',
+		},
+		borderWidth: {
+			type: String,
+			default: '2px'
+		},
+		activeBorder: {
+			type: String,
+			default: 'transparent',
+		},
+		cursorColor: {
+			type: String,
+			default: ''
+		},
+		prefixIcon: {
+			type: String,
+			default: 'search-2-line',
+		},
+		suffixIcon: {
+			type: String,
+			default: '',
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject as UTSJSONObject
+		},
+		customInputStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject as UTSJSONObject
+		},
+		customCancelStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject as UTSJSONObject
+		}
+	})
+	
+	// 基本变量
+	const focusC = ref(false)
+	
+	// 计算属性
+	const bgColorC = computed(() : string => {
+		return useFormatProp('color', props.bgColor, colors.value.info)
+	})
+	
+	const cursorColorC = computed(() : string => {
+		return useFormatProp('color', props.cursorColor, colors.value.primary)
+	})
+	
+	const activeBgColorC = computed(() : string => {
+		return useFormatProp('color', props.activeBgColor, colors.value.info)
+	})
+	
+	const cancelTextSizeC = computed(() : string => {
+		return useFormatProp('font', props.cancelTextSize, $snui.configs.font.size(2))
+	})
+	
+	const cancelTextColorC = computed(() : string => {
+		return useFormatProp('color', props.cancelTextColor, colors.value.primaryDark) 
+	})
+	
+	const cancelTextWidthC = computed(() : number => {
+		return snu.getPx(cancelTextSizeC.value) * props.cancelText.length * 1.5
+	})
+	
+	const inputStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('flex', '1')
+		styles.set('transition-duration', $snui.configs.aniTime.normal)
+		return styles
+	})
+	
+	const cancelStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('transition-property', 'width, color, size, transform')
+		if (focusC.value || props.fixCancel){
+			styles.set('width', snu.addPx(cancelTextWidthC.value))
+			styles.set('transform', 'scale(1)')
+		} else {
+			styles.set('transform', 'scale(0.001)')
+			styles.set('width', '0px')
+		}
+		return styles
+	})
+	
+	// 方法
+	function suffixClick() {
+		emit('suffix-click')
+	}
+	
+	function cancelClick() {
+		model.value = ''
+		emit('cancel')
+	}
+	
+	function onFocus(e : UniInputFocusEvent) {
+		focusC.value = true
+		emit('focus', e)
+	}
+	
+	function onBlur(e: UniInputBlurEvent) {
+		focusC.value = false
+		emit('blur', e)
+	}
+	
+	function onConfirm(e : UniInputConfirmEvent) {
+		emit('confirm', e)
+	}
+</script>
+
+<style lang="scss">
+	.sn-search {
+		&-contain {
+			flex-direction: row;
+			align-items: center;
+		}
+	}
+</style>

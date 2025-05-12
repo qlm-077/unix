@@ -1,0 +1,233 @@
+<template>
+	<view class="sn-empty" 
+	:style="[customStyle]">
+		<slot name="image">
+			<sn-e-svg 
+			:src="imgSrc" 
+			:style="svgStylesC"></sn-e-svg>
+		</slot>
+		<slot name="text">
+			<sn-text :text="text" 
+			:size="textSizeC"
+			:color="textColorC"
+			:customStyle="customTextStyle"
+			:style="textStylesC"></sn-text>
+		</slot>
+		<slot name="action"></slot>
+	</view>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-empty
+	 * @tutorial https://sinleui.pages.dev/components/sn-empty
+	 * @description Empty 缺省页
+	 * 
+	 * - 基于 [邓琪昌](https://ext.dcloud.net.cn/publisher?id=68708) 大佬的开源组件 [`flower-empty`](https://ext.dcloud.net.cn/plugin?name=flower-empty) 实现的缺省页组件。使用方法有改动。
+	 * 
+	 * - 页面处于异常、无内容、加载等时状态时给予用户友好提示
+	 * @property {String} mode=[schedule|card|favor|coupon|data|location|fail|folder|page1|page2|loading|message|star|permission|record|search|server|shopping|network|slow]    String | 缺省页模式
+	 * @value schedule    日程
+	 * @value card    卡包
+	 * @value favor    收藏
+	 * @value coupon    优惠券
+	 * @value data    数据
+	 * @value location    定位
+	 * @value fail    载入失败
+	 * @value folder    文件夹
+	 * @value page1    页面丢失1
+	 * @value page2    页面丢失2
+	 * @value loading    加载中
+	 * @value message    消息
+	 * @value star    喜爱
+	 * @value permission    权限
+	 * @value record    记录
+	 * @value search    搜索
+	 * @value server    服务器
+	 * @value shopping    购物车
+	 * @value network    无网络
+	 * @value slow    网速缓慢
+	 * @property {String} text    String | 缺省页提示文本
+	 * @property {String} textSize    String | 缺省页提示文本字体大小
+	 * @property {String} textColor    String | 缺省页提示文本颜色
+	 * @property {String} themeColor    String | 缺省插图主题色
+	 * @property {String} hairColor    String | 缺省插图人物头发颜色
+	 * @property {String} clothesColor    String | 缺省插图人物上衣颜色
+	 * @property {String} trousersColor    String | 缺省插图人物裤子颜色
+	 * @property {String} shoesColor    String | 缺省插图人物鞋子颜色
+	 * @property {String} itemColor    String | 缺省插图物品颜色
+	 * @property {String} skinColor    String | 缺省插图人物皮肤颜色
+	 * @property {String} elementColor    String | 缺省插图元素颜色
+	 * @property {String} imageSize    String | 缺省插图尺寸
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义缺省页样式
+	 * @property {UTSJSONObject} customTextStyle    UTSJSONObject | 自定义缺省页提示文本样式
+	 */
+	
+	// 依赖
+	import { $snui, SnEmptyColorConfig, useFormatProp } from '../../index.uts'
+	import { getImage, colorConfig } from './index.uts'
+	
+	defineOptions({
+		name: 'sn-empty'
+	})
+	
+	// SinleUI 配置
+	const colors = $snui.colors
+
+	// 组件属性
+	const props = defineProps({
+		mode: {
+			type: String,
+			default: 'data'
+		},
+		text: {
+			type: String,
+			default: ''
+		},
+		textSize: {
+			type: String,
+			default: ''
+		},
+		textColor: {
+			type: String,
+			default: ''
+		},
+		themeColor: {
+			type: String,
+			default: ''
+		},
+		hairColor: {
+			type: String,
+			default: '#483029'
+		},
+		clothesColor: {
+			type: String,
+			default: '#EDA20C'
+		},
+		trousersColor: {
+			type: String,
+			default: ''
+		},
+		shoesColor: {
+			type: String,
+			default: ''
+		},
+		itemColor: {
+			type: String,
+			default: '#483029'
+		},
+		skinColor: {
+			type: String,
+			default: '#ffcda5'
+		},
+		elementColor: {
+			type: String,
+			default: '#ffffff'
+		},
+		imageSize: {
+			type: String,
+			default: '200px'
+		},
+		customTextStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+	})
+	
+	
+	// 计算属性
+	const imgSrc = computed(() : string => {
+		return getImage(props.mode) as string
+	})
+	
+	const textSizeC = computed((): string => {
+		return useFormatProp('font', props.textSize,$snui.configs.font.size(3))
+	})
+	
+	const textColorC = computed((): string => {
+		return useFormatProp('color', props.textColor,colors.value.lineText)
+	})
+	
+	const themeColorC = computed((): string => {
+		return useFormatProp('color', props.themeColor,colors.value.primary)
+	})
+	
+	const hairColorC = computed((): string => {
+		return useFormatProp('color', props.hairColor, '#483029')
+	})
+	
+	const clothesColorC = computed((): string => {
+		return useFormatProp('color', props.clothesColor, '#EDA20C')
+	})
+		
+	const trousersColorC = computed((): string => {
+		return useFormatProp('color', props.trousersColor, themeColorC.value)
+	})
+	
+	const shoesColorC = computed((): string => {
+		return useFormatProp('color', props.shoesColor, themeColorC.value)
+	})
+	
+	const itemColorC = computed((): string => {
+		return useFormatProp('color', props.itemColor, '#483029')
+	})
+	
+	const skinColorC = computed((): string => {
+		return useFormatProp('color', props.skinColor, '#ffcda5')
+	})
+	
+	const elementColorC = computed((): string => {
+		return useFormatProp('color', props.elementColor, '#ffffff')
+	})
+	
+	
+	const colorConfigC = computed((): SnEmptyColorConfig => {
+	  let obj = {
+		  themeColor: themeColorC.value,
+		  hairColor: hairColorC.value,
+		  clothesColor: clothesColorC.value,
+		  trousersColor: trousersColorC.value,
+		  shoesColor: shoesColorC.value,
+		  itemColor: itemColorC.value,
+		  skinColor: skinColorC.value,
+		  elementColor: elementColorC.value
+	  } as SnEmptyColorConfig
+	  return obj
+	})
+	
+	const svgStylesC = computed(():Map<string,any>=>{
+		let styles = new Map<string,any>()
+		styles.set('width', props.imageSize)
+		styles.set('height', props.imageSize)
+		return styles
+	})
+	
+	const textStylesC = computed(():Map<string,any>=>{
+		let styles = new Map<string,any>()
+		styles.set('margin', '15px 0 5px 0')
+		styles.set('fontFamily', '')
+		return styles
+	})
+	
+	function init(){
+		colorConfig.value = colorConfigC.value
+	}
+	
+	watch(colorConfigC, ()=>{
+		init()
+	}, {
+		immediate: true,
+		deep: true
+	})
+</script>
+
+<style lang="scss">
+	.sn-empty {
+		align-items: center;
+		justify-content: center;
+	}
+</style>

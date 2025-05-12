@@ -1,0 +1,49 @@
+export function useDrawLoading(ctx : DrawableContext, width : number, iconColor : ComputedRefImpl<string>, timer : Ref<number>) {
+	let startAngle = 0;
+	let endAngle = 0;
+	let startSpeed = 0;
+	let endSpeed = 0;
+	let rotate = 0;
+
+	const ARC_LENGTH = 359.99
+	const PI = Math.PI / 180
+	const SPEED = 0.02
+	const ROTATE_INTERVAL = 0.09
+	const center = width / 2
+	const lineWidth = width / 10;
+
+	function easeInOutCubic(t : number) : number {
+		return t < 0.5 ? 4 * t * t * t : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1;
+	}
+
+	function draw() {
+		ctx.reset();
+		ctx.lineCap = 'round'
+		ctx.beginPath();
+		ctx.arc(
+			center,
+			center,
+			center - lineWidth,
+			startAngle * PI + rotate,
+			endAngle * PI + rotate);
+		ctx.lineWidth = lineWidth;
+		ctx.strokeStyle = iconColor.value;
+		ctx.stroke();
+
+		if (endAngle < ARC_LENGTH && startAngle == 0) {
+			endSpeed += SPEED
+			endAngle = Math.min(ARC_LENGTH, easeInOutCubic(endSpeed) * ARC_LENGTH)
+		} else if (endAngle == ARC_LENGTH && startAngle < ARC_LENGTH) {
+			startSpeed += SPEED
+			startAngle = Math.min(ARC_LENGTH, easeInOutCubic(startSpeed) * ARC_LENGTH);
+		} else if (endAngle >= ARC_LENGTH && startAngle >= ARC_LENGTH) {
+			endSpeed = 0
+			startSpeed = 0
+			startAngle = 0;
+			endAngle = 0;
+		}
+		rotate += ROTATE_INTERVAL;
+		ctx.update()
+	}
+	timer.value = setInterval(() => draw(), 24)
+}

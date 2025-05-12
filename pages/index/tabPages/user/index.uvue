@@ -1,0 +1,53 @@
+<template>
+	<view class="flex flex-col flex-1">
+		<sn-gap mode="statusbar" borderRadius="0"></sn-gap>
+		<scroll-view :refresher-enabled="true" :refresher-triggered="refresherTriggered" refresher-default-style="none"
+			type="custom" class="flex-1" @refresherrefresh="refresh" :show-scrollbar="false">
+			<view slot="refresher">
+				<sn-refresher :status="refreshStatus"></sn-refresher>
+			</view>
+			<view class="flex-1 ">
+				<view class="h-100px flex-col p-x-20px">
+
+					<view class="flex-1 flex flex-row items-center">
+						<sn-avatar v-if="info == null" mode="icon" icon="empathize-line" iconSize="40px" shape="circle"
+							size="60px" class="m-r-10px" bgColor="#ccc"></sn-avatar>
+						<sn-text text="点击登录" size="20px" @click="toLogin"></sn-text>
+					</view>
+				</view>
+				<sn-gap height="80px"></sn-gap>
+			</view>
+		</scroll-view>
+	</view>
+</template>
+
+<script setup>
+	import { $snui } from '@/uni_modules/sinle-ui';
+	import { info } from '@/store';
+	const UserInfo = info
+	const refreshStatus = ref('refresh')
+	const refresherTriggered = computed(() => {
+		return refreshStatus.value == 'refresh' ? false : true
+	})
+	const refresh = () => {
+		refreshStatus.value = 'refreshing'
+		setTimeout(() => {
+			refreshStatus.value = 'refresh'
+		}, 500)
+	}
+
+	const toLogin = () => {
+		uni.navigateTo({
+			url: '/pages/login/login'
+		})
+	}
+	const show = () => {
+		// console.log('UserShow');
+	}
+	defineExpose({
+		show
+	})
+</script>
+
+<style lang="scss">
+</style>

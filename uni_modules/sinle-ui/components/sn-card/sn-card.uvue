@@ -1,0 +1,259 @@
+<template>
+	<view class="sn-card" :style="[cardStylesC,customStyle]">
+		<view v-if="title.trim()!=''"
+		class="sn-card-header"
+		:style="[customHeaderStyle]">
+			<view class="sn-card-header-left">
+				<slot name="avatar">
+					<sn-avatar v-if="avatarConfig.src != null"
+					class="sn-card-header-avatar"
+					:src="avatarConfig.src ?? ''"
+					:mode="avatarConfig.mode ?? ''"
+					:imageMode="avatarConfig.imageMode ?? ''"
+					:bgColor="avatarConfig.bgColor ?? ''"
+					:borderRadius="avatarConfig.borderRadius ?? ''"
+					:icon="avatarConfig.icon ?? ''"
+					:size="avatarConfig.size ?? '40px'"
+					:iconSize="avatarConfig.iconSize ?? '25px'"
+					:iconColor="avatarConfig.iconColor ?? ''"
+					:enablePreview="avatarConfig.enablePreview ?? false"
+					:shape="avatarConfig.shape ?? ''"
+					:text="avatarConfig.text ?? ''"
+					:textSize="avatarConfig.textSize ?? '25px'"
+					:textColor="avatarConfig.textColor ?? ''">
+					</sn-avatar>
+				</slot>
+				<view v-if="section"
+				class="sn-card-header-line" 
+				:style="lineStylesC"></view>
+				<slot name="title">
+					<sn-text :font="titleFont"
+					:text="title"
+					:lines="titleLines"
+					:color="titleColorC"
+					:size="titleSizeC"
+					:style="[titleStylesC]"
+					:customStyle="customTitleStyle"></sn-text>
+				</slot>
+			</view>
+			<slot name="header-extra"></slot>
+		</view>
+		<slot></slot>
+		<view class="sn-card-footer"
+		v-if="$slots['footer'] != null"
+		:style="[customFooterStyle]">
+			<slot name="footer"></slot>
+		</view>
+		<view class="sn-card-action"
+		v-if="$slots['action'] != null"
+		:style="[customActionStyle]">
+			<slot name="action"></slot>
+		</view>
+	</view>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-card
+	 * @tutorial https://sinleui.pages.dev/components/sn-card
+	 * @description  Card  卡片
+	 *
+	 *- 用以展示数据内容。
+	 *
+	 *- 多个属性，支持完全自定义样式。
+	 * @property {String} title    String | 卡片标题
+	 * @property {String} titleColor    String | 卡片标题颜色
+	 * @property {String} titleFont    String | 卡片标题字体
+	 * @property {String} titleSize    String | 卡片标题字体大小
+	 * @property {Number} titleLines    Number | 卡片标题最大显示行数，默认为`-1`（不限制）
+	 * @property {[SnAvatarParams](https://sinleui.pages.dev/api/types/components#snavatarparams)} avatarConfig    [SnAvatarParams](https://sinleui.pages.dev/api/types/components#snavatarparams) | 卡片头像参数配置
+	 * @property {String} bgColor    String | 卡片背景颜色
+	 * @property {String} border    String | 卡片边框样式
+	 * @property {String} boxShadow    String | 卡片阴影
+	 * @property {String} margin    String | 卡片外边距
+	 * @property {String} padding    String | 卡片内边距
+	 * @property {String} borderRadius    String | 卡片圆角大小
+	 * @property {Boolean} section    Boolean | 是否显示章节标符
+	 * @property {String} sectionColor    String | 章节标符颜色
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义卡片样式
+	 * @property {UTSJSONObject} customTitleStyle    UTSJSONObject | 自定义卡片标题样式
+	 * @property {UTSJSONObject} customHeaderStyle    UTSJSONObject | 自定义卡片标题栏样式
+	 * @property {UTSJSONObject} customFooterStyle    UTSJSONObject | 自定义卡片尾部区域样式
+	 * @property {UTSJSONObject} customActionStyle    UTSJSONObject | 自定义卡片操作区域样式
+	 */
+
+	// 依赖
+	import { $snui, SnAvatarParams, useFormatProp } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-card'
+	})
+
+	// SinleUI 配置
+	const colors = $snui.colors
+	
+	const props = defineProps({
+		title: {
+			type: String,
+			default: ''
+		},
+		titleColor: {
+			type: String,
+			default: ''
+		},
+		titleFont: {
+			type: String,
+			default: ''
+		},
+		titleSize: {
+			type: String,
+			default: ''
+		},
+		avatarConfig: {
+			type: Object as PropType<SnAvatarParams>,
+			default: {} as SnAvatarParams
+		},
+		bgColor: {
+			type: String,
+			default: ''
+		},
+		padding: {
+			type: String,
+			default: '15px'
+		},
+		margin: {
+			type: String,
+			default: '10px 0'
+		},
+		boxShadow: {
+			type: String,
+			default: ''
+		},
+		border: {
+			type: String,
+			default: ''
+		},
+		borderRadius: {
+			type: String,
+			default: ''
+		},
+		titleLines: {
+			type: Number,
+			default: -1,
+		},
+		section: {
+			type: Boolean,
+			default: false
+		},
+		sectionColor: {
+			type: String,
+			default: ''
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customHeaderStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customTitleStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customFooterStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customActionStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+	})
+	
+	// 计算属性
+	const titleColorC = computed((): string => {
+	  return useFormatProp('color', props.titleColor, colors.value.title)
+	})
+	
+	const bgColorC = computed((): string => {
+	  return useFormatProp('color', props.bgColor, colors.value.front)
+	})
+	
+	const borderC = computed((): string => {
+		return useFormatProp('other', props.border, `1px solid ${colors.value.line}`)
+	})
+	
+	const sectionColorC = computed((): string => {
+		return useFormatProp('color', props.sectionColor, colors.value.primary)
+	})
+	
+	const titleSizeC = computed((): string => {
+		return useFormatProp('font', props.titleSize, $snui.configs.font.size(4))
+	})
+	
+	const borderRadiusC = computed((): string => {
+		return useFormatProp('radius', props.borderRadius, $snui.configs.radius.normal)
+	})
+	
+	const cardStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('background', bgColorC.value)
+		styles.set('box-shadow', props.boxShadow)
+		styles.set('border', borderC.value)
+		styles.set('border-radius', borderRadiusC.value)
+		styles.set('padding', props.padding)
+		styles.set('margin', props.margin)
+		styles.set('transition-duration',$snui.configs.aniTime.normal)
+		return styles
+	})
+	
+	const lineStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('background', sectionColorC.value)
+		styles.set('border-radius', $snui.configs.radius.normal)
+		styles.set('height', titleSizeC.value)
+		styles.set('transition-duration',$snui.configs.aniTime.normal)
+		return styles
+	})
+	
+	const titleStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('flex', '1')
+		return styles
+	})
+
+</script>
+
+<style lang="scss">
+	.sn-card {
+		&-header {
+			flex-direction: row;
+			align-items: center;
+			justify-content: space-between;
+			margin-bottom: 10px;
+			flex: 1;
+			&-line {
+				width: 4px;
+				margin-right: 8px;
+			}
+			
+			&-left {
+				flex-direction: row;
+				align-items: center;
+				flex: 1;
+			}
+			&-avatar {
+				margin-right: 10px;
+			}
+		}
+		
+		&-footer {
+			margin-top: 10px;
+		}
+		
+		&-action {
+			margin-top: 15px;
+		}
+	}
+</style>

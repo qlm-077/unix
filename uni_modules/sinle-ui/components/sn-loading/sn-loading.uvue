@@ -1,0 +1,268 @@
+<template>
+	<view class="sn-loading" 
+	:class="vertical?'sn-loading-vertical':''"
+	:style="[customStyle]">
+		<view v-if="modeC=='icon'"
+		class="sn-loading-icon-loader"
+		:style="[iconLoaderStylesC, customLoadingStyle]">
+			<sn-icon lineHeight="1"
+			:name="icon"
+			:size="iconSizeC"
+			:color="iconColorC"></sn-icon>
+		</view>
+		<view v-else-if="modeC=='draw'" class="sn-loading-view" 
+		android-layer-type="hardware" 
+		ref="loadingEle" 
+		:style="[loadingViewStylesC, customLoadingStyle]"></view>
+		<slot>
+			<sn-text v-if="$slots['default'] != null || text !==''"
+			class="sn-loading-text" 
+			:text="text" 
+			:size="textSizeC" 
+			:color="textColorC"
+			:style="[customTextStyle]">
+				
+			</sn-text>
+		</slot>
+	</view>
+
+</template>
+
+<script setup>
+	/**
+	 * @name sn-loading
+	 * @tutorial https://sinleui.pages.dev/components/sn-loading
+	 * @description  Loading 加载
+	 *
+	 *- 用于显示加载中的状态。
+	 *
+	 *- 支持两种模式：图标模式和绘制模式（目前绘制模式只适配 App 平台）。
+	 * @property {String} mode=[icon|draw]    String | 加载模式，可选值为`icon`或`draw`
+	 * @value icon 图标模式
+	 * @value draw 绘制模式（DrawApi）
+	 * @property {String} text    String | 加载文本内容
+	 * @property {String} icon    String | 图标名称
+	 * @property {String} iconColor    String | 图标颜色
+	 * @property {String} iconSize    String | 图标大小
+	 * @property {String} textColor    String | 文本颜色
+	 * @property {String} textSize    String | 文本大小
+	 * @property {Boolean} vertical    Boolean | 是否垂直排列
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义样式
+	 * @property {UTSJSONObject} customLoadingStyle    UTSJSONObject | 自定义加载样式
+	 * @property {UTSJSONObject} customTextStyle    UTSJSONObject | 自定义文本样式
+	 */
+
+	// 依赖
+	import { $snui, useFormatProp } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-loading'
+	})
+	
+	// SinleUI 配置
+	const colors = $snui.colors
+	
+	// #ifdef APP
+	import { useDrawLoading } from './index.uts'
+	// #endif
+	
+	// 组件属性
+	const props = defineProps({
+		mode: {
+			type: String,
+			default: 'icon'
+		},
+		text: {
+			type: String,
+			default: ''
+		},
+		icon: {
+			type: String,
+			default: 'loader-4-line'
+		},
+		iconColor: {
+			type: String,
+			default: ''
+		},
+		iconSize: {
+			type: String,
+			default: ''
+		},
+		textColor: {
+			type: String,
+			default: ''
+		},
+		textSize: {
+			type: String,
+			default: ''
+		},
+		vertical: {
+			type: Boolean,
+			default: false
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customLoadingStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customTextStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+	})
+
+	// 基本变量
+	const width = ref(0)
+	const height = ref(0)
+	const loadingEle = ref(null as UniElement | null)
+	const timer = ref(0)
+	const rotateCnt = ref(0)
+	const rotateTimer = ref(0)
+	
+
+	// 组件属性
+	const modeC = computed((): string=>{
+		const modes = ['icon', 'draw']
+		return modes.includes(props.mode) ? props.mode : 'icon'
+	})
+	
+	const iconColorC = computed((): string => {
+		return useFormatProp('color', props.iconColor, colors.value.primary)
+	})
+
+	const textColorC = computed((): string => {
+		return useFormatProp('color', props.textColor, colors.value.primaryDark)
+	})
+	
+	const textSizeC = computed((): string => {
+		return useFormatProp('font', props.textSize, $snui.configs.font.size(3))
+	})
+	
+	const iconSizeC = computed((): string => {
+		return useFormatProp('font', props.iconSize, $snui.configs.font.size(5))
+	})
+	
+	const loadingViewStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('width', iconSizeC.value)
+		styles.set('height', iconSizeC.value)
+		return styles
+	})
+	
+	const iconLoaderStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('padding', '0px')
+		styles.set('width', 'auto !important')
+		styles.set('height', 'auto !important')
+		styles.set('transform', `rotate(${rotateCnt.value * 360}deg)`)
+		styles.set('transition-duration','1200ms')
+		return styles
+	})
+
+
+	// 方法
+	function iconLoaderRotate(initial: number){
+		rotateCnt.value = initial + 1
+	}
+	
+	function stopDrawing() {
+		clearInterval(timer.value)
+		nextTick(() => {
+			// #ifdef APP
+			const ctx = loadingEle.value?.getDrawableContext()
+			ctx?.reset()
+			// #endif
+		})
+	}
+
+	function startDrawing() {
+		stopDrawing()
+		nextTick(() => {
+			// #ifdef APP
+			const el = loadingEle.value as UniElement
+			const ctx = el.getDrawableContext();
+			const rect = el.getBoundingClientRect()
+			width.value = rect.width
+			height.value = rect.height
+			if (ctx == null) return
+			useDrawLoading(ctx, width.value, iconColorC, timer)
+			// #endif
+		})
+	}
+	
+	watch(modeC, (v: string, o: string)=>{
+		if (v == 'draw') {
+			if (v == o) return
+			startDrawing()
+		} else {
+			stopDrawing()
+		}
+	})
+	
+	function run(){
+		if (modeC.value == 'draw'){
+			nextTick(() => {
+				startDrawing()
+			})
+		} else if (modeC.value == 'icon'){
+			nextTick(()=>{
+				setTimeout(()=>{
+					iconLoaderRotate(0)
+					rotateTimer.value = setInterval(()=>{
+						iconLoaderRotate(rotateCnt.value)
+					}, 1200)
+				}, 10)
+			})
+		}
+	}
+
+	// 生命周期
+	onPageShow(() => {
+		run()
+	})
+
+	onMounted(() => {
+		run()
+	})
+
+	onPageHide(() => {
+		clearInterval(rotateTimer.value)
+		if (modeC.value == 'draw'){
+			nextTick(() => {
+				stopDrawing()
+			})
+		}
+	})
+</script>
+
+<style lang="scss">
+	.sn-loading {
+		flex-direction: row;
+		align-items: center;
+		
+		&-icon-loader {
+			align-items: center;
+			justify-content: center;
+			transform-origin: center;
+			transition-property: transform;
+			transition-timing-function: linear;
+			transform-origin: 50% 50%;
+		}
+
+		&-text {
+			margin-left: 8px;
+		}
+
+		&-vertical {
+			flex-direction: column;
+
+			.sn-loading-text {
+				margin: 4px 0 0;
+			}
+		}
+	}
+	
+</style>

@@ -1,0 +1,59 @@
+import { regeoLocation, regeoLocationType } from "../utils";
+import { regeoLocationInfoType, locationInfoType, userInfo } from "./types";
+import { useUser } from "../service/user";
+import { RequestConfig } from '@/uni_modules/kux-request';
+
+export const locationInfo = ref<locationInfoType | null>(null)
+export const appAuthorize = ref<GetAppAuthorizeSettingResult | null>(null)
+export const info = ref<userInfo | null>(null)
+export const token = ref<string | null>(null)
+
+
+export async function getLocation(data : regeoLocationType | null = null) {
+	if (data !== null) {
+		let info = await analysis(data)
+		console.log(info);
+		return;
+	}
+	uni.getLocation({
+		provider: 'system',
+		type: 'wgs84',
+		isHighAccuracy: true,
+		success: (res : GetLocationSuccess) => {
+			let { longitude, latitude } = res
+			analysis({ longitude, latitude } as regeoLocationType).then((info : locationInfoType | null) => {
+				console.log(info);
+				locationInfo.value = info
+			})
+		}
+	})
+}
+
+const analysis = (data : regeoLocationType) : Promise<locationInfoType | null> => {
+	return new Promise<locationInfoType | null>((resolve, reject) => {
+		let { longitude, latitude } = data
+		regeoLocation({ longitude, latitude } as regeoLocationType).then((res : regeoLocationInfoType | null) => {
+			// console.log(res);
+			let { regeocode } = res!
+			let { addressComponent, formatted_address } = regeocode
+			let { city, province, district, township } = addressComponent
+			resolve({ city, province, district, township, formatted_address, longitude, latitude })
+		})
+	})
+}
+
+export const setAppAuthorize = (data : GetAppAuthorizeSettingResult) => {
+	appAuthorize.value = data
+}
+
+export const getUserInfo = (id : string) => {
+	useUser().info(id, {} as RequestConfig).then(res => {
+		console.log(res)
+	}).catch((err) => {
+		console.log(err);
+	})
+}
+
+export const setToken = (t : string) => {
+	token.value = t
+}

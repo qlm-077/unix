@@ -1,0 +1,739 @@
+<template>
+	<!--#ifdef APP-->
+	<view class="sn-scancode-root">
+		<!--相机扫描预览及识别核心-->
+		<sn-e-scan-provider v-if="cameraMode"
+		ref="scancodeEle" 
+		class="sn-scancode" 
+		:scanType="scanType"
+		:enableDing="enableCustomDing?false:(enableDing)" 
+		:initZoomScale="initZoomScale"
+		:enableZoom="enableZoom" 
+		:cameraPermTip="cameraPermTip"
+		@scanned="scanned"></sn-e-scan-provider>
+
+		<!--图片扫描预览-->
+		<image v-else mode="aspectFit" 
+		class="sn-scancode-imageView"
+		:src="imgScanedSrc"></image>
+
+		<!--遮罩层-->
+		<view class="sn-scancode-overlay" :style="{
+			opacity: overlayDark?0.5:0,
+			position:overlayDark?'fixed':'',
+			transitionDuration:showAniC?$snui.configs.aniTime.normal:'0ms'
+		}">
+		</view>
+
+		<!--扫描线动效贴图-->
+		<!--使用手势组件以防止贴图阻断缩放和双击事件-->
+		<sn-e-gesture v-if="!isScanned&&showAniC"
+		ref="effectEle"
+		class="sn-scancode-effect sn-scancode-float" 
+		@scale="onScale" @dbclick="onDbclick">
+			<image class="sn-scancode-effect" 
+			mode="aspectFit" 
+			src="/uni_modules/sinle-ui/static/images/scanline.png">
+			</image>
+		</sn-e-gesture>
+		<!--导航栏-->
+		<view class="sn-scancode-topbar sn-scancode-float" :style="{
+			padding:`${statusBarHeight+50} 20px`
+		}">
+			<sn-button v-if="showBackButton" 
+			bgColor="rgba(255,255,255,0)" 
+			activeBgColor="rgba(255,255,255,0.2)"
+			round
+			@click="buttonClicked('return')">
+				<sn-icon color="#fff"
+				:name="!(isScanned&&scanOnlyOnce)?'arrow-left-line':'close-line'"></sn-icon>
+			</sn-button>
+			<sn-button v-else
+			bgColor="rgba(255,255,255,0)" 
+			activeBgColor="rgba(255,255,255,0)"
+			round>
+			</sn-button>
+			<sn-text class="sn-scancode-topbar-title" 
+			align="center" 
+			:text="title" 
+			:color="titleColor" 
+			:size="titleSizeC"
+			:custom-style="customTitleStyle"></sn-text>
+			<!--相册-->
+			<sn-button v-if="showAlbum" 
+			bgColor="rgba(255,255,255,0)" 
+			activeBgColor="rgba(255,255,255,0.2)"
+			round
+			@click="buttonClicked('album')">
+				<sn-icon name="gallery-line" color="#fff"></sn-icon>
+			</sn-button>
+			<sn-button v-else
+			bgColor="rgba(255,255,255,0)" 
+			activeBgColor="rgba(255,255,255,0)"
+			round>
+			</sn-button>
+		</view>
+		<sn-text class="sn-scancode-float" 
+		align="center"
+		:text="tip" 
+		:size="tipSizeC" 
+		:color="tipColor" 
+		:custom-style="customTipStyle" 
+		:style="{
+			top:statusBarHeight+80,
+			width:'100%'
+		}"></sn-text>
+
+		<!--手电筒-->
+		<view v-if="showTorch&&!isScanned" class="sn-scancode-torch-contain sn-scancode-float">
+			<sn-button bgColor="rgba(255,255,255,0.3)" 
+			activeBgColor="rgba(255,255,255,0.4)"
+			round
+			@click="buttonClicked('torch')"
+			style="margin-bottom:10px;" >
+				<sn-icon :name="torchOn?'lightbulb-flash-fill':'lightbulb-fill'" color="#fff"></sn-icon>
+			</sn-button>
+			<sn-text :text="torchText" 
+			:size="torchTextSizeC" 
+			:color="torchTextColor"></sn-text>
+		</view>
+
+		<!--识别提示点-->
+		<view class="sn-scancode-dot sn-scancode-float" 
+		v-for="(e,index) in (dotPositions as ScanDataPosition[])" 
+		:key="index" 
+		:style="[{
+			top:(e.centerY - snu.getPx(dotSize)*0.5) as number,
+			left:(e.centerX - snu.getPx(dotSize)*0.5) as number,
+		},dotStylesC, customDotStyle]" @click="turnToCode(dotValues[index])">
+			<sn-icon name="arrow-up-line" :custom-style="customDotIconStyle"></sn-icon>
+		</view>
+	</view>
+	<!--#endif-->
+</template>
+
+<script setup>
+	/**
+	 * @name sn-scan
+	 * @tutorial https://sinleui.pages.dev/components/sn-scan
+	 * @description  Scan 扫码
+	 *
+	 ** 该组件是 UI 组件，基于 `sn-e-scan-provider` 的基础上内置一套扫码界面，如果你对界面不满意，除了修改属性以外，还可以复制本组件或修改本组件源码，自行定义
+	 *
+	 ** 由 uvue、ucss、uts 编写，而非 xml，自由度非常高，修改源码可以放置任意支持 uvue 的组件
+	 *
+	 ** 如果你习惯使用 xml 自定义布局，可以考虑 [kux-mlkit-scancode](https://ext.dcloud.net.cn/plugin?name=kux-mlkit-scancode)，功能更强大
+	 *
+	 ** 如果你希望使用更强大、更稳定的商用级的扫码功能，可以考虑接入 [mPaaS 扫一扫](https://help.aliyun.com/document_detail/52599.html?spm=a2c4g.52296.0.i0)，拥有与支付宝一致的扫码体验；或者华为的 [ScanKit](https://developer.huawei.com/consumer/cn/hms/huawei-scankit/)，体验更好
+	 * @property {String} title    String | 扫码页面标题
+	 * @property {String} titleSize    String | 标题字体大小
+	 * @property {String} titleColor    String | 标题颜色
+	 * @property {String} tip    String | 扫码提示文字
+	 * @property {String} tipColor    String | 提示文字颜色
+	 * @property {String} tipSize    String | 提示文字字体大小
+	 * @property {String} torchText    String | 手电筒提示文字
+	 * @property {String} torchTextColor    String | 手电筒提示文字颜色
+	 * @property {String} torchTextSize    String | 手电筒提示文字字体大小
+	 * @property {String} dotSize    String | 识别点大小
+	 * @property {String} scanType=[qrCode|barCode|all]    String | 扫码类型
+	 * @value qrCode 二维码
+	 * @value barCode 条形码
+	 * @value all 二维码和条形码
+	 * @property {Number} lineAniTime    String | 扫描线动画时长
+	 * @property {Boolean} enableDing    Boolean | 是否开启声音提示
+	 * @property {String} dingFileSrc    String | 自定义声音文件路径
+	 * @property {Boolean} scanOnlyOnce    Boolean | 是否只扫描一次（与`continuous`不可同为`true`）
+	 * @property {Boolean} continuous    Boolean | 是否连续扫描（与`scanOnlyOnce`不可同为`true`）
+	 * @property {Number} continuousSleep    Number | 连续扫描间隔时间（单位：ms）
+	 * @property {Boolean} showTorch    Boolean | 是否显示手电筒按钮
+	 * @property {Boolean} showAlbum    Boolean | 是否显示相册按钮
+	 * @property {Boolean} showBackButton    Boolean | 是否显示返回按钮
+	 * @property {Boolean} showAni    Boolean | 是否显示动画
+	 * @property {Boolean} enableZoom    Boolean | 是否允许缩放
+	 * @property {Number} initZoomScale    Number | 初始缩放比例
+	 * @property {String} cameraPermTip    String | 相机权限请求提示
+	 * @property {String} albumPermTip    String | 相册权限请求提示
+	 * @property {UTSJSONObject} customDotStyle    UTSJSONObject | 自定义识别点样式
+	 * @property {UTSJSONObject} customDotIconStyle    UTSJSONObject | 自定义识别点图标样式
+	 * @property {UTSJSONObject} customTitleStyle    UTSJSONObject | 自定义标题样式
+	 * @property {UTSJSONObject} customTipStyle    UTSJSONObject | 自定义提示文字样式
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义组件样式
+	 * @event {Function} buttonClick   (name:string)=>void | 点击界面按钮时触发，`name`为点击按钮名称。可选值为：`return`（返回）、`album`（相册）、`torch`（手电筒）
+	 * @event {Function} scanned   (res:ScanResult)=>void | 扫码成功时触发。`res`的结构及说明见[文档](https://sinleui.pages.dev/components/sn-scan#%E7%B1%BB%E5%9E%8B)
+	 * @event {Function} goin   (value:string)=>void | 选择识别点时触发，`value`即为识别的文本数据
+	 */
+
+	// 依赖
+	import { $snui, SnRequestMediaPermissionOptions, useFormatProp } from '../../index.uts'
+	import { ScanDataPosition, ScanResult } from '@/uni_modules/sn-e-scan-provider'
+	import { colors } from '../../index.uts'
+	// #ifdef APP-ANDROID
+	import MediaPlayer from "android.media.MediaPlayer";
+	// #endif
+	
+	defineOptions({
+		name: 'sn-scan'
+	})
+
+	// SinleUI 配置
+	const snu = $snui.utils
+
+	// 事件注册
+	const emit = defineEmits(['button-click', 'scanned', 'goin'])
+
+	// 组件属性
+	const props = defineProps({
+		title: {
+			type: String,
+			default: '扫一扫'
+		},
+		titleSize: {
+			type: String,
+			default: ''
+		},
+		titleColor: {
+			type: String,
+			default: '#fff'
+		},
+		tip: {
+			type: String,
+			default: '识别二维码/条码'
+		},
+		tipColor: {
+			type: String,
+			default: "#d6d6db"
+		},
+		tipSize: {
+			type: String,
+			default: ''
+		},
+		torchText: {
+			type: String,
+			default: '轻触点亮或关闭'
+		},
+		torchTextColor: {
+			type: String,
+			default: '#fff'
+		},
+		torchTextSize: {
+			type: String,
+			default: ''
+		},
+		dotSize: {
+			type: String,
+			default: '35px'
+		},
+		scanType: {
+			type: String,
+			default: 'all'
+		},
+		lineAniTime: {
+			type: String,
+			default: '5000ms'
+		},
+		enableDing: {
+			type: Boolean,
+			default: true
+		},
+		dingFileSrc: {
+			type: String,
+			default: ''
+		},
+		scanOnlyOnce: {
+			type: Boolean,
+			default: false
+		},
+		continuous: {
+			type: Boolean,
+			default: false
+		},
+		continuousSleep: {
+			type: Number,
+			default: 2000
+		},
+		showTorch: {
+			type: Boolean,
+			default: true
+		},
+		showAlbum: {
+			type: Boolean,
+			default: true
+		},
+		showBackButton: {
+			type: Boolean,
+			default: true
+		},
+		showAni: {
+			type: Boolean,
+			default: true
+		},
+		enableZoom: {
+			type: Boolean,
+			default: true
+		},
+		initZoomScale: {
+			type: Number,
+			default: 0
+		},
+		cameraPermTip: {
+			type: String,
+			default: '\u3000 本应用正在请求您的相机权限，仅用于条码、二维码识别，且不会将任何数据上传至云端。如不提供此权限，则无法正常使用扫码功能。'
+		},
+		albumPermTip: {
+			type: String,
+			default: '\u3000 本应用正在请求您的相册权限，仅用于条码、二维码识别，且不会将任何数据上传至云端。如不提供此权限，则无法正常使用图片扫码功能。'
+		},
+		customDotStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {
+				border: '2px solid #fff',
+				background: colors.value.primary
+			} as UTSJSONObject
+		},
+		customDotIconStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {
+				color: '#fff'
+			} as UTSJSONObject
+		},
+		customTitleStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customTipStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+
+	})
+
+	// 基本变量
+	const imgScanedSrc = ref("")
+	const cameraMode = ref(true)
+	const overlayDark = ref(false)
+	const dotPositions = ref([] as ScanDataPosition[])
+	const dotValues = ref([] as string[])
+	const dotDuration = ref(200)
+	const dotScale = ref(0.001)
+	const dotTimer = ref(null as number | null)
+	const isScanned = ref(false)
+	const effectTrans = ref(-200)
+	const effectTimer = ref(null as number | null)
+	const torchOn = ref(false)
+	const scancodeEle = ref(null as SnEScanProviderElement | null)
+	const effectEle = ref(null as UniElement | null)
+	
+	// 计算属性
+	const titleSizeC = computed((): string => {
+		return useFormatProp('font', props.titleSize, `${$snui.utils.getPx($snui.configs.font.size(3)) + 2}px`)
+	})
+	
+	const tipSizeC = computed((): string => {
+		return useFormatProp('font', props.tipSize, $snui.configs.font.size(2))
+	})
+	
+	const torchTextSizeC = computed((): string => {
+		return useFormatProp('font', props.torchTextSize, $snui.configs.font.size(1))
+	})
+	
+	const enableCustomDing = computed(() : boolean => {
+		return !snu.isEmpty(props.dingFileSrc)
+	});
+
+	const windowInfo = computed(() : GetWindowInfoResult => {
+		return uni.getWindowInfo()
+	})
+
+	const windowHeight = computed(() : number => {
+		return uni.getWindowInfo().windowHeight;
+	})
+
+	const statusBarHeight = computed(() : number => {
+		return windowInfo.value.statusBarHeight;
+	})
+
+	const showAniC = computed(() : boolean => {
+		return props.showAni
+	})
+	
+	const dotStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('width', props.dotSize)
+		styles.set('height', props.dotSize)
+		styles.set('transform', `scale(${dotScale.value})`)
+		styles.set('border-radius', $snui.configs.radius.circle)
+		styles.set('zIndex', $snui.configs.zIndex.popup)
+		styles.set('transition-duration',`${dotDuration.value}ms`)
+		return styles
+	})
+
+
+	// 方法
+	function setEffectTrans(value : number) {
+		effectTrans.value = value
+		effectEle.value?.style?.setProperty('transform', `translateY(${value}px)`)
+	}
+
+	function init() {
+
+		// 清除扫描线和识别提示点动画定时更新任务
+		if (effectTimer.value != null) {
+			clearInterval(effectTimer.value as number)
+		}
+		if (dotTimer.value != null) {
+			clearInterval(dotTimer.value as number)
+		}
+		// 初始化基本变量
+		isScanned.value = false;
+		torchOn.value = false
+		dotScale.value = 0.001
+		imgScanedSrc.value = ""
+		cameraMode.value = true
+		overlayDark.value = false
+		dotPositions.value = [] as ScanDataPosition[]
+		dotValues.value = [] as string[]
+		dotDuration.value = showAniC.value ? 200 : 0
+		setEffectTrans(-200)
+		dotTimer.value = null
+		effectTimer.value = null
+
+		// 计算更新扫描线动画
+		if (showAniC.value) {
+			let s = windowHeight.value
+			setTimeout(() => {
+				effectTimer.value = setInterval(() => {
+					if (effectTrans.value <= s) {
+						setEffectTrans(effectTrans.value + 1)
+					} else {
+						setEffectTrans(-200)
+					}
+				}, parseInt(props.lineAniTime)/ s)
+			}, 100)
+		}
+	}
+
+	function scanned(e : ScanResult) : void {
+		emit('scanned', e)
+		let data = e.data
+		let scanOnlyOnce = props.scanOnlyOnce
+		let continuous = props.continuous
+		if (data.length > 0) {
+			if (e.scanMode == 'image') {
+				cameraMode.value = false
+			}
+			isScanned.value = true
+
+			// 将获得的数据和码图的位置分配给 dotValues 和 dotPositions
+			let tmpDotPositions = [] as ScanDataPosition[]
+			let tmpDotData = [] as string[]
+			for (let i = 0; i < data.length; i++) {
+				let code = data[i]
+				tmpDotData.push(code.value)
+				tmpDotPositions.push(code.position)
+			}
+			dotValues.value = tmpDotData
+			dotPositions.value = tmpDotPositions
+			overlayDark.value = true
+
+			function checkPoint() {
+				// 如果结果只有一个，自动触发 goin 事件（即自动模仿用户选择结果）
+				if (data.length == 1) {
+					if (!continuous || scanOnlyOnce) {
+						emit('goin', data[0].value)
+					}
+				}
+			}
+
+			// 计算更新识别提示点动画
+			if (showAniC.value) {
+				setTimeout(() => {
+					dotScale.value = 1.2
+					setTimeout(() => {
+						dotDuration.value = 250
+						checkPoint()
+					}, 200)
+					dotTimer.value = setInterval(() => {
+						dotScale.value = 1
+						setTimeout(() => {
+							dotScale.value = 1.2
+						}, 300)
+					}, 2000)
+				}, 100)
+			} else {
+				dotScale.value = 1.2
+				checkPoint()
+			}
+			if (enableCustomDing.value) {
+				let mediaPlayer = new MediaPlayer()
+				try {
+					// 播放本地音频文件（应为绝对地址）
+					mediaPlayer.setDataSource(UTSAndroid.convert2AbsFullPath(props.dingFileSrc))
+					mediaPlayer.prepare()
+					mediaPlayer.start()
+				} catch (e) {
+					throw e
+				}
+			}
+
+			// 如果是连续扫描模式则自动刷新相机
+			if (!scanOnlyOnce && continuous) {
+				setTimeout(() => {
+					init();
+					if (scancodeEle.value != null) {
+						scancodeEle.value!.rescan()
+					}
+				}, props.continuousSleep)
+			}
+		} else {
+			// 无识别内容提示，可以自行定义形式
+			uni.showModal({
+				title: '提示',
+				content: '未识别到有效内容',
+				showCancel: false
+			})
+		}
+	}
+	
+	function rescan(){
+		if (isScanned.value && props.scanOnlyOnce) return 
+		init()
+		if (scancodeEle.value != null) {
+			scancodeEle.value!.rescan()
+		}
+	}
+	
+	
+	
+	function scanImage(src: string){
+		snu.throttle(()=>{
+			if (scancodeEle.value != null) {
+				scancodeEle.value!.scanImageByURI(src)
+				imgScanedSrc.value = src
+			} else {
+				rescan()
+			}
+		}, 20)
+	}
+	
+	function imageChoose(){
+		uni.chooseImage({
+			count: 1,
+			sourceType: ['album'],
+			success: (res) => {
+				if (res.tempFilePaths.length > 0){
+					scanImage(res.tempFilePaths[0])
+				}
+			}
+		})
+	}
+	
+	function checkAlbumPerm(){
+		let granted = snu.checkMediaPermission(['image'])
+		if (!granted) {
+			uni.showModal({
+				title: '提示',
+				content: props.albumPermTip,
+				confirmText: '去授权',
+				cancelText: '返回',
+				success: (res) => {
+					if (res.confirm) {
+						snu.requestMediaPermission({
+							types: ['image'],
+							success: (_,_) => {
+								imageChoose()
+							}
+						} as SnRequestMediaPermissionOptions)
+					}
+				}
+			})
+		} else {
+			imageChoose()
+		}
+	}
+
+	function buttonClicked(e : string) {
+		emit('button-click', e)
+		let scanOnlyOnce = props.scanOnlyOnce
+		switch (e) {
+			// 对于不同情况下的返回事件特别处理
+			case 'return':
+				if (isScanned.value && !scanOnlyOnce) {
+					rescan()
+				} else {
+					uni.navigateBack()
+				}
+				break
+			case 'album':
+				if (!scanOnlyOnce || (scanOnlyOnce && !isScanned.value)) {
+					checkAlbumPerm()
+				}
+
+				break
+			case 'torch':
+				if (!isScanned.value) {
+					torchOn.value = !torchOn.value;
+					if (scancodeEle.value != null) {
+						scancodeEle.value!.setTorchStatus(torchOn.value);
+					}
+				}
+				break
+		}
+	}
+	function turnToCode(value : string) {
+		if (!(props.continuous)) {
+			emit('goin', value)
+		}
+	}
+
+	// 对于被扫描线贴图遮挡的手势事件特别处理
+
+	function onScale(e : UTSJSONObject) {
+		if (scancodeEle.value != null && props.enableZoom) {
+			let delta = e['zoom'] as number
+			let originZoom = scancodeEle.value!.getZoomRatio()
+			let curZoom = originZoom ?? 1.0
+			curZoom = delta * curZoom
+			scancodeEle.value!.setZoomRatio(curZoom)
+		}
+	}
+
+	function onDbclick(e : any) {
+		console.log(scancodeEle.value)
+		if (scancodeEle.value != null && props.enableZoom) {
+			scancodeEle.value!.setZoomRatio(1)
+		}
+	}
+	
+	// 暴露 API
+	function setTorchStatus(value : boolean) {
+		scancodeEle.value!.setTorchStatus(value)
+	}
+	
+	function scanImageByURI(src: string) {
+		scancodeEle.value!.scanImageByURI(src)
+	}
+	
+	function setZoomRatio(zoomRatio : number){
+		scancodeEle.value!.setZoomRatio(zoomRatio)
+	}
+	
+	function getZoomRatio():number{
+		return scancodeEle.value!.getZoomRatio() as number
+	}
+	
+	defineExpose({
+		rescan,
+		setTorchStatus,
+		scanImageByURI,
+		setZoomRatio,
+		getZoomRatio
+	})
+
+
+	// 生命周期
+	onMounted(() => {
+		init()
+	})
+	
+	onPageHide(() => {
+		if (effectTimer.value != null) {
+			clearInterval(effectTimer.value as number)
+		}
+		if (dotTimer.value != null) {
+			clearInterval(dotTimer.value as number)
+		}
+		setEffectTrans(-200)
+	})
+
+	onPageShow(() => {
+		init()
+	})
+
+	// 对于不同情况下的返回事件特别处理
+	onBackPress((options) : boolean => {
+		if (options.from == 'backbutton' && !(props.scanOnlyOnce)) {
+			let r = isScanned.value
+			init()
+			if (scancodeEle.value != null && r) {
+				scancodeEle.value!.rescan()
+			}
+			return r ? true : false
+		} else {
+			return false
+		}
+
+	})
+</script>
+
+<style lang="scss">
+	.sn-scancode {
+		flex: 1;
+		background-color: #000000;
+		z-index: 10;
+	}
+
+	.sn-scancode-imageView {
+		flex: 1;
+		width: 100%;
+		height: 100%;
+		z-index: 10;
+	}
+
+	.sn-scancode-root {
+		flex: 1;
+		background-color: #000;
+	}
+
+	.sn-scancode-float {
+		position: fixed;
+		z-index: 100;
+	}
+
+	.sn-scancode-torch-contain {
+		width: 100%;
+		left: 0;
+		right: 0;
+		bottom: 100;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.sn-scancode-dot {
+		justify-content: center;
+		align-items: center;
+	}
+
+	.sn-scancode-overlay {
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background: #000;
+		z-index: 15;
+	}
+
+	.sn-scancode-effect {
+		width: 100%;
+		z-index: 11;
+	}
+
+	.sn-scancode-topbar {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		height: 100px;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+
+		&-title {
+			flex: 1;
+			text-align: center;
+		}
+	}
+</style>

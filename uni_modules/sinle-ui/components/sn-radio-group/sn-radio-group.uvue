@@ -1,0 +1,383 @@
+<template>
+	<view class="sn-radio-group" 
+	ref="groupEle"
+	:class="groupClassesC" 
+	:style="[customStyle]">
+		<slot></slot>
+	</view>
+
+</template>
+
+<script setup>
+	/**
+	 * @name sn-radio-group
+	 * @tutorial https://sinleui.pages.dev/components/sn-radio
+	 * @description Radio 单选框
+	 * 
+	 * - 分为三个组件：`sn-radio-group` ,  `sn-radio` ,  `sn-radio-tag`。
+	 * 
+	 * - 每一个选项（`sn-radio` 或 `sn-radio-tag`）必须是 `sn-radio-group` 的子代。
+	 * @property {Number} vModel    Number | 当前选中项的索引
+	 * @property {Boolean} vertical    Boolean | 是否纵向排列
+	 * @property {String} radioTextSize    String | radio单选组件右侧文本大小
+	 * @property {String} radioBgColor    String | radio单选组件左侧小圆球中间部分的颜色
+	 * @property {String} disabledRadioBgColor    String | 禁用状态下radio单选组件左侧小圆球中间部分的颜色
+	 * @property {String} radioTextColor    String | radio单选组件右侧文本颜色
+	 * @property {String} disabledRadioTextColor    String | 禁用状态下radio单选组件右侧文本颜色
+	 * @property {String} radioBorderColor    String | radio单选组件未选中时左侧小圆球边缘部分的颜色
+	 * @property {String} disabledRadioBorderColor    String | 禁用状态下radio单选组件未选中时左侧小圆球边缘部分的颜色
+	 * @property {String} radioActiveBorderColor    String | radio单选组件选中时左侧小圆球边缘部分的颜色
+	 * @property {String} disabledRadioActiveBorderColor    String | 禁用状态下radio单选组件选中时左侧小圆球边缘部分的颜色
+	 * @property {String} tagType=[info|primary|success|error|warning]    String | tag单选组件的主题类型（下列自定义颜色默认为空，主题默认颜色与自定义颜色冲突时，以自定义颜色为主）
+	 * @value info 信息
+	 * @value primary 主要
+	 * @value success 成功
+	 * @value error 错误
+	 * @value warning 警告
+	 * @property {String} taglevel=[first|second|third|least]    String | tag单选组件的等级（下列自定义颜色默认为空，主题默认颜色与自定义颜色冲突时，以自定义颜色为主）
+	 * @value first 第一等级
+	 * @value second 第二等级
+	 * @value third 第三等级
+	 * @value least 最小等级
+	 * @property {String} tagBorderRadius    String | tag单选组件的边框圆角
+	 * @property {String} tagPadding    String | tag单选组件的内边距
+	 * @property {String} tagTextSize    String | tag单选组件内部文本大小
+	 * @property {String} tagBgColor    String | tag单选组件的背景颜色
+	 * @property {String} disabledTagBgColor    String | 禁用状态下tag单选组件的背景颜色
+	 * @property {String} tagActiveBgColor    String | tag单选组件选中时的背景颜色
+	 * @property {String} disabledTagActiveBgColor    String | 禁用状态下tag单选组件选中时的背景颜色
+	 * @property {String} tagTextColor    String | tag单选组件内部文本颜色
+	 * @property {String} disabledTagTextColor    String | 禁用状态下tag单选组件内部文本颜色
+	 * @property {String} tagActiveTextColor    String | tag单选组件选中时组件内部文本颜色
+	 * @property {String} disabledTagActiveTextColor    String | 禁用状态下tag单选组件选中时组件内部文本颜色
+	 * @property {UTSJSONObject} customRadioContainStyle    UTSJSONObject | 自定义radio单选框容器样式
+	 * @property {UTSJSONObject} customRadioStyle    UTSJSONObject | 自定义radio单选框样式
+	 * @property {UTSJSONObject} customTagStyle    UTSJSONObject | 自定义tag单选组件样式
+	 * @property {UTSJSONObject} customTextStyle    UTSJSONObject | 自定义单选组件文字样式
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义单选组样式
+	 * @event {Function} change   (v:number)=>void | 当前选中项变化时触发
+	 */
+	
+	// #ifdef WEB
+	// @ts-nocheck
+	// #endif
+	
+	// 依赖
+	import { $snui, useFormatProp } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-radio-group'
+	})
+	
+	// SinleUI 配置
+	const colors = $snui.colors
+	const snu = $snui.utils
+
+	// 事件注册
+	const emit = defineEmits(['change', 'update:modelValue'])
+
+	// 组件属性
+	const props = defineProps({
+		modelValue: {
+			type: Number,
+			default: 0
+		},
+		vertical: {
+			type: Boolean,
+			default: false
+		},
+		radioSize: {
+			type: String,
+			default: '20px'
+		},
+		radioBorderWidth: {
+			type: String,
+			default: '2px'
+		},
+		radioTextSize: {
+			type: String,
+			default: ''
+		},
+		radioBgColor: {
+			type: String,
+			default: ''
+		},
+		disabledRadioBgColor: {
+			type: String,
+			default: ''
+		},
+		radioActiveBgColor: {
+			type: String,
+			default: ''
+		},
+		disabledRadioActiveBgColor: {
+			type: String,
+			default: ''
+		},
+		radioTextColor: {
+			type: String,
+			default: ''
+		},
+		disabledRadioTextColor: {
+			type: String,
+			default: ''
+		},
+		radioBorderColor: {
+			type: String,
+			default: ''
+		},
+		disabledRadioBorderColor: {
+			type: String,
+			default: ''
+		},
+		radioActiveBorderColor: {
+			type: String,
+			default: ''
+		},
+		disabledRadioActiveBorderColor: {
+			type: String,
+			default: ''
+		},
+		tagType: {
+			type: String,
+			default: 'primary'
+		},
+		tagLevel: {
+			type: String,
+			default: 'second'
+		},
+		tagTextColor: {
+			type: String,
+			default: ''
+		},
+		disabledTagTextColor: {
+			type: String,
+			default: ''
+		},
+		tagActiveTextColor: {
+			type: String,
+			default: ''
+		},
+		disabledTagActiveTextColor: {
+			type: String,
+			default: ''
+		},
+		tagTextSize: {
+			type: String,
+			default: ''
+		},
+		tagBorderRadius: {
+			type: String,
+			default: '10px'
+		},
+		tagPadding: {
+			type: String,
+			default: "6px 10px"
+		},
+		tagBgColor: {
+			type: String,
+			default: ''
+		},
+		disabledTagBgColor: {
+			type: String,
+			default: ''
+		},
+		tagActiveBgColor: {
+			type: String,
+			default: ''
+		},
+		disabledTagActiveBgColor: {
+			type: String,
+			default: ''
+		},
+		customRadioContainStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customRadioStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customTagStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customTextStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+	})
+	
+	// 基本变量
+	const groupEle = ref(null as UniElement | null)
+	const childrenList = ref([] as ComponentPublicInstance[])
+	
+	// 计算属性
+	const radioBgColorC = computed((): string => {
+		return useFormatProp('color', props.radioBgColor, colors.value.front)
+	})
+	
+	const radioTextSizeC = computed((): string => {
+		return useFormatProp('font', props.radioTextSize, $snui.configs.font.size(3))
+	})
+	
+	const tagTextSizeC = computed((): string => {
+		return useFormatProp('font', props.tagTextSize, $snui.configs.font.size(2))
+	})
+	
+	const disabledRadioBgColorC = computed((): string => {
+		return useFormatProp('color', props.disabledRadioBgColor, colors.value.front)
+	})
+	
+	const radioActiveBgColorC = computed((): string => {
+		return useFormatProp('color', props.radioActiveBgColor, colors.value.front)
+	})
+	
+	const disabledRadioActiveBgColorC = computed((): string => {
+		return useFormatProp('color', props.disabledRadioActiveBgColor, colors.value.front)
+	})
+	
+	const radioTextColorC = computed((): string => {
+		return useFormatProp('color', props.radioTextColor, colors.value.text)
+	})
+	
+	const disabledRadioTextColorC = computed((): string => {
+		return useFormatProp('color', props.disabledRadioTextColor, colors.value.disabledText)
+	})
+	
+	const radioBorderColorC = computed((): string => {
+		return useFormatProp('color', props.radioBorderColor, colors.value.line)
+	})
+	
+	const disabledRadioBorderColorC = computed((): string => {
+		return useFormatProp('color', props.disabledRadioBorderColor, colors.value.disabled)
+	})
+	
+	const radioActiveBorderColorC = computed((): string => {
+		return useFormatProp('color', props.radioActiveBorderColor, colors.value.primary)
+	})
+	
+	const disabledRadioActiveBorderColorC = computed((): string => {
+		return useFormatProp('color', props.disabledRadioActiveBorderColor, colors.value.disabledDark)
+	})
+	
+	const groupClassesC = computed((): Map<string, any>=>{
+		let classes = new Map<string, any>()
+		classes.set('sn-radio-group-vertical', props.vertical)
+		classes.set('sn-radio-group-horizontal', !props.vertical)
+		return classes
+	})
+	
+
+
+	// 计算属性
+	const model = computed<number>({
+		get: () : number => props.modelValue,
+		set: (value : number) => {
+			emit('update:modelValue', value as number)
+			emit('change', value)
+		}
+	} as WritableComputedOptions<number[]>)
+	
+	const radioSizeC = computed((): string => props.radioSize)
+	const radioBorderWidthC = computed((): string => props.radioBorderWidth)
+	const tagTypeC = computed((): string => props.tagType)
+	const tagLevelC = computed((): string => props.tagLevel)
+	const tagTextColorC = computed((): string => props.tagTextColor)
+	const disabledTagTextColorC = computed((): string => props.disabledTagTextColor)
+	const tagActiveTextColorC = computed((): string => props.tagActiveTextColor)
+	const disabledTagActiveTextColorC = computed((): string => props.disabledTagActiveTextColor)
+	const tagBorderRadiusC = computed((): string => props.tagBorderRadius)
+	const tagPaddingC = computed((): string => props.tagPadding)
+	const tagBgColorC = computed((): string => props.tagBgColor)
+	const disabledTagBgColorC = computed((): string => props.disabledTagBgColor)
+	const tagActiveBgColorC = computed((): string => props.tagActiveBgColor)
+	const disabledTagActiveBgColorC = computed((): string => props.disabledTagActiveBgColor)
+	const customRadioContainStyleC = computed((): UTSJSONObject => props.customRadioContainStyle)
+	const customRadioStyleC = computed((): UTSJSONObject => props.customRadioStyle)
+	const customTagStyleC = computed((): UTSJSONObject => props.customTagStyle)
+	const customTextStyleC = computed((): UTSJSONObject => props.customTextStyle)
+	
+	provide('radioSize', radioSizeC)
+	provide('radioBorderWidth', radioBorderWidthC)
+	provide('radioTextSize', radioTextSizeC)
+	provide('radioBgColor', radioBgColorC)
+	provide('disabledRadioBgColor', disabledRadioBgColorC)
+	provide('radioActiveBgColor', radioActiveBgColorC)
+	provide('disabledRadioActiveBgColor', disabledRadioActiveBgColorC)
+	provide('radioTextColor', radioTextColorC)
+	provide('disabledRadioTextColor', disabledRadioTextColorC)
+	provide('radioBorderColor', radioBorderColorC)
+	provide('disabledRadioBorderColor', disabledRadioBorderColorC)
+	provide('radioActiveBorderColor', radioActiveBorderColorC)
+	provide('disabledRadioActiveBorderColor', disabledRadioActiveBorderColorC)
+	provide('tagType', tagTypeC)
+	provide('tagLevel', tagLevelC)
+	provide('tagTextColor', tagTextColorC)
+	provide('disabledTagTextColor', disabledTagTextColorC)
+	provide('tagActiveTextColor', tagActiveTextColorC)
+	provide('disabledTagActiveTextColor', disabledTagActiveTextColorC)
+	provide('tagTextSize', tagTextSizeC)
+	provide('tagBorderRadius', tagBorderRadiusC)
+	provide('tagPadding', tagPaddingC)
+	provide('tagBgColor', tagBgColorC)
+	provide('disabledTagBgColor', disabledTagBgColorC)
+	provide('tagActiveBgColor', tagActiveBgColorC)
+	provide('disabledTagActiveBgColor', disabledTagActiveBgColorC)
+	provide('customRadioContainStyle', customRadioContainStyleC)
+	provide('customRadioStyle', customRadioStyleC)
+	provide('customTagStyle', customTagStyleC)
+	provide('customTextStyle', customTextStyleC)
+
+
+	// 方法
+	function register(ele : ComponentPublicInstance) {
+		childrenList.value.push(ele)
+	}
+
+	function setNodesValue() {
+		childrenList.value.forEach((child : ComponentPublicInstance, index : number) => {
+			child.$callMethod('updateValue', model.value == index)
+		})
+	}
+
+	function syncData(ele : ComponentPublicInstance) {
+		model.value = childrenList.value.indexOf(ele)
+	}
+
+	defineExpose({
+		register,
+		syncData
+	})
+
+	// 生命周期
+	onMounted(() => {
+		nextTick(() => {
+			setNodesValue()
+		})
+	})
+	
+	// 监听model值变化以动态更新子组件状态
+	watch(model,()=>{
+		setNodesValue()
+	})
+</script>
+
+<style lang="scss">
+	.sn-radio-group {
+		display: flex;
+		flex-wrap: wrap;
+
+		&-horizontal {
+			flex-direction: row;
+		}
+
+		&-vertical {
+			flex-direction: column;
+		}
+	}
+</style>

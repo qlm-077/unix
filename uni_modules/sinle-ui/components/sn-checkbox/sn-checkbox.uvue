@@ -1,0 +1,202 @@
+<template>
+	<view class="sn-checkbox-contain"
+	:class="disabled?'disabled':''"
+	@touchstart="isHover = true" 
+	@touchend="isHover = false"
+	@touchcancel="isHover = false" 
+	@mousedown="isHover = true"
+	@mouseup="isHover = false"
+	@click="checkboxClicked" 
+	:style="[customBoxContainStyle, customContainStyle]">
+		<view class="sn-checkbox" 
+		ref="checkboxEle" 
+		:style="[checkboxStylesC, customBoxStyle, customStyle]">
+			<sn-icon class="sn-checkbox-icon"
+			:class="checked?'sn-checkbox-icon__active':''" 
+			:name="iconC"
+			:color="disabled?disabledBoxIconColor:boxIconColor" 
+			:size="boxIconSize"
+			:style="[customBoxIconStyle]"></sn-icon>
+		</view>
+		<slot>
+			<sn-text v-if="showText" 
+			class="sn-checkbox-text" 
+			:text="text"
+			:color="disabled?disabledBoxTextColor:boxTextColor" 
+			:size="boxTextSize"
+			:style="[customTextStyle]"></sn-text>
+		</slot>
+	</view>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-checkbox
+	 * @tutorial https://sinleui.pages.dev/components/sn-checkbox
+	 * @description Checkbox  复选
+	 * 
+	 * - 分为三个组件：`sn-checkbox-group` , `sn-chekbox` , `sn-checkbox-tag`。
+	 * 
+	 * - 每一个选项（`sn-checkbox`或`sn-checkbox-tag`）必须是`sn-checkbox-group`的子代。
+	 * @property {String} text    String | box复选组件右侧文本内容
+	 * @property {String} icon    String | box复选组件左侧方框内的图标
+	 * @property {Boolean} disabled    Boolean | 是否禁用
+	 * @property {UTSJSONObject} customContainStyle    UTSJSONObject | 自定义box复选组件容器样式（仅针对单组件生效）
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义box复选组件样式（仅针对单组件生效）
+	 */
+	// 依赖
+	import { $snui, useFormatProp } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-checkbox'
+	})
+
+	// SinleUI 配置
+	const snu = $snui.utils
+	const colors = $snui.colors
+	const instance = getCurrentInstance()!
+
+	// 组件属性
+	const props = defineProps({
+		text: {
+			type: String,
+			default: ''
+		},
+		icon: {
+			type: String,
+			default: ''
+		},
+		disabled: {
+			type: Boolean,
+			default: false
+		},
+		customContainStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+	})
+
+	// 基本变量
+	const checked = ref(false)
+	const checkboxEle = ref(null as UniElement | null)
+	
+	// 继承属性
+	const boxSize = inject('boxSize', computed(():string=>`${$snui.utils.getPx($snui.configs.font.size(3)) + 6}px`))
+	const boxBorderRadius = inject('boxBorderRadius',ref('5px'))
+	const boxBorderWidth = inject('boxBorderWidth', ref('2px'));
+	const boxTextSize = inject('boxTextSize', computed(():string=>$snui.configs.font.size(3)));
+	const boxTextColor = inject('boxTextColor', computed(():string=>colors.value.text));
+	const disabledBoxTextColor = inject('disabledBoxTextColor', computed(():string=>colors.value.disabledText));
+	const boxIcon = inject('boxIcon', ref('check-fill'));
+	const boxIconSize = inject('boxIconSize', computed(():string=>$snui.configs.font.size(3)));
+	const boxIconColor = inject('boxIconColor', ref('#fff'));
+	const disabledBoxIconColor = inject('disabledBoxIconColor', ref('#fff'));
+	const boxBorderColor = inject('boxBorderColor', computed(():string=>colors.value.line));
+	const disabledBoxBorderColor = inject('disabledBoxBorderColor', computed(():string=>colors.value.disabled));
+	const boxActiveBorderColor = inject('boxActiveBorderColor', computed(():string=>colors.value.primary));
+	const disabledBoxActiveBorderColor = inject('disabledBoxActiveBorderColor', computed(():string=>colors.value.disabledText));
+	const boxBgColor = inject('boxBgColor', ref('transparent'));
+	const disabledBoxBgColor = inject('disabledBoxBgColor', computed(():string=>colors.value.disabled));
+	const boxActiveBgColor = inject('boxActiveBgColor', computed(():string=>colors.value.primary));
+	const disabledBoxActiveBgColor = inject('disabledBoxActiveBgColor', computed(():string=>colors.value.disabledText));
+	const customBoxContainStyle = inject('customBoxContainStyle', ref({}));
+	const customBoxStyle = inject('customBoxStyle', ref({}));
+	const customBoxIconStyle = inject('customBoxIconStyle', ref({}));
+	const customTextStyle = inject('customTextStyle', ref({}));
+
+	// 计算属性
+	const group = computed(() : ComponentPublicInstance => {
+		return instance.proxy!.$parent as ComponentPublicInstance
+	})
+	
+	const checkboxStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('width', boxSize.value!)
+		styles.set('height', boxSize.value!)
+		styles.set('border-radius', boxBorderRadius.value!)
+		styles.set('border', `${parseInt(boxBorderWidth.value as string)}px solid ${props.disabled?(checked.value?disabledBoxActiveBorderColor.value:disabledBoxBorderColor.value):(checked.value?boxActiveBorderColor.value:boxBorderColor.value)}`)
+		styles.set('background', (props.disabled?(checked.value?disabledBoxActiveBgColor.value:disabledBoxBgColor.value):(checked.value?boxActiveBgColor.value:boxBgColor.value))!)
+		styles.set('transition-duration',$snui.configs.aniTime.normal)
+		return styles
+	})
+
+	// 回弹效果
+	const isHover = ref(false)
+	const originTransform = ref('')
+	watch(isHover, (nv : boolean) => {
+		if (checkboxEle.value != null && !props.disabled) {
+			if (snu.isEmpty(originTransform.value)) originTransform.value = 'scale(1)';
+			(checkboxEle.value as UniElement).style.setProperty('transform', nv ? `${originTransform.value.replace(/scale\((\d+(\.\d+)?)\)/g, 'scale(0.9)')}` : originTransform.value)
+		}
+	})
+
+	// 方法
+	function updateValue(v : boolean) {
+		checked.value = v
+	}
+	function checkboxClicked() {
+		if (!(props.disabled)) {
+			group.value.$callMethod('syncData', instance.proxy! as ComponentPublicInstance, !checked.value)
+		}
+	}
+
+	defineExpose({
+		updateValue
+	})
+
+	// 初始化
+	onMounted(() => {
+		nextTick(() => {
+			group.value.$callMethod('register', instance.proxy! as ComponentPublicInstance)
+		})
+	})
+
+	// 计算属性
+	const showText = computed(() : boolean => {
+		return !snu.isEmpty(props.text as string)
+	})
+
+	const iconC = computed(() : string => {
+		return snu.isEmpty(props.icon as string) ? boxIcon.value as string : props.icon as string
+	})
+</script>
+
+<style lang="scss">
+	.sn-checkbox {
+		justify-content: center;
+
+		&-contain {
+			flex-direction: row;
+			align-items: center;
+			margin-right: 10px;
+			margin-bottom: 10px;
+			// #ifdef WEB
+			cursor: pointer;
+			// #endif
+		}
+
+		&-text {
+			margin-left: 6px;
+			line-height: 1;
+		}
+
+		&-icon {
+			transform: scale(0.001);
+			text-align: center;
+
+			&__active {
+				transform: scale(1);
+			}
+		}
+	}
+	
+	.disabled {
+		// #ifdef WEB
+		cursor: not-allowed;
+		// #endif
+	}
+</style>

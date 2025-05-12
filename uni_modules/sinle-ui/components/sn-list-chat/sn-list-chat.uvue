@@ -1,0 +1,425 @@
+<template>
+	<view class="sn-list-chat" 
+	ref="itemEle" 
+	@click="onClick" 
+	@touchstart="isHover = true"
+	@touchend="isHover = false"
+	@touchcancel="isHover = false" 
+	@mousedown="isHover = true"
+	:style="[listChatStylesC,customStyle]">
+		<!-- #ifndef APP -->
+		<view class="sn-list-chat-web-wrap"
+		:style="[webWrapStylesC]">
+		<!-- #endif -->
+		<view v-if="showAvatar||$slots['header']!=null" 
+		class="sn-list-chat-header" 
+		:style="[customHeaderStyle]">
+			<slot name="header">
+				<sn-badge v-if="showBadge" 
+				:showZero="badgeConfig.showZero ?? false"
+				:value="badgeConfig.value ?? 0" 
+				:max="badgeConfig.max ?? -1" 
+				:size="badgeConfig.size ?? ''" 
+				:offset="badgeConfig.offset ?? ''"
+				style="padding-left:0" 
+				:custom-style="customBadgeStyle">
+					<view v-if="disabled&&showAvatar" 
+					class="sn-list-chat-avatar-overlay" 
+					:style="avatarOverlayStylesC"></view>
+					<sn-avatar v-if="showAvatar" 
+					:shape="avatarConfig.shape ?? 'square'" 
+					:size="avatarConfig.size ?? '40px'" 
+					:src="avatarConfig.src ?? ''"
+					:borderRadius="avatarConfig.borderRadius ?? ''" 
+					:customStyle="customAvatarStyle"></sn-avatar>
+				</sn-badge>
+				<template v-else>
+					<view v-if="disabled&&showAvatar" 
+					class="sn-list-chat-avatar-overlay" 
+					:style="avatarOverlayStylesC"></view>
+					<sn-avatar v-if="showAvatar" 
+					:shape="avatarConfig.shape ?? 'square'"
+					:size="avatarConfig.size ?? '40px'" 
+					:src="avatarConfig.src ?? ''"
+					:borderRadius="avatarConfig.borderRadius ?? ''" 
+					:customStyle="customAvatarStyle"></sn-avatar>
+				</template>
+			</slot>
+		</view>
+		<view class="sn-list-chat-body" :style="[customBodyStyle]">
+			<slot>
+				<sn-text class="sn-list-chat-title" 
+				:text="title" 
+				:size="titleSizeC"
+				:color="disabled?disabledTextColorC:titleColorC"
+				:lines="1"
+				:custom-style="customTitleStyle" 
+				:style="{
+					textOverflow:'ellipsis'
+				}"></sn-text>
+				<sn-text class="sn-list-chat-note" 
+				:text="note" 
+				:size="noteSizeC"
+				:color="disabled?disabledTextColorC:noteColorC"
+				:custom-style="customNoteStyle" 
+				:lines="1"
+				:style="{
+					textOverflow:'ellipsis'
+				}"></sn-text>
+			</slot>
+		</view>
+		<view class="sn-list-chat-footer" :style="[customFooterStyle]">
+			<slot name="footer">
+				<sn-text class="sn-list-item-time-text" 
+				:text="time" 
+				:size="timeSizeC"
+				:color="disabled?disabledTextColorC:timeColorC"
+				:lines="1"
+				:custom-style="customTimeStyle" 
+				style="margin-bottom:2px"></sn-text>
+			</slot>
+		</view>
+		<!-- #ifndef APP -->
+		</view>
+		<sn-line v-if="showBorder"
+		style="margin: 0 auto;width:calc(100% - 40px);"></sn-line>
+		<!-- #endif -->
+	</view>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-list-chat
+	 * @tutorial https://sinleui.pages.dev/components/sn-list
+	 * @description List 列表
+	 * 
+	 * - List 组件用于显示列表信息、聊天信息，内置一套组件模板。
+	 * 
+	 * - 父组件需为 `sn-list`
+	 * @property {Boolean} disabled    Boolean | 是否禁用聊天列表项
+	 * @property {String} title    String | 聊天列表项标题
+	 * @property {String} titleSize    String | 聊天列表项标题字体大小
+	 * @property {String} titleColor    String | 聊天列表项标题颜色
+	 * @property {String} note    String | 聊天列表项副标题
+	 * @property {String} noteSize    String | 聊天列表项副标题字体大小
+	 * @property {String} noteColor    String | 聊天列表项副标题颜色
+	 * @property {String} bgColor    String | 聊天列表项背景颜色
+	 * @property {String} disabledBgColor    String | 禁用时聊天列表项的背景颜色
+	 * @property {String} disabledTextColor    String | 禁用时聊天列表项的文本颜色
+	 * @property {String} activeBgColor    String | 激活时聊天列表项的背景颜色
+	 * @property {String} time    String | 聊天列表项时间文本
+	 * @property {String} timeSize    String | 聊天列表项时间文本字体大小
+	 * @property {String} timeColor    String | 聊天列表项时间文本颜色
+	 * @property {[SnBadgeParams](https://sinleui.pages.dev/api/types/components#snbadgeparams)} badgeConfig    [SnBadgeParams](https://sinleui.pages.dev/api/types/components#snbadgeparams) | 聊天列表项徽标配置
+	 * @property {[SnAvatarParams](https://sinleui.pages.dev/api/types/components#snavatarparams)} avatarConfig    [SnAvatarParams](https://sinleui.pages.dev/api/types/components#snavatarparams) | 聊天列表项头像配置
+	 * @property {String} padding    String | 聊天列表项内边距
+	 * @property {UTSJSONObject} customTitleStyle    UTSJSONObject | 自定义聊天列表项标题样式
+	 * @property {UTSJSONObject} customNoteStyle    UTSJSONObject | 自定义聊天列表项副标题样式
+	 * @property {UTSJSONObject} customAvatarStyle    UTSJSONObject | 自定义聊天列表项头像样式
+	 * @property {UTSJSONObject} customBadgeStyle    UTSJSONObject | 自定义聊天列表项徽标样式
+	 * @property {UTSJSONObject} customBodyStyle    UTSJSONObject | 自定义聊天列表项主体内容样式
+	 * @property {UTSJSONObject} customHeaderStyle    UTSJSONObject | 自定义聊天列表项头部样式
+	 * @property {UTSJSONObject} customFooterStyle    UTSJSONObject | 自定义聊天列表项尾部样式
+	 * @property {UTSJSONObject} customTimeStyle    UTSJSONObject | 自定义聊天列表项时间文本样式
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义聊天列表项整体样式
+	 */
+	// 依赖
+	import { $snui, SnBadgeParams, SnAvatarParams, useFormatProp } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-list-chat'
+	})
+	
+	// SinleUI 配置
+	const colors = $snui.colors
+	const snu = $snui.utils
+	const instance = getCurrentInstance()!
+	
+	// 事件注册
+	const emit = defineEmits(['click'])
+
+	const props = defineProps({
+		disabled: {
+			type: Boolean,
+			default: false
+		},
+		title: {
+			type: String,
+			default: ''
+		},
+		titleSize: {
+			type: String,
+			default: ''
+		},
+		titleColor: {
+			type: String,
+			default: ''
+		},
+		note: {
+			type: String,
+			default: ''
+		},
+		noteSize: {
+			type: String,
+			default: ''
+		},
+		noteColor: {
+			type: String,
+			default: ''
+		},
+		bgColor: {
+			type: String,
+			default: ''
+		},
+		disabledBgColor: {
+			type: String,
+			default: ''
+		},
+		disabledTextColor: {
+			type: String,
+			default: ''
+		},
+		activeBgColor: {
+			type: String,
+			default: ''
+		},
+		time: {
+			type: String,
+			default: ''
+		},
+		timeSize: {
+			type: String,
+			default: ''
+		},
+		timeColor: {
+			type: String,
+			default: ''
+		},
+		badgeConfig: {
+			type: Object as PropType<SnBadgeParams>,
+			default: {} as SnBadgeParams
+		},
+		avatarConfig: {
+			type: Object as PropType<SnAvatarParams>,
+			default: {} as SnAvatarParams
+		},
+		padding: {
+			type: String,
+			default: '8px 10px'
+		},
+		customTitleStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customNoteStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customAvatarStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customBadgeStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customBodyStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customHeaderStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customFooterStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customTimeStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+
+	})
+
+	// 基本变量
+	const id = snu.randomComId()
+	const isHover = ref(false)
+	const itemEle = ref(null as UniElement | null)
+	const showBorder = ref(false)
+	const index = ref(0)
+
+	// 计算属性
+	const showAvatar = computed(() : boolean => {
+		return !snu.isEmpty(props.avatarConfig?.src ?? '')
+	})
+
+	const showBadge = computed(() : boolean => {
+		return (props.badgeConfig?.showZero ?? false) ? true : (props.badgeConfig?.value ?? 0) != 0
+	})
+	
+	const titleColorC = computed((): string => {
+		return useFormatProp('color', props.titleColor, colors.value.title)
+	})
+	
+	const noteColorC = computed((): string => {
+		return useFormatProp('color', props.noteColor, colors.value.textLight)
+	})
+	
+	const disabledBgColorC = computed((): string => {
+		return useFormatProp('color', props.disabledBgColor, colors.value.disabled)
+	})
+	
+	const disabledTextColorC = computed((): string => {
+		return useFormatProp('color', props.disabledTextColor, colors.value.disabledText)
+	})
+	
+	const activeBgColorC = computed((): string => {
+	  return props.activeBgColor == '' ? colors.value.info : props.activeBgColor
+	})
+	
+	const bgColorC = computed(() : string => {
+		let bgColor = useFormatProp('color', props.bgColor, colors.value.transparent)
+		
+		return props.disabled ? disabledBgColorC.value : (isHover.value ? activeBgColorC.value : bgColor)
+	})
+	
+	const timeColorC = computed((): string => {
+		return useFormatProp('color', props.timeColor, colors.value.textLight)
+	})
+	
+	const titleSizeC = computed((): string => {
+		return useFormatProp('font', props.titleSize, $snui.configs.font.size(3))
+	})
+	
+	const noteSizeC = computed((): string => {
+		return useFormatProp('font', props.noteSize, $snui.configs.font.size(1))
+	})
+	
+	const timeSizeC = computed((): string => {
+		return useFormatProp('font', props.timeSize, `${$snui.utils.getPx($snui.configs.font.size(1)) - 1}px`)
+	})
+	
+	const listChatStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('background', bgColorC.value)
+		styles.set('transition-duration', $snui.configs.aniTime.normal)
+		// #ifdef APP
+		styles.set('padding', props.padding)
+		// #endif
+		return styles
+	})
+	
+	// #ifndef APP
+	const webWrapStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('padding', props.padding)
+		return styles
+	})
+	// #endif
+	
+	const avatarOverlayStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('width', props.avatarConfig?.size ?? '40px')
+		styles.set('height', props.avatarConfig?.size ?? '40px')
+		styles.set('border-radius', (props.avatarConfig?.shape ?? 'square')=='circle'?$snui.configs.radius.circle:(props.avatarConfig?.borderRadius ?? ''))
+		styles.set('background', disabledBgColorC.value)
+		styles.set('transition-duration', $snui.configs.aniTime.normal)
+		return styles
+	})
+	
+
+	// 方法
+	function onClick(e : UniPointerEvent) {
+		if (props.disabled) return
+		emit('click', { id: index.value, event: e })
+	}
+
+	function drawLines() {
+		if (!showBorder.value) return
+		// #ifdef APP
+		let item = itemEle.value
+		let rectInfo = item!.getBoundingClientRect()!
+		let ctx = item!.getDrawableContext()!
+		ctx.reset()
+		ctx.lineCap = 'round'
+		ctx.lineWidth = 1
+		ctx.strokeStyle = colors.value.line
+		ctx.moveTo(20, rectInfo.height)
+		ctx.lineTo(rectInfo.width - 20, rectInfo.height)
+		ctx.stroke()
+		ctx.update()
+		// #endif
+	}
+	
+	function setOrder(_index: number, _showBorder:boolean) {
+		showBorder.value = _showBorder
+		index.value = _index
+		drawLines()
+	}
+	
+	
+	defineExpose({
+		setOrder
+	})
+	
+	// 初始化
+	onMounted(() => {
+		// #ifdef WEB
+		window.addEventListener('mouseup', ()=>{
+			isHover.value = false
+		});
+		// #endif
+		nextTick(() => {
+			let ins = instance.proxy!
+			snu.findParent(ins, ['sn-list', 'sn-list-long'])?.$callMethod('register', ins as ComponentPublicInstance)
+		})
+	})
+</script>
+
+<style lang="scss">
+	.sn-list-chat {
+		width: 100%;
+		display: flex;
+		// #ifdef APP
+		flex-direction: row;
+		align-items: center;
+		// #endif
+		
+		// #ifndef APP
+		&-web-wrap {
+			flex-direction: row;
+			align-items: center;
+			flex: 1;
+		}
+		// #endif
+		
+		&-header {
+			overflow: visible;
+			margin-right: 10px;
+		}
+
+		&-avatar-overlay {
+			transition: background-color;
+			position: absolute;
+			z-index: 1;
+			opacity: 0.8;
+		}
+
+		&-body {
+			flex: 1;
+			flex-direction: column;
+		}
+
+		&-footer {
+			flex-direction: column;
+			justify-content: center;
+			align-items: flex-end;
+			overflow: visible;
+		}
+	}
+</style>

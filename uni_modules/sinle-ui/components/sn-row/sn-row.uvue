@@ -1,0 +1,91 @@
+<template>
+	<view class="sn-row" :style="[rowStylesC, customStyle]">
+		<slot />
+	</view>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-row
+	 * @tutorial https://sinleui.pages.dev/components/sn-row
+	 * @description  Row 水平布局
+	 *
+	 *- 用于快速设置栅格布局。
+	 *
+	 *- 搭配 `sn-col` 组件使用更佳哦
+	 * @property {String} justify    String | 主轴对齐方式
+	 * @property {String} align    String | 交叉轴对齐方式
+	 * @property {Boolean} wrap    Boolean | 是否允许换行
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义样式
+	 */
+
+	// 依赖
+	import { $snui } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-row'
+	})
+
+	// 组件属性
+	const props = defineProps({
+		justify: {
+			type: String,
+			default: 'start'
+		},
+		align: {
+			type: String,
+			default: 'center'
+		},
+		wrap: {
+			type: Boolean,
+			default: false
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+
+	})
+
+	const justifyC = computed(() : string => {
+		let justify = props.justify
+		if (justify == 'left' || justify == 'start') {
+			return 'flex-start'
+		} else if (justify == 'right' || justify == 'end') {
+			return 'flex-end'
+		} else if (justify == 'around' || justify == 'between') {
+			return `space-${justify}`
+		}
+
+		return justify
+	})
+
+	const alignItemsC = computed(() : string => {
+		let align = props.align
+		if (align == 'top' || align == 'start') {
+			return 'flex-start'
+		} else if (align == 'bottom' || align == 'end') {
+			return 'flex-end'
+		} else if (align == 'around' || align == 'between') {
+			return `space-${align}`
+		}
+
+		return align
+	})
+	
+	const rowStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('justify-content', justifyC.value)
+		styles.set('align-items', alignItemsC.value)
+		styles.set('flex-wrap', props.wrap ? 'wrap' : 'nowrap')
+		styles.set('transition-duration',$snui.configs.aniTime.normal)
+		return styles
+	})
+</script>
+
+<style lang="scss">
+	.sn-row {
+		display: flex;
+		flex-direction: row;
+	}
+</style>

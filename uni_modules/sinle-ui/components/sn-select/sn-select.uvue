@@ -1,0 +1,376 @@
+<template>
+	<view class="sn-select" 
+	ref="selectEle" 
+	:class="disabled?'disabled':''"
+	@touchstart="isHover = true"
+	@click="setshowOverlay(!showOverlay)"
+	@touchend="isHover = false" 
+	@touchcancel="isHover = false" 
+	@mousedown="isHover = true"
+	@mouseup="isHover = false"
+	:style="[selectStylesC, customStyle]">
+		<sn-text class="sn-select-text" 
+		:text="selectedData['text']" 
+		:size="textSizeC" 
+		:color="textColorC"
+		:customStyle="customTextStyle"></sn-text>
+		<sn-icon name="arrow-down-s-line" 
+		:size="textSizeC" 
+		:color="textColorC" 
+		:style="iconStylesC"></sn-icon>
+	</view>
+	<sn-overlay ref="overlayEle"
+	aniTime="$long" 
+	:opacity="0" 
+	@clickMask="setshowOverlay(false)">
+		<view class="sn-select-popup" 
+		ref="popEle" 
+		:class="{'sn-select-popup__show':showPop}" 
+		:style="[popStylesC, customPopStyle]" @click.stop>
+			<scroll-view
+			class="sn-select-popup-listview" 
+			direction="vertical"
+			:bounces="false"
+			:show-scrollbar="false"
+			:style="scrollStylesC">
+				<sn-menu-item 
+				v-for="(e,index) in (dataC as SnDataItem[])" 
+				:key="index"
+				:bgColor="popBgColorC" 
+				:activeBgColor="popActiveBgColorC" 
+				:text="e.text ?? ''"
+				:textSize="popTextSizeC" 
+				:textColor="index==model?popActiveTextColorC:popTextColorC"
+				textAlign="center"
+				:customTextStyle="customPopTextStyle"
+				:customStyle="{width}"
+				@click="clickItem(index)"></sn-menu-item>
+			</scroll-view>
+		</view>
+	</sn-overlay>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-select
+	 * @tutorial https://sinleui.pages.dev/components/sn-select
+	 * @description  Select 选择框
+	 *
+	 *- 用于简单的数据选择。对于大量、复杂数据请使用 sn-picker 组件
+	 * @property {Number} vModel    Number | 当前选中项的索引
+	 * @property {Array<[SnDataItem](https://sinleui.pages.dev/api/types/components#sndataitem)>} data    Array<[SnDataItem](https://sinleui.pages.dev/api/types/components#sndataitem)> | 选项数据源
+	 * @property {String} width    String | 选择框宽度
+	 * @property {String} bgColor    String | 选择框背景颜色
+	 * @property {String} activeBgColor    String | 选中项背景颜色
+	 * @property {String} popBgColor    String | 弹出层背景颜色
+	 * @property {String} popActiveBgColor    String | 弹出层选中项背景颜色
+	 * @property {String} textSize    String | 选择框文本大小
+	 * @property {String} textColor    String | 选择框文本颜色
+	 * @property {String} popTextSize    String | 弹出层文本大小
+	 * @property {String} popActiveTextColor    String | 弹出层选中项文本颜色
+	 * @property {String} popTextColor    String | 弹出层文本颜色
+	 * @property {String} borderRadius    String | 选择框圆角大小
+	 * @property {String} maxHeight    String | 弹出层最大高度
+	 * @property {Boolean} disabled    Boolean | 是否禁用选择框
+	 * @property {UTSJSONObject} customPopStyle    UTSJSONObject | 自定义弹出层样式
+	 * @property {UTSJSONObject} customPopTextStyle    UTSJSONObject | 自定义弹出层文本样式
+	 * @property {UTSJSONObject} customTextStyle    UTSJSONObject | 自定义选择框文本样式
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义选择框样式
+	 * @event {Function} change   (value:number)=>void | 选中项变化时触发。`value`即为选中项索引
+	 */
+
+	// 依赖
+	import { $snui, SnDataItem, useFormatProp } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-select'
+	})
+	
+	// SinleUI 配置
+	const colors = $snui.colors
+	const snu = $snui.utils;
+
+	// 事件注册
+	const emit = defineEmits(['change'])
+	
+	const model = defineModel({
+		type: Number,
+		default: 0,
+	})
+
+	// 组件属性
+	const props = defineProps({
+		data: {
+			type: Array as PropType<SnDataItem[]>,
+			default: [] as SnDataItem[]
+		},
+		width: {
+			type: String,
+			default: "100px"
+		},
+		bgColor: {
+			type: String,
+			default: ''
+		},
+		activeBgColor: {
+			type: String,
+			default: ''
+		},
+		popBgColor: {
+			type: String,
+			default: ''
+		},
+		popActiveBgColor: {
+			type: String,
+			default: ''
+		},
+		textSize: {
+			type: String,
+			default: ''
+		},
+		textColor: {
+			type: String,
+			default: ''
+		},
+		popTextSize: {
+			type: String,
+			default: ''
+		},
+		popActiveTextColor: {
+			type: String,
+			default: ''
+		},
+		popTextColor: {
+			type: String,
+			default: ''
+		},
+		borderRadius: {
+			type: String,
+			default: ''
+		},
+		maxHeight: {
+			type: String,
+			default: "500px"
+		},
+		disabled: {
+			type: Boolean,
+			default: false
+		},
+		customPopStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customPopTextStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customTextStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+	})
+
+	// 基本变量
+	const isHover = ref(false)
+	const showPop = ref(false)
+	const showOverlay = ref(false)
+	const selectEle = ref(null as UniElement | null)
+	const overlayEle = ref(null as SnOverlayComponentPublicInstance | null)
+	const popEle = ref(null as UniElement | null)
+	const nodeInfo = ref({ top: 0, left: 0 })
+	const contentHeight = ref(0)
+
+	// 计算属性
+	const theme = computed(():string=>$snui.configs.app.theme)
+
+	const dataC = computed(() : SnDataItem[] => {
+		return props.data as SnDataItem[]
+	})
+
+	const selectedData = computed(() : SnDataItem => {
+		let data = dataC.value.length > 0 ? dataC.value[model.value] : {id:'',text:''} as SnDataItem
+		return data
+	})
+	
+	const activeBgColorC = computed((): string => {
+		return useFormatProp('color', props.activeBgColor, colors.value.infoActive)
+	})
+	
+	const popBgColorC = computed((): string => {
+		return useFormatProp('color', props.popBgColor, colors.value[theme.value=='light'?'front':'info'] as string)
+	})
+	
+	const popActiveBgColorC = computed((): string => {
+		return useFormatProp('color', props.popActiveBgColor, colors.value[theme.value=='light'?'info':'infoActive'] as string)
+	})
+	
+	const textSizeC = computed((): string => {
+		return useFormatProp('font', props.textSize, $snui.configs.font.size(3))
+	})
+	
+	const textColorC = computed((): string => {
+	  let textColor = useFormatProp('color', props.textColor, colors.value.text)
+	  return props.disabled ? colors.value.disabledText : textColor
+	})
+	
+	const popTextSizeC = computed((): string => {
+		return useFormatProp('font', props.popTextSize, $snui.configs.font.size(2))
+	})
+	
+	const popActiveTextColorC = computed((): string => {
+		return useFormatProp('color', props.popActiveTextColor, colors.value.primaryDark)
+	})
+	
+	const popTextColorC = computed((): string => {
+		return useFormatProp('color', props.popTextColor, colors.value.text)
+	})
+	
+	const borderRadiusC = computed((): string => {
+		return useFormatProp('radius', props.borderRadius, $snui.configs.radius.normal)
+	})
+
+	const bgColorC = computed(() : string => {
+		let bgColor = useFormatProp('color', props.bgColor, colors.value.front)
+		return props.disabled ? colors.value.disabled : ((isHover.value ? props.activeBgColor : bgColor))
+	})
+	
+	const selectStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('width', props.width)
+		styles.set('background', isHover.value?activeBgColorC.value:bgColorC.value)
+		styles.set('border-radius', borderRadiusC.value)
+		styles.set('transition-duration',$snui.configs.aniTime.normal)
+		return styles
+	})
+	
+	const iconStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('transform', `rotate(${showOverlay.value ? 180 : 0}deg)`)
+		styles.set('transition-duration',$snui.configs.aniTime.normal)
+		return styles
+	})
+	
+	const scrollStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('max-height', props.maxHeight)
+		return styles
+	})
+	
+	const popStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('background', popBgColorC.value)
+		styles.set('border-radius', borderRadiusC.value)
+		styles.set('width', props.width)
+		styles.set('top', `${nodeInfo.value['top']??0}px`)
+		styles.set('left', `${nodeInfo.value['left']??0}px`)
+		styles.set('max-height', props.maxHeight)
+		styles.set('z-index', $snui.configs.zIndex.popup)
+		styles.set('transition-duration',$snui.configs.aniTime.normal)
+		return styles
+	})
+
+	// 方法
+	function setshowOverlay(status : boolean) {
+		if (!props.disabled){
+			if (status == true && selectEle.value != null) {
+				let info = selectEle.value!.getBoundingClientRect()
+				nodeInfo.value = {
+					top: info.top + info.height + 5,
+					left: info.left
+				}
+			}
+			
+			showOverlay.value = status
+			if (showOverlay.value) {
+				overlayEle.value?.open?.()
+			} else {
+				overlayEle.value?.close?.()
+			}
+			if (status == true && popEle.value != null) {
+				nextTick(() => {
+					let height = popEle.value!.getBoundingClientRect().height
+					if (height != 0) {
+						contentHeight.value = height
+					}
+				})
+			}
+		}
+	}
+
+	function clickItem(index : number) {
+		if (props.disabled) return
+		model.value = index
+		emit('change', dataC.value[index])
+		setshowOverlay(false)
+	}
+	
+	// 绑定遮罩层和弹出层状态
+	const id = ref(snu.randomComId())
+	
+	watch(showOverlay, (value : boolean) => {
+		if (value) {
+			nextTick(()=>{
+				snu.throttle(()=>{
+					showPop.value = true
+				}, 10, id.value)
+			})
+		} else {
+			showPop.value = false
+			snu.throttle(()=>{
+				showOverlay.value = false
+			},parseInt($snui.configs.aniTime.long),id.value)
+		}
+	})
+</script>
+
+<style lang="scss">
+	.sn-select {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		min-width: 100px;
+		padding: 10px 12px;
+		// #ifdef WEB
+		cursor: pointer;
+		// #endif
+
+		&-text {
+			flex: 1;
+		}
+
+		&-popup {
+			position: absolute;
+			justify-content: center;
+			align-items: center;
+			// #ifdef APP
+			box-shadow: 0px 2px 15px -1px rgba(0, 0, 0, 0.2);
+			// #endif
+			// #ifndef APP
+			box-shadow: 0px 2px 15px -2px rgba(0, 0, 0, 0.1);
+			// #endif
+			transform: translate(-10px, -30px) scale(0.8);
+			opacity: 0;
+			transition-property: transform, background-color, opacity;
+
+			&-listview {
+				flex: 1;
+				padding: 0px;
+			}
+
+			&__show {
+				transform: translate(0px, 0px) scale(1);
+				opacity: 1;
+			}
+		}
+	}
+	
+	.disabled {
+		// #ifdef WEB
+		cursor: not-allowed;
+		// #endif
+	}
+</style>

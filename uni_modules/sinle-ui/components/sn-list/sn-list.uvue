@@ -1,0 +1,107 @@
+<template>
+	<view class="sn-list"
+	:style="[listStylesC,customStyle]">
+		<slot></slot>
+	</view>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-list
+	 * @tutorial https://sinleui.pages.dev/components/sn-list
+	 * @description List 列表
+	 * 
+	 * - List 组件用于显示列表信息、聊天信息，内置一套组件模板。
+	 * 
+	 * - 子组件可为 `sn-list-item` 和 `sn-list-chat`。
+	 * @property {Boolean} showBorder    Boolean | 是否显示列表项边框分割线
+	 * @property {String} bgColor    String | 列表背景颜色
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义列表样式
+	 */
+	// 依赖
+	import { $snui, useFormatProp } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-list'
+	})
+
+	// SinleUI 配置
+	const colors = $snui.colors
+	const snu = $snui.utils;
+	
+	const props = defineProps({
+		showBorder: {
+			type: Boolean,
+			default: true
+		},
+		bgColor: {
+			type: String,
+			default: ''
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+	})
+	
+	// 基本变量
+	const childrenList = ref([] as ComponentPublicInstance[])
+	
+	const showBorderC = computed(():boolean=>props.showBorder)
+	provide('showBorder', showBorderC)
+	
+	// 计算属性
+	const bgColorC = computed((): string => {
+		return useFormatProp('color',props.bgColor,colors.value.front)
+	})
+	
+	const listStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('background', bgColorC.value)
+		styles.set('border-radius', $snui.configs.radius.normal)
+		styles.set('transition-duration', $snui.configs.aniTime.normal)
+		return styles
+	})
+
+	// 方法
+	function register(child: ComponentPublicInstance) {
+		childrenList.value.push(child)
+	}
+	
+	function provideChildren() {
+		if (!props.showBorder) return
+		childrenList.value.forEach((child : ComponentPublicInstance, index: number) => {
+			child.$callMethod('setOrder', index, index != childrenList.value.length - 1)
+		})
+	}
+	
+	
+	defineExpose({
+		register
+	})
+
+	// 生命周期
+	onMounted(() => {
+		nextTick(()=>{
+			nextTick(()=>{
+				provideChildren()
+			})
+		})
+	})
+
+	onUpdated(() => {
+		nextTick(()=>{
+			provideChildren()
+		})
+	})
+	
+</script>
+
+<style>
+	.sn-list {
+		min-height: 20px;
+		width: 100%;
+		margin: 0 auto;
+		overflow: hidden;
+	}
+</style>

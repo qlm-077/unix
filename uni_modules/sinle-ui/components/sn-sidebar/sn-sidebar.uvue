@@ -1,0 +1,256 @@
+<template>
+	<view class="sn-siderbar-contain"
+	:style="[containStylesC, customStyle]">
+		<view class="sn-siderbar-bar"
+		:style="[barStylesC, customBarStyle]">
+			<list-view class="sn-siderbar-bar-list"
+			:show-scrollbar="false"
+			:bounces="false">
+				<list-item class="sn-siderbar-bar-item"
+				v-for="(e, index) in (data as SnDataItem[])"
+				:style="[itemStylesC,{
+					background: model==index?activeItemBgColorC:itemBgColorC,
+					borderLeft: showLine? `2px solid ${model==index?lineColorC:colors.transparent}`:'none',
+				} as Map<string,any>, customItemStyle]"
+				@click="itemClicked(index)">
+					<sn-text align="center"
+					:text="e.text"
+					:color="model==index?activeItemTextColorC:itemTextColorC"
+					:size="itemTextSizeC"
+					></sn-text>
+				</list-item>
+			</list-view>
+		</view>
+		<scroll-view class="sn-siderbar-scroll-view"
+		:show-scrollbar="false"
+		:scroll-with-animation="true"
+		:scroll-into-view="scrollIntoViewC"
+		:style="[customContentStyle]">
+			<slot></slot>
+		</scroll-view>
+	</view>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-sidebar
+	 * @tutorial https://sinleui.pages.dev/components/sn-sidebar
+	 * @description  Sidebar 侧边栏
+	 *
+	 *- 适用于商城选购等场景的侧边导航栏
+	 *
+	 *- 支持自定义样式和锚点切换。
+	 * @property {Number} vModel    Number | 当前选中的选项索引
+	 * @property {Array<SnDataItem>} data    Array<SnDataItem> | 侧边栏选项数据数组
+	 * @property {String} width    String | 侧边栏宽度
+	 * @property {String} itemWidth    String | 选项宽度
+	 * @property {String} itemPadding    String | 选项内边距
+	 * @property {String} itemTextColor    String | 选项文字颜色
+	 * @property {String} itemTextSize    String | 选项文字大小
+	 * @property {String} activeItemTextColor    String | 激活选项文字颜色
+	 * @property {String} itemBgColor    String | 选项背景颜色
+	 * @property {String} itemBorderRadius    String | 选项圆角大小
+	 * @property {String} activeItemBgColor    String | 激活选项背景颜色
+	 * @property {Boolean} disabled    Boolean | 是否禁用所有选项
+	 * @property {Boolean} anchor    Boolean | 是否使用锚点定位
+	 * @property {Boolean} showLine    Boolean | 是否显示选项的选中线
+	 * @property {String} lineColor    String | 选中线的颜色
+	 * @property {String} customStyle    String | 自定义容器样式
+	 * @property {String} customItemStyle    String | 自定义选项样式
+	 * @property {String} customBarStyle    String | 自定义侧边栏样式
+	 * @property {String} customContentStyle    String | 自定义内容区域样式
+	 * @event {Function} change   (v:number)=>void | 选项改变时触发
+	 */
+
+	// 依赖
+	import { $snui, SnDataItem, useFormatProp } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-sidebar'
+	})
+	
+	// SinleUI 配置
+	const snu = $snui.utils;
+	const colors = $snui.colors
+	
+	// 事件注册
+	const emit = defineEmits(['change'])
+	
+	const model = defineModel({
+		type: Number,
+		default: 0,
+	})
+	
+	watch(model, (value : number) => {
+		emit('change', value)
+	})
+	
+	// 组件属性
+	const props = defineProps({
+		data: {
+			type: Array as PropType<SnDataItem[]>,
+			default: [] as SnDataItem[]
+		},
+		width: {
+			type: String,
+			default: '100px'
+		},
+		itemWidth: {
+			type: String,
+			default: '100px'
+		},
+		itemPadding: {
+			type: String,
+			default: '15px 0',
+		},
+		itemTextColor: {
+			type: String,
+			default: '',
+		},
+		itemTextSize: {
+			type: String,
+			default: '',
+		},
+		activeItemTextColor: {
+			type: String,
+			default: '',
+		},
+		itemBgColor: {
+			type: String,
+			default: '',
+		},
+		itemBorderRadius: {
+			type: String,
+			default: '0',
+		},
+		activeItemBgColor: {
+			type: String,
+			default: '',
+		},
+		disabled: {
+			type: Boolean,
+			default: false,
+		},
+		anchor: {
+			type: Boolean,
+			default: false,
+		},
+		showLine: {
+			type: Boolean,
+			default: true,
+		},
+		lineColor: {
+			type: String,
+			default: '',
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customItemStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customBarStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customContentStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+	})
+	
+	// 计算属性
+	const itemBgColorC = computed((): string=>{
+		return useFormatProp('color', props.itemBgColor, colors.value.transparent)
+	})
+	
+	const activeItemBgColorC = computed((): string=>{
+		return useFormatProp('color', props.activeItemBgColor, colors.value.front)
+	})
+	
+	const itemTextSizeC = computed((): string=>{
+		return useFormatProp('font', props.itemTextSize, $snui.configs.font.size(3))
+	})
+	
+	const itemTextColorC = computed((): string=>{
+		return useFormatProp('color', props.itemTextColor, colors.value.text)
+	})
+	
+	const activeItemTextColorC = computed((): string=>{
+		return useFormatProp('color', props.activeItemTextColor, colors.value.primary)
+	})
+	
+	const scrollIntoViewC = computed((): string=>{
+		if (props.anchor){
+			return props.data[model.value].id
+		}
+		return ''
+	})
+	
+	const lineColorC = computed((): string=>{
+		return useFormatProp('color', props.lineColor, colors.value.primary)
+	})
+	
+	const itemBorderRadiusC = computed((): string=>{
+		return useFormatProp('radius', props.itemBorderRadius, '0px')
+	})
+	
+	const barStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('width', props.width)
+		styles.set('transition-duration', $snui.configs.aniTime.normal)
+		return styles
+	})
+	
+	const itemStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('width', props.itemWidth)
+		styles.set('padding', props.itemPadding)
+		styles.set('border-radius', itemBorderRadiusC.value)
+		return styles
+	})
+	
+	
+	const containStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		return styles
+	})
+	
+	// 方法
+	function itemClicked(index: number){
+		if (props.disabled) return
+		model.value = index
+	}
+</script>
+
+<style lang="scss">
+	.sn-siderbar {
+		&-contain {
+			flex-direction: row;
+			flex: 1;
+		}
+		
+		&-bar {
+			flex-direction: column;
+			&-list {
+				flex: 1;
+			}
+			
+			&-item {
+				justify-content: center;
+				align-items: center;
+				margin: 0 auto;
+			}
+		}
+		
+		&-content {
+			flex: 1;
+		}
+		
+		&-scroll-view {
+			flex: 1;
+		}
+	}
+</style>

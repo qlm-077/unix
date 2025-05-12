@@ -1,0 +1,437 @@
+<template>
+	<view class="sn-list-item" 
+	ref="itemEle"
+	@click="onClick" 
+	@mousedown="isHover = true"
+	@touchstart="isHover = true"
+	@touchend="isHover = false" 
+	@touchcancel="isHover = false" 
+	:style="[listItemStylesC,customStyle]">
+		<!-- #ifndef APP -->
+		<view class="sn-list-item-web-wrap"
+		:style="[webWrapStylesC]">
+		<!-- #endif -->
+		<view v-if="showAvatar||showIcon||$slots['header']!=null" 
+		class="sn-list-item-header" 
+		:style="[{
+			marginRight: showAvatar||showIcon?`5px`:''
+		},customHeaderStyle]">
+			<slot name="header">
+				<view v-if="disabled&&showAvatar" 
+				class="sn-list-item-avatar-overlay"
+				:style="{
+					width: avatarConfig.size ?? '30px',
+					height: avatarConfig.size ?? '30px',
+					borderRadius: avatarConfig.borderRadius ?? '10px',
+					background:disabledBgColorC
+				}"></view>
+				<sn-avatar v-if="showAvatar" 
+				:size="avatarConfig.size ?? '30px'" 
+				:src="avatarConfig.src ?? ''"
+				:borderRadius="avatarConfig.borderRadius ?? '10px'" 
+				:customStyle="customAvatarStyle"></sn-avatar>
+				<sn-icon v-if="showIcon" 
+				:name="icon" 
+				:size="iconSizeC"
+				:color="disabled?disabledTextColorC:iconColorC"
+				:customStyle="customIconStyle"></sn-icon>
+			</slot>
+		</view>
+		<view class="sn-list-item-body" :style="[customBodyStyle]">
+			<slot>
+				<sn-text class="sn-list-item-title" 
+				:text="title" 
+				:size="titleSizeC"
+				:color="disabled?disabledTextColorC:titleColorC"
+				:lines="ellipsis==0?-1:ellipsis"
+				:custom-style="customTitleStyle" 
+				:style="{
+					textOverflow:'ellipsis'
+				}"></sn-text>
+				<sn-text class="sn-list-item-note"
+				:text="note" 
+				:size="noteSizeC"
+				:color="disabled?disabledTextColorC:noteColorC"
+				:lines="ellipsis==0?-1:ellipsis"
+				:custom-style="customNoteStyle" 
+				:style="{
+					textOverflow:'ellipsis'
+				}"></sn-text>
+			</slot>
+		</view>
+		<view class="sn-list-item-footer" :style="[customFooterStyle]">
+			<slot name="footer">
+				<sn-text class="sn-list-item-right-text" 
+				:text="rightText" 
+				:size="rightTextSizeC"
+				:color="disabled?disabledTextColorC:rightTextColorC"
+				:custom-style="customRightTextStyle" 
+				:style="{
+					lines:1,
+					textOverflow:'ellipsis'
+				}"></sn-text>
+				<sn-icon v-if="showArrow" name="arrow-right-s-line"
+					:size="`${snu.getPx(rightTextSizeC)*1.6}px`"
+					:color="disabled?disabledTextColorC:rightTextColorC"
+					:customStyle="customRightTextStyle"></sn-icon>
+			</slot>
+		</view>
+		<!-- #ifndef APP -->
+		</view>
+		<sn-line v-if="showBorder"
+		style="margin: 0 auto;width:calc(100% - 40px);"></sn-line>
+		<!-- #endif -->
+	</view>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-list-item
+	 * @tutorial https://sinleui.pages.dev/components/sn-list
+	 * @description List 列表
+	 * 
+	 * - List 组件用于显示列表信息、聊天信息，内置一套组件模板。
+	 * 
+	 * - 父组件需为 `sn-list`
+	 * @property {Number} ellipsis    Number | 文本溢出隐藏，可设置最大行数，超过则以省略号隐藏文本
+	 * @property {Boolean} disabled    Boolean | 是否禁用列表项（只针对单个列表项）
+	 * @property {String} title    String | 列表项标题
+	 * @property {String} titleSize    String | 列表项标题字体大小
+	 * @property {String} titleColor    String | 列表项标题颜色
+	 * @property {String} note    String | 列表项副标题
+	 * @property {String} noteSize    String | 列表项副标题字体大小
+	 * @property {String} noteColor    String | 列表项副标题颜色
+	 * @property {String} rightText    String | 列表项右侧文本
+	 * @property {String} rightTextSize    String | 列表项右侧文本字体大小
+	 * @property {String} rightTextColor    String | 列表项右侧文本颜色
+	 * @property {String} icon    String | 列表项图标名称
+	 * @property {String} iconSize    String | 列表项图标大小
+	 * @property {String} iconColor    String | 列表项图标颜色
+	 * @property {Boolean} showArrow    Boolean | 是否显示列表项右侧箭头
+	 * @property {String} bgColor    String | 列表项背景颜色
+	 * @property {String} disabledBgColor    String | 禁用时列表项的背景颜色
+	 * @property {String} disabledTextColor    String | 禁用时列表项的文本颜色
+	 * @property {String} activeBgColor    String | 激活时列表项的背景颜色
+	 * @property {String} padding    String | 列表项内边距
+	 * @property {[SnAvatarParams](https://sinleui.pages.dev/api/types/components#snavatarparams)} avatarConfig    [SnAvatarParams](https://sinleui.pages.dev/api/types/components#snavatarparams) | 聊天列表项头像配置
+	 * @property {UTSJSONObject} customTitleStyle    UTSJSONObject | 自定义列表项标题样式
+	 * @property {UTSJSONObject} customNoteStyle    UTSJSONObject | 自定义列表项副标题样式
+	 * @property {UTSJSONObject} customRightTextStyle    UTSJSONObject | 自定义列表项右侧文本样式
+	 * @property {UTSJSONObject} customAvatarStyle    UTSJSONObject | 自定义列表项头像样式
+	 * @property {UTSJSONObject} customIconStyle    UTSJSONObject | 自定义列表项图标样式
+	 * @property {UTSJSONObject} customBodyStyle    UTSJSONObject | 自定义列表项主体内容样式
+	 * @property {UTSJSONObject} customHeaderStyle    UTSJSONObject | 自定义列表项头部样式
+	 * @property {UTSJSONObject} customFooterStyle    UTSJSONObject | 自定义列表项尾部样式
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义列表项整体样式
+	 */
+	// 依赖
+	import { $snui, useResize, SnAvatarParams, useFormatProp } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-list-item'
+	})
+
+	// SinleUI 配置
+	const colors = $snui.colors
+	const snu = $snui.utils
+	const instance = getCurrentInstance()!
+	
+	// 事件注册
+	const emit = defineEmits(['click'])
+
+	const props = defineProps({
+		ellipsis: {
+			type: Number,
+			default: 0
+		},
+		disabled: {
+			type: Boolean,
+			default: false
+		},
+		title: {
+			type: String,
+			default: ''
+		},
+		titleSize: {
+			type: String,
+			default: ''
+		},
+		titleColor: {
+			type: String,
+			default: ''
+		},
+		note: {
+			type: String,
+			default: ''
+		},
+		noteSize: {
+			type: String,
+			default: ''
+		},
+		noteColor: {
+			type: String,
+			default: ''
+		},
+		rightText: {
+			type: String,
+			default: ''
+		},
+		rightTextSize: {
+			type: String,
+			default: ''
+		},
+		rightTextColor: {
+			type: String,
+			default: ''
+		},
+		avatarConfig: {
+			type: Object as PropType<SnAvatarParams>,
+			default: {} as SnAvatarParams
+		},
+		icon: {
+			type: String,
+			default: ''
+		},
+		iconSize: {
+			type: String,
+			default: ''
+		},
+		iconColor: {
+			type: String,
+			default: ''
+		},
+		showArrow: {
+			type: Boolean,
+			default: false
+		},
+		bgColor: {
+			type: String,
+			default: ''
+		},
+		disabledBgColor: {
+			type: String,
+			default: ''
+		},
+		disabledTextColor: {
+			type: String,
+			default: ''
+		},
+		activeBgColor: {
+			type: String,
+			default: ''
+		},
+		padding: {
+			type: String,
+			default: '13px 15px'
+		},
+		customTitleStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customNoteStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customRightTextStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customAvatarStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customIconStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customBodyStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customHeaderStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customFooterStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+
+	})
+
+	// 基本变量
+	const id = snu.randomComId()
+	const isHover = ref(false)
+	const itemEle = ref(null as UniElement | null)
+	const index = ref(0)
+	const showBorder = ref(false)
+
+	// 计算属性
+	const titleColorC = computed((): string => {
+		return useFormatProp('color',props.titleColor, colors.value.title)
+	})
+	
+	const noteColorC = computed((): string => {
+		return useFormatProp('color',props.noteColor, colors.value.textLight)
+	})
+	
+	const rightTextColorC = computed((): string => {
+		return useFormatProp('color',props.rightTextColor, colors.value.textLight)
+	})
+	
+	const iconColorC = computed((): string => {
+		return useFormatProp('color',props.iconColor, colors.value.title)
+	})
+	
+	const disabledBgColorC = computed((): string => {
+		return useFormatProp('color',props.disabledBgColor, colors.value.disabled)
+	})
+	
+	const disabledTextColorC = computed((): string => {
+		return useFormatProp('color',props.disabledTextColor, colors.value.disabledText)
+	})
+	
+	const activeBgColorC = computed((): string => {
+		return useFormatProp('color',props.activeBgColor, colors.value.info)
+	})
+	
+	const bgColorC = computed(() : string => {
+		let bgColor = useFormatProp('color',props.bgColor, colors.value.transparent)
+		return props.disabled ? disabledBgColorC.value : (isHover.value ? activeBgColorC.value : bgColor)
+	})
+
+	const showAvatar = computed(() : boolean => {
+		return !snu.isEmpty(props.avatarConfig?.src ?? '')
+	})
+
+	const showIcon = computed(() : boolean => {
+		return !showAvatar.value && !snu.isEmpty(props.icon)
+	})
+	
+	const titleSizeC = computed((): string => {
+		return useFormatProp('font',props.titleSize, $snui.configs.font.size(2))
+	})
+	
+	const noteSizeC = computed((): string => {
+		return useFormatProp('font',props.noteSize, $snui.configs.font.size(1))
+	})
+	
+	const rightTextSizeC = computed((): string => {
+		return useFormatProp('font',props.rightTextSize, $snui.configs.font.size(1))
+	})
+	
+	const iconSizeC = computed((): string => {
+		return useFormatProp('font',props.iconSize, $snui.configs.font.size(4))
+	})
+	
+	const listItemStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		// #ifdef APP
+		styles.set('padding', props.padding)
+		// #endif
+		styles.set('background', bgColorC.value)
+		styles.set('transition-duration', $snui.configs.aniTime.normal)
+		return styles
+	})
+	
+	// #ifndef APP
+	const webWrapStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('padding', props.padding)
+		return styles
+	})
+	// #endif
+
+
+	// 方法
+	function onClick(e : UniPointerEvent) {
+		if (props.disabled) return
+		emit('click', { id: index.value, event: e })
+	}
+	
+	
+	function drawLines() {
+		if (!showBorder.value) return
+		// #ifdef APP
+		let item = itemEle.value
+		let rectInfo = item!.getBoundingClientRect()!
+		let ctx = item!.getDrawableContext()!
+		ctx.reset()
+		ctx.lineCap = 'round'
+		ctx.lineWidth = 1
+		ctx.strokeStyle = colors.value.line
+		ctx.moveTo(20, rectInfo.height)
+		ctx.lineTo(rectInfo.width - 20, rectInfo.height)
+		ctx.stroke()
+		ctx.update()
+		// #endif
+	}
+
+	function setOrder(_index: number, _showBorder:boolean) {
+		showBorder.value = _showBorder
+		index.value = _index
+		drawLines()
+	}
+	
+
+	defineExpose({
+		setOrder
+	})
+
+	// 初始化
+	onMounted(() => {
+		// #ifdef WEB
+		window.addEventListener('mouseup', ()=>{
+			isHover.value = false
+		});
+		// #endif
+		nextTick(() => {
+			let ins = instance.proxy!
+			snu.findParent(ins, ['sn-list'])?.$callMethod('register', ins as ComponentPublicInstance)
+		})
+		useResize(itemEle.value, ()=>{
+			drawLines()
+		})
+	})
+</script>
+
+<style lang="scss">
+	.sn-list-item {
+		width: 100%;
+		
+		// #ifdef APP
+		flex-direction: row;
+		align-items: center;
+		// #endif
+		
+		// #ifndef APP
+		&-web-wrap {
+			flex-direction: row;
+			align-items: center;
+			flex: 1;
+		}
+		// #endif
+
+		&-avatar-overlay {
+			transition: background-color;
+			position: absolute;
+			z-index: 1;
+			opacity: 0.8;
+		}
+
+		&-body {
+			flex: 1;
+			flex-direction: column;
+		}
+
+		&-footer {
+			flex-direction: row;
+			justify-content: center;
+			align-items: center;
+		}
+	}
+</style>

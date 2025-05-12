@@ -1,0 +1,242 @@
+<template>
+	<view v-if="count>0" 
+	class="sn-rate" 
+	:style="[customStyle]">
+		<sn-icon v-show="activeValue>0"
+		class="sn-rate-prefix" 
+		:id="prefixId"
+		:name="prefixText"
+		:color="activeColorC" 
+		:size="iconSizeC"
+		@touchstart="rateTouched"
+		:style="iconStylesC"></sn-icon>
+		<sn-icon v-show="restCount>0"
+		class="sn-rate-suffix" 
+		:id="suffixId" 
+		:name="suffixText"
+		:color="inactiveColorC" 
+		:size="iconSizeC" 
+		@touchstart="rateTouched"
+		:style="iconStylesC" ></sn-icon>
+	</view>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-rate
+	 * @tutorial https://sinleui.pages.dev/components/sn-rate
+	 * @description  Rate 评分组件
+	 *
+	 *- 普普通通的评分组件
+	 * @property {Number} vModel    Number | 当前选中的评分值
+	 * @property {Number} count    Number | 总评分数量
+	 * @property {Boolean} readonly    Boolean | 是否为只读状态
+	 * @property {Boolean} clearable    Boolean | 是否允许点击当前值清除评分
+	 * @property {Boolean} allowHalf    Boolean | 是否允许半星评分
+	 * @property {String} spacing    String | 图标之间的间距
+	 * @property {String} inactiveColor    String | 未选中图标的颜色
+	 * @property {String} activeColor    String | 选中图标的颜色
+	 * @property {String} icon    String | 评分图标名称
+	 * @property {String} iconSize    String | 图标大小
+	 * @property {String} activeIcon    String | 选中图标的名称
+	 * @property {String} halfIcon    String | 半星图标的名称
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义评分组件样式
+	 * @event {Function} change   (v:number)=>void | 当前值变化时触发
+	 */
+
+
+	// 依赖
+	import { $snui, useFormatProp } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-rate'
+	})
+	
+	// SinleUI 配置
+	const colors = $snui.colors
+	const snu = $snui.utils;
+
+	// 事件注册
+	const emit = defineEmits(['change'])
+	
+	const model = defineModel({
+		type: Number,
+		default: 0,
+	})
+
+	// 组件属性
+	const props = defineProps({
+		count: {
+			type: Number,
+			default: 5
+		},
+		readonly: {
+			type: Boolean,
+			default: false
+		},
+		clearable: {
+			type: Boolean,
+			default: false
+		},
+		allowHalf: {
+			type: Boolean,
+			default: false
+		},
+		spacing: {
+			type: String,
+			default: '5px'
+		},
+		inactiveColor: {
+			type: String,
+			default: ''
+		},
+		activeColor: {
+			type: String,
+			default: ''
+		},
+		icon: {
+			type: String,
+			default: 'star-fill'
+		},
+		iconSize: {
+			type: String,
+			default: ''
+		},
+		activeIcon: {
+			type: String,
+			default: ''
+		},
+		halfIcon: {
+			type: String,
+			default: 'star-half-fill'
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+	})
+
+	// 基本变量
+	const prefixId = snu.randomComId()
+	const suffixId = snu.randomComId()
+	const prefixEle = ref(null as UniElement | null)
+	const suffixEle = ref(null as UniElement | null)
+	
+	
+	onMounted(()=>{
+		nextTick(()=>{
+			prefixEle.value = uni.getElementById(prefixId)
+			suffixEle.value = uni.getElementById(suffixId)
+		})
+	})
+	
+	
+	// 计算属性
+
+	const activeIconC = computed(() : string => {
+		let givenIcon = props.activeIcon
+		return snu.isEmpty(givenIcon) ? props.icon : givenIcon;
+	});
+
+	const activeValue = computed(() : number => {
+		return Math.min(props.count, (Math.max(model.value, 0)))
+	});
+
+	const prefixText = computed(() : string => {
+		if (props.allowHalf) {
+			let activeValueInt = Math.trunc(activeValue.value)
+			return (activeIconC.value + ',').repeat(activeValueInt) + (activeValue.value - activeValueInt == 0.5 ? props.halfIcon : '');
+		} else {
+			return (activeIconC.value + ',').repeat(activeValue.value);
+		}
+	});
+
+	const restCount = computed(() : number => {
+		return Math.max(props.count - activeValue.value, 0);
+	});
+
+	const suffixText = computed(() : string => {
+		let icon = (props.allowHalf) ? (props.icon == 'star-fill' ? 'star-line' : props.icon) : props.icon
+		return (icon as string + ',').repeat(Math.trunc(restCount.value));
+	});
+
+
+	const componentPos = computed(() : number[] => {
+		if (activeValue.value > 0 && prefixEle.value != null && suffixEle.value != null) {
+			let pre = (prefixEle.value as UniElement).getBoundingClientRect() as DOMRect;
+			return [pre.x as number, pre.y as number];
+		} else if (activeValue.value == 0 && suffixEle != null) {
+			let suf = (suffixEle.value as UniElement).getBoundingClientRect() as DOMRect;
+			return [suf.x as number, suf.y as number];
+		} else {
+			return [0, 0];
+		}
+	});
+
+	const componentWidth = computed(() : number => {
+		if (prefixEle.value != null && suffixEle.value != null) {
+			return (prefixEle.value as UniElement).offsetWidth as number + (suffixEle.value as UniElement).offsetWidth as number;
+		} else {
+			return 0;
+		}
+	});
+	
+	const inactiveColorC = computed((): string => {
+		return useFormatProp('color', props.inactiveColor, colors.value.infoDark)
+	})
+	
+	const activeColorC = computed((): string => {
+		return useFormatProp('color', props.activeColor, colors.value.warning)
+	})
+	
+	const iconSizeC = computed((): string => {
+		return useFormatProp('font', props.iconSize, $snui.configs.font.size(4))
+	})
+	
+	const iconStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('letterSpacing', props.spacing)
+		return styles
+	})
+	
+	
+	// 方法
+	function rateTouched(e : UniTouchEvent) {
+		let count = props.count
+		if (!(props.readonly)) {
+			let touch = e.touches[0]
+			let itemX = touch.clientX as number - componentPos.value[0]
+			let itemWidth = componentWidth.value / count
+
+			let itemValueInt = parseInt((itemX / itemWidth).toString())
+			let itemValue = itemValueInt + (props.allowHalf ? (itemX / itemWidth - itemValueInt > 0.5 ? 1 : 0.5) : 1)
+			if (itemValue > count) {
+				itemValue = count
+			} else if (itemValue < 0) {
+				itemValue = 0
+			}
+			if (props.clearable && itemValue == model.value) {
+				itemValue = 0
+			}
+			model.value = itemValue
+			emit('change', itemValue)
+		}
+	}
+
+</script>
+
+<style lang="scss">
+	.sn-rate {
+		flex-direction: row;
+		flex-wrap: nowrap;
+
+		&-prefix {
+			lines: 1;
+		}
+
+		&-suffix {
+			lines: 1;
+		}
+
+	}
+</style>

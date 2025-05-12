@@ -1,0 +1,175 @@
+<template>
+	<sn-overlay ref="overlayEle"
+	:maskClose="false"
+	:aniTime="aniTimeC"
+	:bgColor="bgColorC" 
+	:opacity="1">
+		<view class="sn-loading-page" :class="showV?'sn-loading-page__show':''"
+		:style="loadingPageStylesC">
+			<sn-loading v-if="!showImage" 
+			:iconColor="iconColorC"
+			:iconSize="iconSizeC"></sn-loading>
+			<image v-else 
+			fade-show
+			:src="imgSrc" 
+			:style="[customImgStyle]">
+			</image>
+			<sn-text :color="textColorC" 
+			:size="textSizeC" 
+			:text="text"
+			:custom-style="customTextStyle"></sn-text>
+		</view>
+	</sn-overlay>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-loading-page
+	 * @tutorial https://sinleui.pages.dev/components/sn-loading-page
+	 * @description  LoadingPage 加载页
+	 *
+	 *- 在页面信息尚未完全加载时使用，避免出现视觉空白
+	 * @property {Boolean} show    Boolean | 是否显示加载页
+	 * @property {String} text    String | 加载页显示的文本内容
+	 * @property {String} imgSrc    String | 加载页显示的图片路径
+	 * @property {String} bgColor    String | 加载页背景颜色
+	 * @property {String} textColor    String | 加载页文本颜色
+	 * @property {String} textSize    String | 加载页文本大小
+	 * @property {String} iconColor    String | 加载页图标颜色（如果显示图标）
+	 * @property {String} iconSize    String | 加载页图标大小（如果显示图标）
+	 * @property {Number} aniTime    String | 加载页动画持续时间
+	 * @property {UTSJSONObject} customImgStyle    UTSJSONObject | 加载页图片自定义样式
+	 * @property {UTSJSONObject} customTextStyle    UTSJSONObject | 加载页文本自定义样式
+	 */
+	// 依赖
+	import { $snui, useFormatProp } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-loading-page'
+	})
+	
+	// SinleUI 配置
+	const colors = $snui.colors
+	const snu = $snui.utils;
+	
+	const props = defineProps({
+		show: {
+			type: Boolean,
+			default: false
+		},
+		text: {
+			type: String,
+			default: '加载中'
+		},
+		imgSrc: {
+			type: String,
+			default: ''
+		},
+		bgColor: {
+			type: String,
+			default: ''
+		},
+		textColor: {
+			type: String,
+			default: ''
+		},
+		textSize: {
+			type: String,
+			default: ''
+		},
+		iconColor: {
+			type: String,
+			default: ''
+		},
+		iconSize: {
+			type: String,
+			default: ''
+		},
+		aniTime: {
+			type: String,
+			default: $snui.configs.aniTime.normal
+		},
+		customImgStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {
+				width: '70px',
+				height: '70px',
+			}
+		},
+		customTextStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {
+				marginTop: '15px'
+			}
+		}
+	})
+	
+	// 基本变量
+	const overlayEle = ref(null as SnOverlayComponentPublicInstance | null)
+	const showV = ref(false)
+	
+	// 计算属性
+	const showImage = computed(():boolean=>{
+		return !snu.isEmpty(props.imgSrc) 
+	})
+	
+	const theme = computed((): string => $snui.configs.app.theme)
+	
+	const bgColorC = computed((): string => {
+		return useFormatProp('color', props.bgColor, colors.value.info)
+	})
+	
+	const aniTimeC = computed((): string => {
+		return useFormatProp('aniTime', props.aniTime, $snui.configs.aniTime.normal)
+	})
+	
+	const textColorC = computed((): string => {
+		return useFormatProp('color', props.textColor, colors.value[`${theme.value == 'light'? 'infoDark':'dark'}`] as string)
+	})
+	
+	const textSizeC = computed((): string => {
+		return useFormatProp('font', props.textSize, $snui.configs.font.size(4))
+	})
+	
+	const iconColorC = computed((): string => {
+		return useFormatProp('color', props.iconColor, colors.value[`${theme.value == 'light'? 'infoDark':'dark'}`] as string)
+	})
+	
+	const iconSizeC = computed((): string => {
+		return useFormatProp('font', props.iconSize, $snui.configs.font.size(7))
+	})
+	
+	const loadingPageStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('transition-duration',aniTimeC.value)
+		return styles
+	})
+	
+	// 设置一定的延迟增加动画的流畅度
+	watch(():boolean=>props.show, (n:boolean)=>{
+		if (n){
+			overlayEle.value?.open?.()
+		} else {
+			overlayEle.value?.close?.()
+		}
+		setTimeout(() => {
+			showV.value = n
+		}, 50)
+	}, {
+		immediate: true
+	})
+</script>
+
+<style lang="scss">
+	.sn-loading-page {
+		margin: auto;
+		flex-direction: column;
+		align-items: center;
+		opacity: 0;
+		transition-property: opacity;
+		transform: translateY(-50%);
+		&__show {
+			opacity: 1;
+		}
+	}
+</style>

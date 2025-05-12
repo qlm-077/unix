@@ -1,0 +1,89 @@
+import { colorsLight, _setColor, _setColorSet } from '../theme/theme.uts'
+import { SnColorBase } from '../types/index.uts'
+import { UtilsLib } from '../core/utils/index.uts'
+export const utils = new UtilsLib()
+export const _colors = ref(utils.deepClone(colorsLight.value))
+import { store } from '../core/store/index.uts'
+export { store }
+
+// 基本配置
+import { AppConfig } from './app.uts'
+import { PageConfig } from './page.uts'
+import { FontConfig } from './font.uts'
+import { RadiusConfig } from './radius.uts'
+import { AniTimeConfig } from './aniTime.uts'
+import { zIndexStyles } from './zIndex.uts'
+
+// 核心库
+import { Core } from '../core/index.uts'
+
+class Configs {
+	app = new AppConfig()
+	font = new FontConfig()
+	radius = new RadiusConfig()
+	aniTime = new AniTimeConfig()
+	page = new PageConfig()
+	zIndex = new zIndexStyles()
+}
+
+type themeType = 'light' | 'dark'
+
+export class Snui {
+	/**
+	 * 提供当前主题和颜色模式下的颜色对象
+	 */
+	readonly colors = _colors
+	/**
+	 * Utils 工具库
+	 */
+	readonly utils = utils
+	/**
+	 * Store 状态管理
+	 */
+	readonly store = store
+	/**
+	 * 其他核心库
+	 */
+	readonly libs = new Core()
+	/**
+	 * SinleUI 的全局配置
+	 */
+	configs = new Configs()
+
+	
+	/**
+	 * @name 设置颜色
+	 * @description 设置指定主题中的指定颜色变量的值
+	 * @param {themeType} theme - 主题类型。
+	 * @param {string} key - 颜色键。
+	 * @param {string} value - 颜色值。
+	 * @returns {void}
+	 * @example
+	 * // 示例用法
+	 * setColor('light', 'primary', '#007bff');
+	 */
+
+	setColor(theme : themeType, key : string, value : string) {
+		_setColor(theme, key, value)
+	}
+	
+	/**
+	 * @name 设置颜色集合
+	 * @description 设置指定主题中的所有颜色变量的集合。
+	 * @param {themeType} theme - 主题类型。
+	 * @param {SnColorBase} colorSet - 颜色集合对象。
+	 * @returns {void}
+	 * @example
+	 * // 示例用法
+	 * const colorSet: SnColorBase = { 
+		 primary: '#007bff', 
+		 info: '#6c757d', 
+		 ... // 其他颜色变量，须完整实现 SnColorBase
+		 };
+		setColorSet('light', colorSet);
+	 */
+	setColorSet(theme : themeType, colorSet : SnColorBase) {
+		_setColorSet(theme, colorSet)
+	}
+	
+}

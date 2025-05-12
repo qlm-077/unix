@@ -1,0 +1,207 @@
+<template>
+	<view class="sn-badge" 
+	ref="badgeEle"
+	:style="[containStylesC, customStyle]">
+		<slot>
+		</slot>
+		<view v-if="modeC=='dot'||(modeC=='text'&&!showText)" 
+		class="sn-badge-dot" 
+		:style="[dotStylesC, customDotStyle]">
+		</view>
+		<view v-else-if="(modeC=='number'&&(value==0?showZero:true)) || (modeC=='text'&&showText)" 
+		class="sn-badge-number-text"
+		:style="[numberTextStylesC, customStyle]">
+			<sn-text class="sn-badge-number-text-text" 
+			font="sans-serif" 
+			lineHeight="1.3"
+			:text="contentC" 
+			:color="textColor==''?'#fff':textColor" 
+			:size="sizeC"
+			:style="[customTextStyle]"></sn-text>
+		</view>
+	</view>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-badge
+	 * @tutorial https://sinleui.pages.dev/components/sn-badge
+	 * @description Badge 徽标
+	 *  
+	 * - 用以展示未读消息及消息提示。
+	 * @property {String} mode=[number|dot|text]    String | 徽标显示模式，可选数字模式Number、文本模式`text`、浮点模式`dot`
+	 * @value number 数字模式
+	 * @value dot 浮点模式
+	 * @value text 文本模式
+	 * @property {Number} value    Number | 数字模式下徽标的数字值
+	 * @property {Number} max    Number | 数字模式下徽标的最大数字值。超过此值会显示`${max}+`。值为-1时不限制最大值。
+	 * @property {String} text    String | 文本模式下徽标的文本内容
+	 * @property {String} bgColor    String | 徽标的背景颜色
+	 * @property {String} textColor    String | 数字、文本模式下徽标的数字/文本颜色
+	 * @property {String} size    String | 数字、文本模式下徽标内数字/文本大小；浮点模式
+	 * @property {Boolean} showZero    Boolean | 数字模式下徽标的数字值为`0`时是否显示（默认不显示）
+	 * @property {String} offset    String | 徽标的偏移量（对徽标的位置不满意可以通过这个属性调整。格式同css属性`transform`）
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义徽标样式
+	 * @property {UTSJSONObject} customTextStyle    UTSJSONObject | 自定义数字、文本模式下徽标内部文本样式
+	 * @property {UTSJSONObject} customDotStyle    UTSJSONObject | 自定义浮点模式下徽标样式
+	 * @property {UTSJSONObject} customContainStyle    UTSJSONObject | 自定义徽标外部容器样式
+	 */
+	
+	// 依赖
+	import { $snui, useFormatProp } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-badge'
+	})
+
+	// SinleUI 配置
+	const snu = $snui.utils
+	const colors = $snui.colors
+	
+	// 组件属性
+	const props = defineProps({
+		value: {
+			type: Number,
+			default: 0
+		},
+		text: {
+			type: String,
+			default: ''
+		},
+		bgColor: {
+			type: String,
+			default: ''
+		},
+		textColor: {
+			type: String,
+			default: '#fff'
+		},
+		mode: {
+			type: String,
+			default: 'number'
+		},
+		max: {
+			type: Number,
+			default: -1
+		},
+		size: {
+			type: String,
+			default: ''
+		},
+		showZero: {
+			type: Boolean,
+			default: false
+		},
+		offset: {
+			type: String,
+			default: ''
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customTextStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customDotStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customContainStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+	})
+	
+	// 计算属性
+	const modeC = computed(() : string => {
+		let types = ['number', 'dot', 'text']
+		return types.includes(props.mode) ? props.mode : 'number'
+	})
+
+	const showText = computed(() : boolean => {
+		return !snu.isEmpty(props.text)
+	})
+
+	const bgColorC = computed(() : string => {
+		return useFormatProp('color', props.bgColor, colors.value.error)
+	})
+	
+	const sizeC = computed((): string => {
+		return useFormatProp('font', props.size, (modeC.value == 'dot' ? '8px' : $snui.configs.font.size(1)))
+	})
+
+	const badgeTransform = computed(() : string => {
+		return useFormatProp('other', props.offset, 'translate(25%, -25%)')
+	})
+	const contentC = computed(() : string => {
+		if (modeC.value == 'number') {
+			let max = props.max
+			let value = props.value
+			return max == -1 || (value <= max) ? value.toString() : max.toString() + '+'
+		} else if (modeC.value == 'text') {
+			return props.text
+		}
+		return ''
+	})
+	
+	const dotStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('background', bgColorC.value)
+		styles.set('transform', badgeTransform.value)
+		styles.set('width', sizeC.value)
+		styles.set('height', sizeC.value)
+		styles.set('z-index', $snui.configs.zIndex.badge)
+		styles.set('border-radius', $snui.configs.radius.circle)
+		styles.set('transition-duration',$snui.configs.aniTime.normal)
+		return styles
+	})
+	
+	const numberTextStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('transform', badgeTransform.value)
+		styles.set('background', bgColorC.value)
+		styles.set('z-index', $snui.configs.zIndex.badge)
+		styles.set('border-radius', $snui.configs.radius.circle)
+		styles.set('transition-duration',$snui.configs.aniTime.normal)
+		return styles
+	})
+	
+	const containStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('transition-duration',$snui.configs.aniTime.normal)
+		return styles
+	})
+	
+	
+</script>
+
+<style lang="scss">
+	.sn-badge {
+		display: flex;
+		flex-direction: row;
+		align-items: flex-start;
+		overflow: visible;
+		
+		&-dot {
+			position: absolute;
+			right: 0;
+			top: 0;
+		}
+
+		&-number-text {
+			display: flex;
+			justify-content: center;
+			position: absolute;
+			right: 0;
+			top: 0;
+
+			&-text {
+				padding: 1px 5px;
+				flex: 1;
+				text-align: center;
+			}
+		}
+	}
+</style>

@@ -1,0 +1,308 @@
+<template>
+	<view>
+		<list-view class="sn-longlist"
+		ref="listEle"
+		:refresher-default-style="refresherDefaultStyleC"
+		:associative-container="associativeContainer"
+		:bounces="bounces"
+		:upper-threshold="upperThreshold"
+		:lower-threshold="lowerThreshold"
+		:scroll-top="scrollTop"
+		:show-scrollbar="showScrollbar"
+		:scroll-into-view="scrollIntoView"
+		:scroll-with-animation="scrollWithAnimation"
+		:refresher-enabled="refresherEnabled"
+		:refresher-threshold="refresherThreshold"
+		:refresher-max-drag-distance="refresherMaxDragDistance"
+		:refresher-background="refresherBackground"
+		:refresher-triggered="refresherTriggered"
+		:custom-nested-scroll="customNestedScroll"
+		@refresherpulling="refresherpulling"
+		@refresherrefresh="refresherrefresh"
+		@refresherrestore="refresherrestore"
+		@refresherabort="refresherabort"
+		@scrolltolower="scrolltolower"
+		@scrolltoupper="scrolltoupper"
+		@scroll="scroll"
+		@scrollend="scrollend"
+		@click="emit('click')"
+		:style="[customStyle]">
+			<slot></slot>
+			<list-item v-if="loadmore"
+			type="99998">
+				<sn-loadmore :status="loadmoreStatus"
+				:dashed="loadmoreConfig.dashed ?? false"
+				:disabled="loadmoreConfig.disabled ?? false"
+				:textSize="loadmoreConfig.textSize ?? ''"
+				:textColor="loadmoreConfig.textColor ?? ''"
+				:iconSize="loadmoreConfig.iconSize ?? ''"
+				:iconColor="loadmoreConfig.iconColor ?? ''"
+				:lineHeight="loadmoreConfig.lineHeight ?? '0.5px'"
+				:lineColor="loadmoreConfig.lineColor ?? ''"
+				:loadingText="loadmoreConfig.loadingText ?? ''"
+				:nomoreText="loadmoreConfig.nomoreText ?? ''"
+				:loadmoreText="loadmoreConfig.loadmoreText ?? ''"
+				@loadmore="onloadmore"></sn-loadmore>
+			</list-item>
+			<!-- #ifdef APP -->
+			<list-item slot="refresher" 
+			class="refresh-box"
+			type="99999">
+				<sn-refresher v-if="refresherEnabled"
+				:status="refresherStatus"
+				:textSize="refresherConfig.textSize ?? ''"
+				:textColor="refresherConfig.textColor ?? ''"
+				:iconSize="refresherConfig.iconSize ?? ''"
+				:iconColor="refresherConfig.iconColor ?? ''"
+				:icon="refresherConfig.icon ?? 'refresh-line'"
+				:refreshingText="refresherConfig.refreshingText ?? ''"
+				:refreshText="refresherConfig.refreshText ?? ''">
+				</sn-refresher>
+			</list-item>
+			<!-- #endif -->
+		</list-view>
+		<sn-backtop v-if="backtop"></sn-backtop>
+	</view>
+</template>
+
+<script setup>
+
+	/**
+	 * @name sn-longlist
+	 * @tutorial https://sinleui.pages.dev/components/sn-longlist
+	 * @description  LongList 长列表
+	 *
+	 *- 用于显示大量同类信息。
+	 *
+	 *- Longlist 本身只是容器，不预设任何样式。在 Android 端基于 recycle-view，性能优秀（设置固定的高度才支持高性能滚动）。
+	 *
+	 *- 子组件为 `list-item`。
+	 * @property {String} associativeContainer    String | 关联的滚动容器。同[`list-view`](https://doc.dcloud.net.cn/uni-app-x/component/list-view.html#%E5%B1%9E%E6%80%A7)。
+	 * @property {Boolean} bounces    Boolean | 是否启用回弹效果。同[`list-view`](https://doc.dcloud.net.cn/uni-app-x/component/list-view.html#%E5%B1%9E%E6%80%A7)。
+	 * @property {Number} upperThreshold    Number | 距顶部/左边多远时（单位px），触发scrolltoupper事件。同[`list-view`](https://doc.dcloud.net.cn/uni-app-x/component/list-view.html#%E5%B1%9E%E6%80%A7)。
+	 * @property {Number} lowerThreshold    Number | 距底部/右边多远时（单位px），触发scrolltolower事件。同[`list-view`](https://doc.dcloud.net.cn/uni-app-x/component/list-view.html#%E5%B1%9E%E6%80%A7)。
+	 * @property {Number} scrollTop    Number | 设置竖向滚动条位置。同[`list-view`](https://doc.dcloud.net.cn/uni-app-x/component/list-view.html#%E5%B1%9E%E6%80%A7)。
+	 * @property {Boolean} showScrollbar    Boolean | 是否显示滚动条。同[`list-view`](https://doc.dcloud.net.cn/uni-app-x/component/list-view.html#%E5%B1%9E%E6%80%A7)。
+	 * @property {String} scrollIntoView    String | 值应为某子元素id（id不能以数字开头）。设置哪个方向可滚动，则在哪个方向滚动到该元素起始位置。同[`list-view`](https://doc.dcloud.net.cn/uni-app-x/component/list-view.html#%E5%B1%9E%E6%80%A7)。
+	 * @property {Boolean} scrollWithAnimation    Boolean | 是否在设置滚动条位置时使用滚动动画，设置`false`没有滚动动画。同[`list-view`](https://doc.dcloud.net.cn/uni-app-x/component/list-view.html#%E5%B1%9E%E6%80%A7)。
+	 * @property {Boolean} refresherEnabled    Boolean | 开启下拉刷新，暂时不支持`scroll-x=true`横向刷新。同[`list-view`](https://doc.dcloud.net.cn/uni-app-x/component/list-view.html#%E5%B1%9E%E6%80%A7)。
+	 * @property {Number} refresherThreshold    Number | 设置下拉刷新阈值,仅`refresher-default-style='none'`自定义样式下生效。同[`list-view`](https://doc.dcloud.net.cn/uni-app-x/component/list-view.html#%E5%B1%9E%E6%80%A7)。
+	 * @property {Number} refresherMaxDragDistance    Number | 设置下拉最大拖拽距离（单位px）。
+	 * @property {String} refresherBackground    String | 设置下拉刷新区域背景颜色，默认透明。同[`list-view`](https://doc.dcloud.net.cn/uni-app-x/component/list-view.html#%E5%B1%9E%E6%80%A7)。
+	 * @property {Boolean} refresherTriggered    Boolean | 设置当前下拉刷新状态，`true`表示下拉刷新已经被触发，`false`表示下拉刷新未被触发。同[`list-view`](https://doc.dcloud.net.cn/uni-app-x/component/list-view.html#%E5%B1%9E%E6%80%A7)。
+	 * @property {Boolean} backtop    Boolean | 是否显示回到顶部的按钮
+	 * @property {Boolean} loadmore    Boolean | 是否显示加载更多的组件
+	 * @property {String} refresherDefaultStyle=[white|black|none]    String | 设置下拉刷新默认样式，`none`表示不使用默认样式；App端固定为`none`
+	 * @value white 	白色
+	 * @value black 	黑色
+	 * @value none 	不使用默认样式
+	 * @property {String} loadmoreStatus=[loading|nomore|loadmore]    String | 加载更多组件的状态
+	 * @value loading 	加载中
+	 * @value nomore 	没有更多
+	 * @value loadmore 	加载更多
+	 * @property {[SnLoadmoreParams](https://sinleui.pages.dev/api/types/components#snloadmoreparams)} loadmoreConfig    [SnLoadmoreParams](https://sinleui.pages.dev/api/types/components#snloadmoreparams) | 加载更多组件的配置
+	 * @property {[SnRefresherParams](https://sinleui.pages.dev/api/types/components#snrefresherparams)} refresherConfig    [SnRefresherParams](https://sinleui.pages.dev/api/types/components#snrefresherparams) | 下拉刷新组件的配置
+	 * @property {Boolean} customNestedScroll    Boolean | 子元素是否开启嵌套滚动将滚动事件与父元素协商处理同[`list-view`](https://doc.dcloud.net.cn/uni-app-x/component/list-view.html#%E5%B1%9E%E6%80%A7)。
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义滚动列表样式
+	 * @event {Function} loadmore   ()=>void | 加载更多时触发
+	 * @event {Function} scrolltoupper   (e:UniScrollToUpperEvent)=>void | 滚动到顶部时触发
+	 * @event {Function} scrolltolower   (e:UniScrollToLowerEvent)=>void | 滚动到底部时触发
+	 * @event {Function} scroll   (e:UniScrollEvent)=>void | 滚动时触发
+	 * @event {Function} scrollend   (e:UniScrollEvent)=>void | 滚动结束时触发
+	 * @event {Function} refresherpulling   (event:UniRefresherEvent)=>void | 下拉刷新控件被下拉
+	 * @event {Function} refresherrefresh   (event:UniRefresherEvent)=>void | 下拉刷新被触发
+	 * @event {Function} refresherrestore   (event:UniRefresherEvent)=>void | 下拉刷新被复位
+	 * @event {Function} refresherabort   (event:UniRefresherEvent)=>void | 下拉刷新被中止
+	 */
+
+	// 依赖
+	import { SnLoadmoreParams, SnRefresherParams, $snui } from '../../index.uts'
+
+	defineOptions({
+		name: 'sn-longlist'
+	})
+
+	// 事件注册
+	const emit = defineEmits(['refresherpulling', 'refresherrefresh', 'refresherrestore', 'refresherabort', 'scrolltoupper', 'scrolltolower', 'scroll', 'scrollend', 'click', 'loadmore'])
+
+	const props = defineProps({
+		associativeContainer: {
+			type: String,
+			default: ''
+		},
+		bounces: {
+			type: Boolean,
+			default: false
+		},
+		upperThreshold: {
+			type: Number,
+			default: 50
+		},
+		lowerThreshold: {
+			type: Number,
+			default: 50
+		},
+		scrollTop: {
+			type: Number,
+			default: 0
+		},
+		showScrollbar: {
+			type: Boolean,
+			default: false
+		},
+		scrollIntoView: {
+			type: String,
+			default: ''
+		},
+		scrollWithAnimation: {
+			type: Boolean,
+			default: true
+		},
+		refresherEnabled: {
+			type: Boolean,
+			default: false
+		},
+		refresherThreshold: {
+			type: Number,
+			default: 45
+		},
+		refresherMaxDragDistance: {
+			type: Number,
+			default: 100
+		},
+		refresherBackground: {
+			type: String,
+			default: 'transparent'
+		},
+		refresherTriggered: {
+			type: Boolean,
+			default: false
+		},
+		backtop: {
+			type: Boolean,
+			default: true
+		},
+		loadmore: {
+			type: Boolean,
+			default: true
+		},
+		refresherDefaultStyle: {
+			type: String,
+			default: 'white'
+		},
+		loadmoreStatus: {
+			type: String,
+			default: 'loadmore'
+		},
+		loadmoreConfig: {
+			type: Object as PropType<SnLoadmoreParams>,
+			default: {} as SnLoadmoreParams
+		},
+		refresherConfig: {
+			type: Object as PropType<SnRefresherParams>,
+			default: {} as SnRefresherParams
+		},
+		customNestedScroll: {
+			type: Boolean,
+			default: false
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+	})
+
+	// 基本变量
+	const updateBacktop = ref([(scrollTop : number) => { }])
+	const listEle = ref(null as UniListViewElement | null)
+	const refresherStatus = ref('refresh')
+	
+	// 计算属性
+	const refresherDefaultStyleC = computed((): string => {
+		let v = props.refresherDefaultStyle
+		// #ifdef APP
+		v = 'none'
+		// #endif
+		return v
+	})
+
+	// 方法
+	function updateBacktopStatus(scrollTop : number) {
+		updateBacktop.value.forEach((update : (scrollTop : number) => void) => {
+			update(scrollTop)
+		})
+	}
+
+	function scrollTo(x : number, y : number) {
+		updateBacktopStatus(y)
+		if (listEle.value != null) {
+			// #ifdef APP
+			listEle.value!.setAttribute('scroll-top', `${x}`)
+			listEle.value!.setAttribute('scroll-left', `${y}`)
+			// #endif
+			// #ifndef APP
+			listEle.value!.scrollTop = x
+			listEle.value!.scrollLeft = y
+			// #endif
+		}
+	}
+
+	function registerBacktop(update : (scrollTop : number) => void) {
+		updateBacktop.value.push(update)
+	}
+
+
+	// 页面事件
+	function onloadmore() {
+		emit('loadmore')
+	}
+
+	function refresherpulling(e : UniRefresherEvent) {
+		refresherStatus.value = 'refresh'
+		emit('refresherpulling', e)
+	}
+	function refresherrefresh(e : UniRefresherEvent) {
+		refresherStatus.value = 'refreshing'
+		emit('refresherrefresh', e)
+	}
+	function refresherrestore(e : UniRefresherEvent) {
+		refresherStatus.value = 'refresh'
+		emit('refresherrestore', e)
+	}
+	function refresherabort(e : UniRefresherEvent) {
+		refresherStatus.value = 'refresh'
+		emit('refresherabort', e)
+	}
+	function scrolltoupper(e : UniScrollToUpperEvent) {
+		emit('scrolltoupper', e)
+	}
+	function scrolltolower(e : UniScrollToLowerEvent) {
+		emit('scrolltolower', e)
+	}
+	function scroll(e : UniScrollEvent) {
+		emit('scroll', e)
+		updateBacktopStatus(e.detail.scrollTop)
+	}
+
+	function scrollend(e : UniScrollEvent) {
+		emit('scrollend', e)
+	}
+
+	defineExpose({
+		scrollTo,
+		registerBacktop
+	})
+</script>
+
+<style lang="scss">
+	.sn-longlist {
+		flex: 1;
+	}
+	
+	.refresh-box {
+		justify-content: center;
+		align-items: center;
+		flex-direction: row;
+		width: 100%;
+	}
+</style>

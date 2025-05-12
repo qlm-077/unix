@@ -1,0 +1,85 @@
+import { colorType } from './css/type.uts'
+import { reactive } from 'vue'
+import { Theme, BeeThemeAttr } from './types'
+import dark from './css/dark.uts'
+import light from './css/light.uts'
+
+export default class BeeTheme {
+	beeThemeAttr : BeeThemeAttr = reactive({
+
+		themes: [],
+		// 默认主题
+		colors: light,
+		// 默认主题名
+		currTheme: 'default'
+	} as BeeThemeAttr)
+
+	private static instance : BeeTheme | null = null
+
+	private constructor() { }
+
+	static getInstance() : BeeTheme {
+		const ins = BeeTheme.instance
+		if (ins == null) {
+			BeeTheme.instance = new BeeTheme()
+		}
+		return BeeTheme.instance as BeeTheme
+	}
+
+	// 初始化主题
+	init() {
+		const themes = [{
+			theme: 'default',
+			colors: light,
+		}, {
+			theme: 'dark',
+			colors: dark,
+		}] as Theme[]
+
+		this.beeThemeAttr.themes = themes
+         
+		// 本地持久化缓存theme
+		const localCurrTheme = uni.getStorageSync('currTheme') as string
+		if (typeof localCurrTheme == 'string' && localCurrTheme != '') {
+			for (let i = 0; i < this.beeThemeAttr.themes.length; i++) {
+				if (localCurrTheme == this.beeThemeAttr.themes[i]['theme']) {
+					this.beeThemeAttr.currTheme = localCurrTheme
+					this.beeThemeAttr.colors = this.beeThemeAttr.themes[i].colors
+				}
+			}
+		}
+	}
+
+	// 判断是否已存在某个主题
+	hasTheme(theme : string) : boolean {
+		const len = this.beeThemeAttr.themes.length
+		for (let i = 0; i < len; i++) {
+			if (this.beeThemeAttr.themes[i]['theme'] == theme) {
+				return true
+			}
+		}
+		return false
+	}
+
+	// 切换主题
+	switchTheme(theme : string) : boolean {
+		if (this.hasTheme(theme)) {
+			this.beeThemeAttr.currTheme = theme
+			const len = this.beeThemeAttr.themes.length
+			for (let i = 0; i < len; i++) {
+				if (theme == this.beeThemeAttr.themes[i]['theme']) {
+					this.beeThemeAttr.currTheme = this.beeThemeAttr.themes[i].theme
+					this.beeThemeAttr.colors = this.beeThemeAttr.themes[i].colors
+					uni.setStorageSync('currTheme', this.beeThemeAttr.currTheme)
+				}
+			}
+			return true
+		}
+		return false
+	}
+
+	// 获取主题颜色
+	theme(color : string) : string {
+		return this.beeThemeAttr.colors[color] as string
+	}
+}

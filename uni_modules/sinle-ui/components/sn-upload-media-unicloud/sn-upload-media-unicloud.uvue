@@ -1,0 +1,565 @@
+<template>
+	<view class="sn-upload-media-unicloud-group"
+	:style="customStyle">
+		<sn-view class="sn-upload-media-unicloud-item"
+		v-for="(item, index) in (mediaList as SnMedia[])"
+		:key="index"
+		:disabled="disabled"
+		:borderRadius="itemBorderRadiusC"
+		:style="[itemStylesC, customItemStyle]">
+			<sn-image v-if="item.type=='image'"
+			mode="scaleToFill"
+			:src="item.src ?? ''"
+			:width="width"
+			:height="height"
+			:borderRadius="itemBorderRadiusC"
+			:enablePreview="enablePreview"></sn-image>
+			<video v-else-if="item.type=='video'"
+			:src="item.src ?? ''"
+			:controls="false"
+			:poster="item.thumb ?? ''"
+			:show-center-play-btn="false"
+			:style="videoStylesC"></video>
+			<sn-icon v-if="clearable"
+			name="close-circle-fill"
+			class="sn-upload-media-unicloud-item-close"
+			color="$error"
+			:size="delBtnSizeC"
+			:style="delBtnStylesC"
+			@click="del(index, $event)">
+			</sn-icon>
+			<view :style="statusBarStylesC">
+				<sn-text align="center"
+				:text="item.status=='uploaded' ? uploadedText : (item.status=='unuploaded' ? unuploadedText : (item.status == 'error' ? errorText : uploadingText))"
+				:color="item.status=='uploaded' ? colors.success : (item.status=='unuploaded' ? colors.front : (item.status == 'error' ? colors.error : colors.front))"></sn-text>
+			</view>
+		</sn-view>
+		<sn-view v-if="(maxCount<= 0 || mediaList.length < maxCount)"
+		class="sn-upload-media-unicloud-item"
+		:disabled="disabled"
+		:borderRadius="itemBorderRadiusC"
+		:style="[itemStylesC]"
+		@click="onclick()">
+			<slot>
+				<view class="sn-upload-media-unicloud-item-placeholder"
+				:style="[itemPlaceholderStylesC]">
+					<sn-icon name="add-line"
+					color="$lineText"
+					:size="iconSize"></sn-icon>
+				</view>
+			</slot>
+		</sn-view>
+	</view>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-upload-media-unicloud
+	 * @tutorial https://sinleui.pages.dev/components/sn-upload-media
+	 * @description Upload Media 媒体上传
+	 * 
+	 * - 用于快速上传图片/视频媒体文件，分为基础版（`sn-upload-media`）和 uniCloud 版（`sn-upload-media-unicloud`）
+	 * 
+	 * - 支持选择媒体文件、上传、预览等功能。
+	 * @property {String} mode=[image|video|all]    String | 媒体模式。支持图片和视频以及混合模式。
+	 * @value image    图片
+	 * @value video    视频
+	 * @value all      混合
+	 * @property {Boolean} autoUpload    Boolean | 是否自动上传。如设置为 false，则可以通过 upload 方法上传所有媒体文件	
+	 * @property {Number} chooseCount    Number | 一次可以选择的文件数量。视频文件每次只支持选择1张。
+	 * @property {Number} maxCount    Number | 最多可以上传的文件数量，小于等于0则不限制
+	 * @property {Array<String>} sourceType    Array<String> | 可选择媒体文件的来源，提供album（相册）、camera（相机）两个选项
+	 * @property {String} width    String | 媒体文件子项宽度
+	 * @property {String} height    String | 媒体文件子项高度
+	 * @property {String} itemBgColor    String | 媒体文件占位项背景颜色
+	 * @property {String} itemBorderRadius    String | 媒体文件子项圆角大小
+	 * @property {String} iconSize    String | 媒体文件占位项中央图标大小
+	 * @property {Boolean} disabled    Boolean | 是否禁用
+	 * @property {String} chooseErrorTip    String | 选择媒体文件失败时的提示信息
+	 * @property {Boolean} enablePreview    Boolean | 是否启用点击图片预览功能。仅图片模式生效。
+	 * @property {String} uploadingText    String | 上传中的文本
+	 * @property {String} uploadedText    String | 上传成功的文本
+	 * @property {String} unuploadedText    String | 未上传的文本
+	 * @property {String} errorText    String | 上传失败的文本
+	 * @property {Boolean} clearable    Boolean | 是否显示删除按钮
+	 * @property {Boolean} compressed    Boolean | 是否压缩视频文件。仅视频模式生效。
+	 * @property {Number} chooseCount    Number | 录像最大时长，单位为s。仅视频模式生效。
+	 * @property {String} directory    String | 上传至云存储的目录，注意，不要写文件名，该目录将和随机生成的文件名拼合为文件在云存储的绝对地址，使用“/”来分割路径，例如：uploadImages/
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义上传区域样式
+	 * @property {UTSJSONObject} customItemStyle    UTSJSONObject | 自定义媒体文件子项样式
+	 * @event {Function} uploaded   (response:UploadFileSuccess)=>void | 每个文件上传成功时触发
+	 * @event {Function} uploadError   (error:UploadFileFail)=>void | 每个文件上传失败时触发
+	 * @event {Function} chooseError   (error:IMediaError)=>void | 选择文件失败时触发
+	 * @event {Function} imageChose (res:ChooseImageSuccess)=>void | 选择图片成功时触发
+	 * @event {Function} videoChose (res:ChooseVideoSuccess)=>void | 选择视频成功时触发
+	 * @event {Function} fileChose (files:SnFile[])=>void | 选择文件（图片和视频）成功时触发
+	 */
+	
+	// #ifdef APP-ANDROID
+	import Bitmap from "android.graphics.Bitmap"
+	import MediaMetadataRetriever from "android.media.MediaMetadataRetriever"
+	import Uri from "android.net.Uri"
+	import File from "java.io.File"
+	import FileOutputStream from "java.io.FileOutputStream"
+	// #endif
+	// 依赖
+	import { $snui, SnMedia, useFormatProp, SnError, SnChooseMediaOptions, SnFile } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-upload-media-unicloud'
+	})
+	
+	// SinleUI 配置
+	const snu = $snui.utils;
+	const colors = $snui.colors
+	
+	// 事件注册
+	const emit = defineEmits(['uploaded', 'upload-error', 'choose-error', 'image-chose', 'video-chose', 'file-chose'])
+	
+	
+	
+	// 组件属性
+	const props = defineProps({
+		mode: {
+			type: String,
+			default: 'image',
+		},
+		autoUpload: {
+			type: Boolean,
+			default: true,
+		},
+		chooseCount: {
+			type: Number,
+			default: 20,
+		},
+		maxCount: {
+			type: Number,
+			default: -1,
+		},
+		sourceType: {
+			type: Array as PropType<string[]>,
+			default: ['album', 'camera'] as string[]
+		},
+		width: {
+			type: String,
+			default: '70px',
+		},
+		height: {
+			type: String,
+			default: '70px',
+		},
+		itemBgColor: {
+			type: String,
+			default: '',
+		},
+		itemBorderRadius: {
+			type: String,
+			default: '',
+		},
+		iconSize: {
+			type: String,
+			default: '40px',
+		},
+		disabled: {
+			type: Boolean,
+			default: false,
+		},
+		chooseErrorTip: {
+			type: String,
+			default: '选择媒体文件失败',
+		},
+		directory: {
+			type: String,
+			default: 'uploadImages/',
+		},
+		uploadingText: {
+			type: String,
+			default: '上传中',
+		},
+		uploadedText: {
+			type: String,
+			default: '上传成功',
+		},
+		unuploadedText: {
+			type: String,
+			default: '未上传',
+		},
+		errorText: {
+			type: String,
+			default: '上传失败',
+		},
+		clearable: {
+			type: Boolean,
+			default: true,
+		},
+		enablePreview: {
+			type: Boolean,
+			default: true,
+		},
+		compressed: {
+			type: Boolean,
+			default: true,
+		},
+		maxDuration: {
+			type: Number,
+			default: 60,
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject as UTSJSONObject
+		},
+		customItemStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject as UTSJSONObject
+		}
+	})
+	
+	// 基本变量
+	const mediaList = ref<SnMedia[]>([])
+	
+	// 计算属性
+	const minSizeC = computed((): string=>{
+		let min = Math.min(snu.getPx(props.width), snu.getPx(props.height))
+		return snu.addPx(min)
+	})
+	
+	const modeC = computed((): string=>{
+		let modes = ['image', 'video','all']
+		return modes.includes(props.mode) ? props.mode : 'image'
+	})
+	
+	const delBtnSizeC = computed(():string=>{
+		return snu.addPx(snu.getPx(minSizeC.value)/3.75)
+	})
+	
+	const itemBgColorC = computed(():string=>{
+		return useFormatProp('color', props.itemBgColor, colors.value.line)
+	})
+
+	const itemBorderRadiusC = computed(():string=>{
+		return useFormatProp('radius', props.itemBorderRadius, $snui.configs.radius.small)
+	})
+	
+	const itemStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('width', props.width)
+		styles.set('height', props.height)
+		styles.set('margin-bottom', '5px')
+		styles.set('margin-right', '5px')
+		styles.set('transition-duration', $snui.configs.aniTime.normal)
+		return styles
+	})
+	
+	const itemPlaceholderStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('background', itemBgColorC.value)
+		styles.set('transition-duration', $snui.configs.aniTime.normal)
+		return styles
+	})
+	
+	const delBtnStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('position', 'absolute')
+		styles.set('right', '0px')
+		styles.set('top', '0px')
+		styles.set('transition-duration', $snui.configs.aniTime.normal)
+		return styles
+	})
+	
+	const statusBarStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('position', 'absolute')
+		styles.set('left', '0px')
+		styles.set('right', '0px')
+		styles.set('bottom', '0px')
+		styles.set('padding', '2px')
+		
+		styles.set('background', `rgba(0,0,0,0.5)`)
+		styles.set('transition-duration', $snui.configs.aniTime.normal)
+		return styles
+	})
+	
+	const videoStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('width', props.width)
+		styles.set('height', props.height)
+		styles.set('borderRadius', itemBorderRadiusC.value)
+		return styles
+	})
+	
+	// 方法
+	async function uploadFile(files: UploadFileOptionFiles[]){
+		let directory = props.directory
+		if (!props.directory.endsWith('/')) {
+			directory += '/'
+		}
+		
+		if (props.directory.startsWith('/')) {
+			directory = props.directory.slice(1)
+		}
+		
+		for (let j = 0; j<files.length;j++){
+			let file = files[j]
+			let fileName = ''
+			
+			// #ifdef WEB
+			if (file.file == null) {
+				throw new SnError('components', 'snUploadMediaUnicloud', 9010008)
+				return
+			}
+			if (modeC.value == 'all') {
+				let type = (file.file as SnFile).ext
+				fileName = `${snu.uuid()}.${type}`
+			} else {
+				let type = file.file.type
+				if (type == null && type == undefined) {
+					throw new SnError('components', 'snUploadMediaUnicloud', 9010008)
+					return
+				}
+				type = type.split('/')[1]
+				fileName = `${snu.uuid()}.${type}`
+			}
+			
+			// #endif
+			// #ifndef WEB
+			let _t = file.uri.split('/')
+			fileName = _t[_t.length - 1]
+			let _t_tmp = fileName.split('.')
+			let type = _t_tmp[_t_tmp.length - 1]
+			fileName = `${snu.uuid()}.${type}`
+			// #endif
+			
+			let cloudPath = directory + fileName
+			let index = -1
+			mediaList.value.forEach((item: SnMedia, i: number) => {
+				if (item.name == file.name) {
+					index = i
+					item.status = 'uploading'
+				}
+			})
+			
+			if (uniCloud != null) {
+				await uniCloud.uploadFile({
+					filePath: file.uri,
+					cloudPath: cloudPath,
+					cloudPathAsRealPath: true,
+				}).then((res)=>{
+					if (index != -1) {
+						mediaList.value[index].status = 'uploaded'
+					}
+					emit('uploaded', res)
+				}).catch((err)=>{
+					console.error('sn-upload-media-unicloud: 上传失败', err)
+					if (index != -1) {
+						mediaList.value[index].status = 'error'
+					}
+					emit('upload-error', new SnError('components', 'snUploadMediaUnicloud', 9010009))
+				})
+			} else {
+				let err = new SnError('components', 'snUploadMediaUnicloud', 9010006)
+				console.error(err)
+				emit('upload-error', err)
+			}
+		}
+		
+	}
+	
+	function upload(){
+		if (uniCloud == null) {
+			let err = new SnError('components', 'snUploadMediaUnicloud', 9010006)
+			console.error(err)
+			emit('upload-error', err)
+			return
+		}
+		let unuploadedFiles = [] as UploadFileOptionFiles[]
+		mediaList.value.forEach((item: SnMedia) => {
+			if (item.status == 'unuploaded' || item.status == 'error') {
+				unuploadedFiles.push({
+					name: item.name,
+					uri: item.src ?? '',
+					file: item.file
+				} as UploadFileOptionFiles)
+			}
+		})
+		uploadFile(unuploadedFiles)
+	}
+	
+	function getThumbnailPathForVideo(videoUri: string): string {
+		let filePath = ''
+		// #ifdef APP-ANDROID
+		const context = UTSAndroid.getAppContext()!
+		const retriever = new MediaMetadataRetriever()
+		let bitmap: Bitmap | null = null
+		try {
+			retriever.setDataSource(context, Uri.parse(videoUri))
+			
+			bitmap = retriever.getFrameAtTime(-1) // Retrieve the first frame as a thumbnail
+			if (bitmap != null) {
+				const cachePath = new File(context.cacheDir, "thumbs")
+				cachePath.mkdirs()
+	
+				const fileName = `thumbnail_${System.currentTimeMillis()}.jpg`
+				const file = new File(cachePath, fileName)
+	
+				const fos = new FileOutputStream(file)
+				bitmap.compress(Bitmap.CompressFormat.JPEG, 100, fos)
+				fos.close()
+	
+				filePath = 'file://' + file.absolutePath
+			}
+			
+			retriever.release()
+		} catch (e) {
+			retriever.release()
+		} 
+		// #endif
+		return filePath
+	}
+	
+	function newMedia(media: SnMedia){
+		if (props.maxCount > 0 && mediaList.value.length >= props.maxCount) return
+		if (media.type == 'video' && media.src != null) {
+			media.thumb = getThumbnailPathForVideo(media.src!)
+		}
+		mediaList.value.push(media)
+	}
+	
+	function del(index: number, e: any) {
+		if (mediaList.value[index].status != 'uploading' ) {
+			mediaList.value.splice(index, 1);
+		}
+		(e as UniEvent).preventDefault();
+		(e as UniEvent).stopPropagation();
+	}
+	
+	
+	function onclick() {
+		if (props.disabled) return
+		if (modeC.value == 'image') {
+			uni.chooseImage({
+				count: props.chooseCount,
+				sourceType: props.sourceType,
+				success: (res: ChooseImageSuccess) => {
+					emit('image-chose', res)
+					// #ifdef WEB
+					res.tempFiles.forEach((item: any) => {
+						newMedia({
+							file: item,
+							src: item.path,
+							name: snu.uuid(),
+							status: 'unuploaded',
+							type: 'image'
+						} as SnMedia)
+					})
+					// #endif
+					// #ifndef WEB
+					res.tempFilePaths.forEach((path: string)=>{
+						newMedia({
+							src: path,
+							name: snu.uuid(),
+							status: 'unuploaded',
+							type: 'image'
+						} as SnMedia)
+					})
+					// #endif
+					if (props.autoUpload) upload()
+				},
+				fail: (err) => {
+					if (err.errCode != 1101001) {
+						let error = new SnError('components', 'snUploadMediaUnicloud', 9010010, new Error(err.errMsg, {cause:err.cause}))
+						emit('choose-error', error)
+					}
+				},
+			})
+		} else if (modeC.value == 'video') {
+			uni.chooseVideo({
+				sourceType: props.sourceType,
+				// #ifndef WEB
+				compressed: props.compressed,
+				// #endif
+				maxDuration	: props.maxDuration,
+				success: (res: ChooseVideoSuccess) => {
+					emit('video-chose', res)
+					// #ifdef WEB
+					newMedia({
+						file: res.tempFile,
+						src: res.tempFilePath,
+						name: snu.uuid(),
+						status: 'unuploaded',
+						type: 'video'
+					} as SnMedia)
+					// #endif
+					// #ifndef WEB
+					newMedia({
+						src: res.tempFilePath,
+						name: snu.uuid(),
+						status: 'unuploaded',
+						type: 'video'
+					} as SnMedia)
+					// #endif
+					if (props.autoUpload) upload()
+				},
+				fail: (err) => {
+					if (err.errCode != 1101001) {
+						let error = new SnError('components', 'snUploadMediaUnicloud', 9010010, new Error(err.errMsg, {cause: err.cause}))
+						emit('choose-error', error)
+					}
+				},
+			})
+		} else if (modeC.value == 'all') {
+			snu.chooseMedia({
+				type: 'all',
+				multiple: props.chooseCount > 1 ? true : false,
+				maxCount: Math.max(props.chooseCount as number, 1),
+				success: (files: SnFile[]) => {
+					emit('file-chose', files)
+					files.forEach((file : SnFile) => {
+						newMedia({
+							src: file.path,
+							name: snu.uuid(),
+							status: 'unuploaded',
+							type: snu.isVideo('a.'+file.ext) ? 'video' : 'image',
+							// #ifdef WEB
+							file: file,
+							// #endif
+						} as SnMedia)
+					})
+					if (props.autoUpload) upload()
+				},
+				fail: (err: SnError) => {
+					emit('choose-error', err)
+				}
+			} as SnChooseMediaOptions)
+		}
+		
+	}
+	
+	defineExpose({
+		upload
+	})
+	
+	
+</script>
+
+<style lang="scss">
+	.sn-upload-media-unicloud {
+		&-group {
+			flex-direction: row;
+			flex-wrap: wrap;
+			align-items: center;
+		}
+		
+		&-item {
+			&-placeholder {
+				flex: 1;
+				align-items: center;
+				justify-content: center;
+			}
+			
+			&-close {
+				position: absolute;
+				
+			}
+		}
+	}
+</style>

@@ -1,0 +1,82 @@
+<template>
+	<view class="sn-grid-item"
+	:style="[itemStylesC, customStyle]">
+		<slot></slot>
+	</view>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-grid-item
+	 * @tutorial https://sinleui.pages.dev/components/sn-grid
+	 * @description Grid 宫格布局
+	 * 
+	 * - 一般用于同时展示多个同类项目
+	 * @property {String} bgColor    String | 宫格布局背景颜色
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义宫格布局子项样式
+	 */
+	// 依赖
+	import { $snui } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-grid-item'
+	})
+	
+	// SinleUI 配置
+	const colors = $snui.colors
+	const snu = $snui.utils
+	
+	// 组件属性
+	const props = defineProps({
+		bgColor: {
+			type: String,
+			default: ''
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+	})
+	
+	// 继承属性
+	const col = inject('col', ref(4))
+	const gutter = inject('gutter', ref('0px'))
+	const width = inject('width', ref(0))
+	const itemEle = ref(null as UniElement | null)
+	const instance = getCurrentInstance()!
+	
+	// 计算属性
+	const bgColorC = computed((): string => {
+	  return props.bgColor == '' ? colors.value.transparent : props.bgColor
+	})
+	
+	const gutterC = computed((): number => {
+		return snu.getPx(gutter.value)
+	})
+	
+	const itemStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		
+		if (gutterC.value != 0) {
+			styles.set('width', `${width.value}px`)
+		} else {
+			styles.set('width', `${100/col.value}%`)
+		}
+		styles.set('margin-left', `${gutterC.value/2}px`)
+		styles.set('margin-right', `${gutterC.value/2}px`)
+		styles.set('background', bgColorC.value)
+		styles.set('transition-duration',$snui.configs.aniTime.normal)
+		return styles
+	})
+	
+	
+
+</script>
+
+<style lang="scss">
+	.sn-grid-item {
+		align-items: center;
+		justify-content: center;
+		transition-property: background-color;
+	}
+</style>

@@ -1,0 +1,24 @@
+import { regeoLocationInfoType } from '@/store/types.uts'
+export type regeoLocationType = {
+	longitude : number,
+	latitude : number
+}
+export const regeoLocation = (data : regeoLocationType) => {
+	return new Promise<regeoLocationInfoType | null>((resolve, reject) => {
+		uni.request<regeoLocationInfoType | null>({
+			url: 'https://restapi.amap.com/v3/geocode/regeo',
+			method: 'GET',
+			data: {
+				key: '0f03915648b7d222bd0331c7385b92a0',
+				location: `${data.longitude},${data.latitude}`,
+				radius: 10,
+			},
+			success: (res : RequestSuccess<regeoLocationInfoType | null>) => {
+				resolve(res?.data)
+			},
+			fail: (err : RequestFail) => {
+				reject(err)
+			}
+		})
+	})
+}

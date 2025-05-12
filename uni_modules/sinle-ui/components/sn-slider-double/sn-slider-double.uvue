@@ -1,0 +1,521 @@
+<template>
+	<!--#ifdef WEB -->
+	<view class="sn-slider-contain"
+	ref="containEle"
+	@touchmove="ontouchmove"
+	@touchstart="ontouchstart"
+	@touchend="ontouchend"
+	@touchcancel="ontouchcancel"
+	@mousedown="onmousedown"
+	:style="[containStylesC, customContainStyle]">
+	<!-- #endif -->
+	<!--#ifndef WEB-->
+	<view class="sn-slider-contain"
+	ref="containEle"
+	@touchmove="ontouchmove"
+	@touchstart="ontouchstart"
+	@touchend="ontouchend"
+	@touchcancel="ontouchcancel"
+	:style="[containStylesC, customContainStyle]">
+	<!-- #endif -->
+		<view class="sn-slider"
+		ref="sliderEle"
+		:class="disabled?'disabled':''"
+		:style="[sliderStylesC,customStyle]">
+			<view class="sn-slider-active"
+			:style="[activeStylesC,customActiveStyle]">
+			</view>
+		</view>
+		<view class="sn-slider-thumb-pre"
+		:style="[thumbStylesC,thumbPreStylesC,customThumbStyle]">
+		</view>
+		<view class="sn-slider-thumb-suf"
+		:style="[thumbStylesC,thumbSufStylesC,customThumbStyle]">
+		</view>
+		<sn-text v-if="showValueText"
+		align="center"
+		:text="`${model}`"
+		:lines="1"
+		:style="[valueTextStylesC,customValueTextStyle]"></sn-text>
+	</view>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-slider-double
+	 * @tutorial https://sinleui.pages.dev/components/sn-slider
+	 * @description Slider 滑动选择
+	 * 
+	 * - 和内置 Slider 组件不同的是，本组件并非使用 Draw Api 绘制。大部分场景下，不会出现大量 Slider 联动的高性能需求，使用多 DOM 布局以更好满足用户个性化需求。
+	 * 
+	 * - 分为两个组件：`sn-slider` 和 `sn-slider-double`（双向 Slider）。
+	 * @property {Number} vModel    Array<Number> | 双向滑动选择器的当前值
+	 * @property {Boolean} vertical    Boolean | 是否为竖向滑动选择器
+	 * @property {Number} min    Number | 最小值
+	 * @property {Number} max    Number | 最大值
+	 * @property {Number} step    Number | 步长
+	 * @property {Boolean} disabled    Boolean | 是否禁用滑动选择器
+	 * @property {String} activeColor    String | 滑块容器条选中部分的颜色
+	 * @property {String} inactiveColor    String | 滑块容器条未选中部分的颜色
+	 * @property {String} thickness    String | 滑块容器条的粗细
+	 * @property {String} borderRadius    String | 滑块容器条的圆角大小
+	 * @property {String} thumbBorderRadius    String | 滑块的圆角大小
+	 * @property {String} thumbBorder    String | 滑块的边框
+	 * @property {String} thumbSize    String | 滑块的尺寸
+	 * @property {Boolean} showValueText    Boolean | 是否在右侧/下方显示当前值文本
+	 * @property {String} valueTextWidth    String | 当前值文本的宽度
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义滑块容器条样式
+	 * @property {UTSJSONObject} customContainStyle    UTSJSONObject | 自定义滑块容器条的父元素的样式
+	 * @property {UTSJSONObject} customThumbStyle    UTSJSONObject | 自定义滑块的样式
+	 * @property {UTSJSONObject} customValueTextStyle    UTSJSONObject | 自定义当前值文本样式
+	 * @property {UTSJSONObject} customActiveStyle    UTSJSONObject | 自定义滑块容器条选中部分样式
+	 * @event {Function} change   (value:number)=>void | 数据变化时触发
+	 */
+	// 依赖
+	import { $snui, useResize, useFormatProp, SnError } from '../../index.uts'
+
+	defineOptions({
+		name: 'sn-slider'
+	})
+
+	// SinleUI 配置
+	const snu = $snui.utils;
+	const colors = $snui.colors
+
+	// 事件注册
+	const emit = defineEmits(['update:modelValue', 'change', 'touchend', 'touchstart', 'touchmove', 'touchcancel'])
+
+	// 组件属性
+	const props = defineProps({
+		modelValue: {
+			type: Array as PropType<number[]>,
+			default: [0, 0] as number[],
+			validator: (value : number[]) : boolean => {
+				if (value.length != 2) {
+					throw new SnError('components', 'snSlider', 9010012)
+				}
+				return true
+			}
+		},
+		vertical: {
+			type: Boolean,
+			default: false
+		},
+		min: {
+			type: Number,
+			default: 0
+		},
+		max: {
+			type: Number,
+			default: 100
+		},
+		step: {
+			type: Number,
+			default: 1
+		},
+		disabled: {
+			type: Boolean,
+			default: false
+		},
+		activeColor: {
+			type: String,
+			default: ''
+		},
+		inactiveColor: {
+			type: String,
+			default: '',
+		},
+		thickness: {
+			type: String,
+			default: '20px',
+		},
+		borderRadius: {
+			type: String,
+			default: '',
+		},
+		thumbBorderRadius: {
+			type: String,
+			default: '',
+		},
+		thumbBorder: {
+			type: String,
+			default: '',
+		},
+		thumbSize: {
+			type: String,
+			default: '10px'
+		},
+		showValueText: {
+			type: Boolean,
+			default: false,
+		},
+		valueTextWidth: {
+			type: String,
+			default: '30px',
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject as UTSJSONObject
+		},
+		customContainStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject as UTSJSONObject
+		},
+		customThumbStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject as UTSJSONObject
+		},
+		customValueTextStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject as UTSJSONObject
+		},
+		customActiveStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject as UTSJSONObject
+		}
+	})
+
+	// 基本变量
+	const sliderEle = ref(null as UniElement | null)
+	const containEle = ref(null as UniElement | null)
+	const sliderWidth = ref(0)
+	const sliderHeight = ref(0)
+	const containLeft = ref(0)
+	const containTop = ref(0)
+	// 防止多指操作影响布局
+	const status = ref(-1)
+
+	function formatValuePart(value : number) : number {
+		value = Math.min(Math.max(props.min, value), props.max)
+		
+		value = Math.round((value - props.min) / props.step) * props.step + props.min
+		return value
+	}
+
+	function formatValue(value : number[]) : number[] {
+	   let pre = formatValuePart(value[0])
+	   let suf = formatValuePart(value[1])
+	   return [pre, suf]
+	}
+
+	// 计算属性
+	const model = computed<number[]>({
+		get: () : number[] => props.modelValue,
+		set: (value : number[]) => {
+			let v = formatValue(value)
+			emit('update:modelValue', v)
+			emit('change', v[0] < v[1] ?[v[0], v[1]] : [v[1], v[0]])
+		}
+	} as WritableComputedOptions<number>)
+
+	const thumbPaddingC = computed(() : number => {
+		return Math.max((snu.getPx(props.thickness) - snu.getPx(props.thumbSize))/2, 0)
+	})
+
+	const thumbSizeC = computed(() : number => {
+		return snu.getPx(props.thumbSize)
+	})
+
+	const fullThumbC = computed(() : number => {
+		return thumbPaddingC.value * 2 + thumbSizeC.value
+	})
+
+	const sliderLengthC = computed(() : number => {
+		return props.vertical ? sliderHeight.value : sliderWidth.value
+	})
+
+	const availSliderLengthC = computed(() : number => {
+		return sliderLengthC.value - fullThumbC.value
+	})
+
+	const borderRadiusC = computed(() : string => {
+		return useFormatProp('radius', props.borderRadius, $snui.configs.radius.circle)
+	})
+
+	const thumbBorderRadiusC = computed(() : string => {
+		return useFormatProp('radius', props.thumbBorderRadius, $snui.configs.radius.circle)
+	})
+
+	const activeColorC = computed(() : string => {
+		return useFormatProp('color', props.activeColor, colors.value.primary)
+	})
+
+	const inactiveColorC = computed(() : string => {
+		return useFormatProp('color', props.inactiveColor, colors.value.infoActive)
+	})
+	
+	const preRateC = computed(() : number => {
+		let rate = (model.value[0] - props.min) / (props.max - props.min)
+		return rate
+	})
+	
+	const sufRateC = computed(() : number => {
+		let rate = (model.value[1] - props.min) / (props.max - props.min)
+		return rate
+	})
+
+	const thumbPreTranslate = computed(() : number => {
+		let value = preRateC.value * availSliderLengthC.value
+		return value
+	})
+	
+	const thumbSufTranslate = computed(() : number => {
+		let value = sufRateC.value * availSliderLengthC.value
+		return value
+	})
+	
+	const activeOffsetC = computed(() : number => {
+		return Math.min(thumbPreTranslate.value, thumbSufTranslate.value)
+	})
+
+	const activeLengthC = computed(() : number => {
+		return Math.abs(thumbSufTranslate.value - thumbPreTranslate.value) + fullThumbC.value
+	})
+	
+	const sliderStylesC = computed(() : Map<string, any> => {
+		const styles = new Map<string, any>()
+		if (props.vertical) {
+			styles.set('width', props.thickness)
+			styles.set('flex-direction', 'column')
+		} else {
+			styles.set('height', props.thickness)
+			styles.set('flex-direction', 'row')
+		}
+
+		styles.set('border-radius', borderRadiusC.value)
+		styles.set('background',  props.disabled ? colors.value.disabled :  inactiveColorC.value)
+		styles.set('transition-duration', $snui.configs.aniTime.normal)
+		return styles
+	})
+
+	const activeStylesC = computed(() : Map<string, any> => {
+		const styles = new Map<string, any>()
+		if (props.vertical) {
+			styles.set('top', snu.addPx(activeOffsetC.value))
+			styles.set('width', '100%')
+			styles.set('height', snu.addPx(activeLengthC.value))
+			styles.set('min-height', snu.addPx(fullThumbC.value))
+			styles.set('max-height', snu.addPx(sliderHeight.value))
+			styles.set('flex-direction', 'column')
+		} else {
+			styles.set('left', snu.addPx(activeOffsetC.value))
+			styles.set('height', '100%')
+			styles.set('width', snu.addPx(activeLengthC.value))
+			styles.set('min-width', snu.addPx(fullThumbC.value))
+			styles.set('max-width', snu.addPx(sliderWidth.value))
+			styles.set('flex-direction', 'row')
+		}
+		styles.set('border-radius', thumbBorderRadiusC.value)
+		styles.set('background',  props.disabled ? colors.value.disabledText :  activeColorC.value)
+		styles.set('transition-duration', $snui.configs.aniTime.normal)
+		return styles
+	})
+
+	const thumbStylesC = computed(() : Map<string, any> => {
+		const styles = new Map<string, any>()
+		styles.set('width', snu.addPx(thumbSizeC.value))
+		styles.set('height', snu.addPx(thumbSizeC.value))
+		styles.set('border-radius', thumbBorderRadiusC.value)
+		styles.set('background', 'white')
+		styles.set('border', props.thumbBorder)
+		styles.set('transition-duration', $snui.configs.aniTime.normal)
+		return styles
+	})
+	
+	const thumbPreStylesC = computed(() : Map<string, any> => {
+		const styles = new Map<string, any>()
+		styles.set('transform', `translate${props.vertical ? 'Y' : 'X'}(${thumbPreTranslate.value + thumbPaddingC.value}px)`)
+		return styles
+	})
+	
+	const thumbSufStylesC = computed(() : Map<string, any> => {
+		const styles = new Map<string, any>()
+		styles.set('transform', `translate${props.vertical ? 'Y' : 'X'}(${thumbSufTranslate.value + thumbPaddingC.value}px)`)
+		return styles
+	})
+
+	const valueTextStylesC = computed(() : Map<string, any> => {
+		const styles = new Map<string, any>()
+		styles.set('width', props.valueTextWidth)
+		if (props.vertical) {
+			styles.set('margin-top', `5px`)
+		} else {
+			styles.set('margin-left', `5px`)
+		}
+		return styles
+	})
+
+	const containStylesC = computed(() : Map<string, any> => {
+		const styles = new Map<string, any>()
+		let maxTh = Math.max(thumbSizeC.value, snu.getPx(props.thickness))
+		if (props.vertical) {
+			styles.set('flex-direction', 'column')
+			styles.set('height', '100%')
+			styles.set('width', snu.addPx(Math.max(maxTh, snu.getPx(props.valueTextWidth))))
+		} else {
+			styles.set('flex-direction', 'row')
+			styles.set('width', '100%')
+			styles.set('height', snu.addPx(maxTh))
+		}
+		return styles
+	})
+
+	// 方法
+	function init() {
+		let slider = sliderEle.value?.getBoundingClientRect()
+		let contain = containEle.value?.getBoundingClientRect()
+		sliderWidth.value = slider?.width ?? 0
+		sliderHeight.value = slider?.height ?? 0
+		containLeft.value = contain?.left ?? 0
+		containTop.value = contain?.top ?? 0
+	}
+	
+	function isInRange(value:number,min:number,max:number):boolean {
+		return value >= min && value <= max
+	}
+	
+	function curThumb(touch: UniTouch):number{
+		for (let i = 0;i<2;i++){
+			let offset = 0
+			let point = 0
+			if (props.vertical) {
+				offset = containTop.value
+				point = touch.clientY
+			} else {
+				offset = containLeft.value
+				point = touch.clientX
+			}
+			let rate = i == 0 ? preRateC.value : sufRateC.value
+			let min = offset + availSliderLengthC.value * rate
+			let max = min + fullThumbC.value
+			if (isInRange(point, min, max)) return i
+		}
+		return -1
+	}
+
+	function updateValue(x: number, y: number) {
+		let offset = props.vertical ? containTop.value : containLeft.value
+		let point = props.vertical ? y : x
+		let value = (point-offset-fullThumbC.value/2) / availSliderLengthC.value 
+		value = Math.min(Math.max(0, value), 1)
+		value = value * (props.max - props.min) + props.min
+		model.value[status.value] = value
+		model.value = model.value
+	}
+	
+	function ontouchmove(event : UniTouchEvent) {
+		event.preventDefault()
+		if (props.disabled || status.value==-1) return
+		let touch = event.touches[0]
+		updateValue(touch.clientX, touch.clientY)
+		emit('touchmove', event)
+	}
+
+	function ontouchstart(event : UniTouchEvent) {
+		event.preventDefault()
+		if (props.disabled || status.value!=-1) return
+		
+		let touch = event.touches[0]
+		let _status = curThumb(touch)
+		if (_status != -1) {
+			status.value = _status
+			updateValue(touch.clientX, touch.clientY)
+		}
+		emit('touchstart', event)
+	}
+
+	function ontouchend(event : UniTouchEvent) {
+		event.preventDefault()
+		status.value = -1
+		let m = model.value
+		model.value = m[0] > m[1] ? [m[1], m[0]] : m
+		emit('touchend', event.target!)
+	}
+
+	function ontouchcancel(event : UniTouchEvent) {
+		event.preventDefault()
+		
+		emit('touchcancel', event.target!)
+	}
+	
+	// #ifdef WEB
+	function onmousedown(event: UniMouseEvent) {
+		event.preventDefault()
+		if (props.disabled) return
+		
+		
+		emit('touchstart', event)
+	}
+	
+	function onmousemove(event: UniMouseEvent) {
+		event.preventDefault()
+		if (props.disabled || status.value==-1) return
+		
+		emit('touchmove', event)
+	}
+	
+	function onmouseup(event: UniMouseEvent) {
+		event.preventDefault()
+		
+		emit('touchend', event)
+	}
+	// #endif
+
+	onMounted(() => {
+		model.value = formatValue(model.value)
+		// #ifdef WEB
+		window.addEventListener('mouseup', onmouseup);
+		window.addEventListener('mousemove', onmousemove);
+		// #endif
+		nextTick(() => {
+			init()
+		})
+		useResize(sliderEle.value, () => {
+			init()
+		})
+	})
+
+	onUpdated(() => {
+		nextTick(() => {
+			init()
+		})
+	})
+</script>
+
+<style lang="scss">
+	.sn-slider {
+		display: flex;
+		justify-content: flex-start;
+		align-items: center;
+		padding: 0px;
+		flex: 1;
+		transition-property: background-color;
+		// #ifdef WEB
+		cursor: pointer;
+		// #endif
+
+		&-contain {
+			overflow: visible;
+			align-items: center;
+		}
+
+		&-active {
+			align-items: center;
+			justify-content: center;
+			transition-property: background-color;
+		}
+	}
+
+	.sn-slider-thumb-pre,
+	.sn-slider-thumb-suf {
+		position: absolute;
+		pointer-events: none;
+		transition-property: background-color, width, height;
+	}
+	
+	.disabled {
+		// #ifdef WEB
+		cursor: not-allowed;
+		// #endif
+	}
+</style>

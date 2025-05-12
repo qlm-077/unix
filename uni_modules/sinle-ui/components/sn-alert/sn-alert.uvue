@@ -1,0 +1,197 @@
+<template>
+	<view class="sn-alert" :style="[alertStylesC,  customStyle]">
+		<slot>
+			<sn-icon v-if="showIcon" 
+			class="sn-alert-icon" 
+			:name="icon" 
+			:color="iconColorC"
+			:size="iconSizeC"></sn-icon>
+			<sn-text class="sn-alert-text" 
+			:text="text" 
+			:color="textColorC"
+			:size="textSizeC"
+			:style="[customTextStyle]"></sn-text>
+		</slot>
+	</view>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-alert
+	 * @tutorial https://sinleui.pages.dev/components/sn-alert
+	 * @description Alert 警告信息 
+	 * 
+	 * - 用以展示警告信息。 
+	 * 
+	 * - 多个属性，支持完全自定义样式。
+	 * @property {String} text    String | 警告信息文本内容
+	 * @property {String} icon    String | 警告信息左侧图标名
+	 * @property {String} type=[info|primary|success|error|warning]    String | 警告信息主题样式类型
+	 * @value info 信息
+	 * @value primary 主要
+	 * @value success 成功
+	 * @value error 错误
+	 * @value warning 警告
+	 * @property {String} effect=[light|dark]    String | 警告信息显示效果，可设为淡色和深色
+	 * @value light 淡色
+	 * @value dark 深色
+	 * @property {String} borderRadius    String | 警告信息圆角大小
+	 * @property {String} bgColor    String | 警告信息背景颜色
+	 * @property {String} textColor    String | 警告信息文本颜色
+	 * @property {String} textSize    String | 警告信息文本大小
+	 * @property {String} iconColor    String | 警告信息左侧图标颜色
+	 * @property {String} iconSize    String | 警告信息左侧图标大小
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义警告信息样式
+	 * @property {UTSJSONObject} customTextStyle    UTSJSONObject | 自定义警告信息文本样式
+	 */
+	
+	// 依赖
+	import { $snui, useFormatProp } from '../../index.uts';
+	
+	defineOptions({
+		name: 'sn-alert'
+	})
+	
+	// SinleUI 配置
+	const snu = $snui.utils
+	const colors = $snui.colors
+
+	// 组件属性
+	const props = defineProps({
+		text: {
+			type: String,
+			default: ""
+		},
+		icon: {
+			type: String,
+			default: ""
+		},
+		type: {
+			type: String,
+			default: "info"
+		},
+		effect: {
+			type: String,
+			default: "light"
+		},
+		bgColor: {
+			type: String,
+			default: ''
+		},
+		textColor: {
+			type: String,
+			default: ''
+		},
+		textSize: {
+			type: String,
+			default: ''
+		},
+		iconColor: {
+			type: String,
+			default: ''
+		},
+		iconSize: {
+			type: String,
+			default: ''
+		},
+		borderRadius: {
+			type: String,
+			default: ''
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customTextStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customIconStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+	})
+
+
+	// 计算属性
+	const showIcon = computed(() : boolean => !snu.isEmpty(props.icon))
+	const effectC = computed<string>(() : string => {
+
+		let types = ['light', 'dark']
+		return types.includes(props.effect) ? props.effect : 'light'
+	})
+	const typeC = computed(() : string => {
+		let types = ['info', 'primary', 'success', 'error', 'warning']
+		return types.includes(props.type) ? props.type : 'info'
+	})
+	
+	const bgColorC = computed(() : string => {
+		let color = useFormatProp('color', props.bgColor, '')
+		if (snu.isEmpty(color)) {
+			if (effectC.value == 'dark') {
+				return colors.value[`${typeC.value}`] as string
+			} else {
+				return colors.value[`${typeC.value}Light`] as string
+			}
+		} else {
+			return color
+		}
+
+	})
+	const textColorC = computed(() : string => {
+		let color = useFormatProp('color', props.textColor, '')
+		if (snu.isEmpty(color)) {
+			if (typeC.value == 'info') return colors.value.text
+			if (effectC.value == 'dark') {
+				return colors.value[`${typeC.value}Text`] as string
+			} else {
+				return colors.value[`${typeC.value}LightText`] as string
+			}
+		} else {
+			return color
+		}
+	})
+	const iconColorC = computed(() : string => {
+		return useFormatProp('color', props.iconColor, textColorC.value)
+	})
+	
+	const iconSizeC = computed((): string => {
+	  return useFormatProp('font', props.iconSize, $snui.configs.font.size(3))
+	})
+	
+	const textSizeC = computed((): string => {
+	  return useFormatProp('font', props.textSize, $snui.configs.font.size(2))
+	})
+	
+	const borderRadiusC = computed((): string => {
+		return useFormatProp('radius', props.borderRadius, $snui.configs.radius.small)
+	})
+	
+	const alertStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('background', bgColorC.value)
+		styles.set('border-radius', borderRadiusC.value)
+		styles.set('transition-duration',$snui.configs.aniTime.normal)
+		return styles
+	})
+</script>
+
+<style lang="scss">
+	.sn-alert {
+		width: 100%;
+		padding: 8px 10px;
+		margin: 5px 0;
+		display: flex;
+		flex-direction: row;
+		flex-wrap: nowrap;
+		align-items: center;
+
+		&-text {
+			flex: 1;
+		}
+
+		&-icon {
+			margin-right: 5px;
+		}
+	}
+</style>

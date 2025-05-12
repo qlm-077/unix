@@ -1,0 +1,263 @@
+<template>
+	<view class="sn-toast-contain"
+	:class="containClassesC"
+	:style="containStylesC">
+		<view class="sn-toast"
+		:style="toastStylesC">
+			<sn-icon v-if="showIcon&&!(config.loading ?? false)" 
+			:name="config.icon ?? ''"
+			:color="config.iconColor ?? iconColorC"
+			:size="config.iconSize ?? iconSizeC"
+			:style="iconStylesC"></sn-icon>
+			<sn-loading v-if="(config.loading ?? false)"
+			:iconColor="config.iconColor ?? iconColorC"
+			:iconSize="config.iconSize ?? iconSizeC"
+			:style="iconStylesC">
+			</sn-loading>
+			<sn-text :text="config.text ?? ''"
+			:align="config.textAlign ?? 'center'"
+			:color="config.textColor ?? textColorC"
+			:size="config.textSize ?? textSizeC"
+			:lines="config.textLines ?? 0"
+			:style="textStylesC"></sn-text>
+		</view>
+	</view>
+</template>
+
+<script setup>
+	import { $snui, SnShowToastConfig, useFormatProp, SnError } from '../../index.uts'
+	import { frameStore } from '../../libs/core/store/index.uts'
+	// #ifdef APP-ANDROID
+	import { __setGrayMode } from '../../libs/private/index.uts'
+	// #endif
+
+	// SinleUI 配置
+	const snu = $snui.utils;
+	const colors = $snui.colors
+	
+	// 基本变量
+	const id = ref('')
+	const instance = getCurrentInstance()!
+	const showToast = ref(false)
+	const config = reactive({} as SnShowToastConfig)
+	const success = ref(null as (() => void) | null)
+	const fail = ref(null as ((error : SnError) => void) | null)
+	const complete = ref(null as ((res: any | null) => void) | null)
+	
+	
+	// 计算属性
+	const showIcon = computed((): boolean =>{
+		let icon = config.icon as string | null
+		return icon != null && icon.trim()!=''
+	})
+	
+	const paddingC = computed((): string=>{
+		return useFormatProp('other', config.padding ?? '', '12px 15px')
+	})
+	
+	const durationC = computed((): number=>{
+		return config.duration ?? 2000
+	})
+	
+	const textColorC = computed(():string=>{
+		return useFormatProp('color', config.textColor ?? '', '#fff')
+	})
+	
+	const textSizeC = computed(():string=>{
+		return useFormatProp('font', config.textSize ?? '', $snui.configs.font.size(2))
+	})
+	
+	const iconColorC = computed(():string=>{
+		return useFormatProp('color', config.iconColor ?? '', '#fff')
+	})
+	
+	const iconSizeC = computed(():string=>{
+		return useFormatProp('font', config.iconSize ?? '', $snui.configs.font.size(5))
+	})
+	
+	const bgColorC = computed(():string=>{
+		return (config.bgColor == '' || config.bgColor==null) ? colors.value.toast : `${config.bgColor}`
+		
+	})
+	
+	const borderRadiusC = computed(():string=>{
+		return useFormatProp('radius', config.borderRadius ?? '', $snui.configs.radius.normal)
+	})
+	
+	
+	const positionC = computed(():string=>{
+		let positions = ['center', 'top', 'bottom']
+		return positions.includes(config.position ?? 'center') ? config.position ?? 'center' : 'center'
+	})
+	
+	const containStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('z-index', $snui.configs.zIndex.toast)
+		styles.set('transition-duration',$snui.configs.aniTime.normal)
+		return styles
+	})
+	
+	const iconStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('margin-right', '6px')
+		return styles
+	})
+	
+	const textStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('word-break', 'break-all')
+		styles.set('flex', '1')
+		return styles
+	})
+	
+	const toastStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('border-radius', borderRadiusC.value)
+		styles.set('padding', paddingC.value)
+		
+		styles.set('background',bgColorC.value)
+		styles.set('transition-duration',$snui.configs.aniTime.normal)
+		return styles
+	})
+	
+	const containClassesC = computed((): Map<string, any>=>{
+		let classes = new Map<string, any>()
+		classes.set('top', positionC.value =='top')
+		classes.set('center', positionC.value =='center')
+		classes.set('bottom', positionC.value =='bottom')
+		classes.set('hover', showToast.value)
+		return classes
+	})
+	
+	// 方法
+	function close(){
+		showToast.value = false
+		snu.throttle(()=>{
+			uni.closeDialogPage({
+				dialogPage: instance.proxy!.$page
+			})
+		}, parseInt($snui.configs.aniTime.normal), 'showToast')
+	}
+	
+	function show(){
+		showToast.value = true
+		success.value?.()
+		complete.value?.(null)
+		if (config.loading != false){
+			snu.debounce(()=>{
+				close()
+			}, durationC.value)
+		}
+	}
+	
+	
+	onLoad((options)=>{
+		if (options['id'] != null) {
+			id.value = options['id'] as string
+			let __config = frameStore.get(`DIALOGPAGE_TOAST_${options['id']}`)
+			if (__config != null) {
+				let tmp = __config as SnShowToastConfig
+				config.text = tmp.text
+				config.bgColor = tmp.bgColor
+				config.loading = tmp.loading
+				config.position = tmp.position
+				config.duration = tmp.duration
+				config.textSize = tmp.textSize
+				config.textColor = tmp.textColor
+				config.icon = tmp.icon
+				config.iconSize = tmp.iconSize
+				config.iconColor = tmp.iconColor
+				config.textAlign = tmp.textAlign
+				config.textLines = tmp.textLines
+				config.success = tmp.success
+				config.fail = tmp.fail
+				config.complete = tmp.complete
+			}
+		}
+	})
+	
+	onBackPress((_):boolean=>{
+		if (showToast.value) {
+			if (config.loading != true){
+				close()
+			}
+			return true
+		} else {
+			return false
+		}
+	})
+	
+	
+	onUnload(()=>{
+		frameStore.delete(`DIALOGPAGE_TOAST_${id.value}`)
+	})
+	
+	onReady(()=>{
+		/**
+		 * 针对 DialogPage 专门适配哀悼模式
+		 */
+		let enabled = $snui.configs.app.grayMode
+		// #ifdef APP-ANDROID
+		__setGrayMode(enabled, instance.proxy!.$page.getAndroidView());
+		// #endif
+		// #ifdef WEB
+		window.document.body.style.filter = enabled ? 'grayscale(100%)' : ''
+		// #endif
+		setTimeout(()=>{
+			show()
+		}, 10)
+	})
+</script>
+
+<style lang="scss">
+	.sn-toast-contain {
+		padding: 40px;
+		align-items: center;
+		justify-content: center;
+		position: fixed;
+		pointer-events: none;
+		left: 0;
+		right: 0;
+		opacity: 0;
+		transform: scale(0.9) translateY(-50%);
+		
+		&.top {
+			top: 0;
+			transform: scale(0.9) translateY(0px);
+			&.hover {
+				opacity: 1;
+				transform: scale(1) translateY(20px);
+			}
+		}
+		
+		&.center {
+			top: 50%;
+			transform: scale(0.9) translateY(-50%);
+			// #ifndef APP
+			transform-origin: 50% 0%;
+			// #endif
+			&.hover {
+				opacity: 1;
+				transform: scale(1) translateY(-50%);
+			}
+		}
+		
+		&.bottom {
+			bottom: 0;
+			transform: scale(0.9) translateY(0px);
+			&.hover {
+				opacity: 1;
+				transform: scale(1) translateY(-20px);
+			}
+		}
+	}
+	.sn-toast {
+		align-items: center;
+		justify-content: center;
+		flex-direction: row;
+		padding: 12px 15px;
+		// #ifndef APP
+		box-shadow: 0px 4px 12px -8px #000;
+		// #endif
+	}
+</style>

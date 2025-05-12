@@ -1,0 +1,287 @@
+<template>
+	<view class="sn-subsection" 
+	ref="subsection" 
+	:class="disabled?'disabled':''"
+	:style="[subsectionStylesC, customStyle]">
+		<sn-text v-for="(e,index) in data" 
+		class="sn-subsection-item"
+		align="center"
+		:key="index" 
+		:size="textSizeC"
+		:text="e"
+		:color="disabled?(index==model?disabledActiveTextColorC:disabledTextColorC):(index==model?activeTextColorC:textColorC)"
+		@click="changeValue(index)" 
+		:style="[itemStylesC,customItemStyle]"></sn-text>
+		<view class="sn-subsection-block" :style="[blockStylesC,customBlockStyle]"></view>
+	</view>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-subsection
+	 * @tutorial https://sinleui.pages.dev/components/sn-subsection
+	 * @description  Subsection 分段器
+	 *
+	 *- 该分段器一般用于用户从几个选项中选择某一个的场景
+	 *
+	 *- 支持自定义分段样式、颜色等。
+	 * @property {Number} vModel    Number | 当前选中的分段索引
+	 * @property {Array<String>} data    Array<String> | 分段数据，数组中的每个元素代表一个分段
+	 * @property {Boolean} disabled    Boolean | 是否禁用分段选择器
+	 * @property {String} padding    String | 分段之间的间距
+	 * @property {String} blockPadding    String | 分段块的内部padding
+	 * @property {String} borderRadius    String | 分段边框的圆角
+	 * @property {String} textSize    String | 分段文本大小
+	 * @property {String} bgColor    String | 分段背景颜色
+	 * @property {String} disabledBgColor    String | 禁用状态分段背景颜色
+	 * @property {String} blockBgColor    String | 分段块背景颜色
+	 * @property {String} disabledBlockBgColor    String | 禁用状态分段块背景颜色
+	 * @property {String} textColor    String | 分段文本颜色
+	 * @property {String} activeTextColor    String | 激活状态分段文本颜色
+	 * @property {String} disabledTextColor    String | 禁用状态分段文本颜色
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义分段选择器样式
+	 * @property {UTSJSONObject} customItemStyle    UTSJSONObject | 自定义分段样式
+	 * @property {UTSJSONObject} customBlockStyle    UTSJSONObject | 自定义分段块样式
+	 * @event {Function} change   (value:number)=>void | 数据变化时触发
+	 */
+
+	// 依赖
+	import { $snui, useFormatProp } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-subsection'
+	})
+	
+	// SinleUI 配置
+	const colors = $snui.colors
+	const snu = $snui.utils;
+	const instance = getCurrentInstance()!
+	
+	// 事件注册
+	const emit = defineEmits(['change'])
+	
+	const model = defineModel({
+		type: Number,
+		default: 0,
+	})
+	
+	// 组件属性
+	const props = defineProps({
+		data: {
+			type: Array,
+			default: [] as string[]
+		},
+		disabled: {
+			type: Boolean,
+			default: false
+		},
+		padding: {
+			type: String,
+			default: '3px'
+		},
+		blockPadding: {
+			type: String,
+			default: '10px'
+		},
+		borderRadius: {
+			type: String,
+			default: ''
+		},
+		textSize: {
+			type: String,
+			default: ''
+		},
+		bgColor: {
+			type: String,
+			default: ''
+		},
+		disabledBgColor: {
+			type: String,
+			default: ''
+		},
+		blockBgColor: {
+			type: String,
+			default: ''
+		},
+		disabledBlockBgColor: {
+			type: String,
+			default: ''
+		},
+		textColor: {
+			type: String,
+			default: ''
+		},
+		activeTextColor: {
+			type: String,
+			default: ''
+		},
+		disabledTextColor: {
+			type: String,
+			default: ''
+		},
+		disabledActiveTextColor: {
+			type: String,
+			default: ''
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customItemStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customBlockStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+	})
+	
+	// 基本变量
+	const subsectionWidth = ref(0)
+	const subsectionHeight = ref(0)
+	
+	// 计算属性
+	const theme = computed(():string=>$snui.configs.app.theme)
+	
+	function getPaddingN(padding:string, index:number):number{
+		let _t = padding.split(' ')
+		return snu.getPx(_t[index==0?0:_t.length-1])
+	}
+	
+	const blockWidthC = computed(():number=>{
+		return subsectionWidth.value != 0 && props.data.length > 0 ? ((subsectionWidth.value - ((props.data.length + 1) * getPaddingN(props.padding, 1))) / props.data.length) : 0
+	})
+	
+	const blockHeightC = computed((): number=> {
+		return subsectionHeight.value != 0 ?subsectionHeight.value - 2 * getPaddingN(props.padding, 0) : 0
+	})
+	
+	const blockTransformC = computed(() : number=> {
+		return (blockWidthC.value + getPaddingN(props.padding, 1)) * model.value
+	})
+	
+	const borderRadiusC = computed((): string => {
+		return useFormatProp('radius', props.borderRadius, $snui.configs.radius.normal)
+	})
+	
+	const textSizeC = computed((): string => {
+		return useFormatProp('font', props.textSize, $snui.configs.font.baseSize)
+	})
+	
+	const bgColorC = computed((): string => {
+		return useFormatProp('color', props.bgColor, colors.value[theme.value == 'light'?'info':'front'] as string)
+	})
+	
+	const disabledBgColorC = computed((): string => {
+		return useFormatProp('color', props.disabledBgColor, colors.value[theme.value == 'light'?'disabled':'disabledDark'] as string)
+	})
+	
+	const blockBgColorC = computed((): string => {
+		return useFormatProp('color', props.blockBgColor, colors.value[theme.value == 'light'?'front':'info'] as string)
+	})
+	
+	const disabledBlockBgColorC = computed((): string => {
+		return useFormatProp('color', props.disabledBlockBgColor, colors.value[theme.value == 'light'?'disabledDark':'disabled'] as string)
+	})
+	
+	const textColorC = computed((): string => {
+		return useFormatProp('color', props.textColor, colors.value.text)
+	})
+	
+	const activeTextColorC = computed((): string => {
+		return useFormatProp('color', props.activeTextColor, colors.value.primaryDark)
+	})
+	
+	const disabledTextColorC  = computed((): string => {
+		return useFormatProp('color', props.disabledTextColor, colors.value.disabledText)
+	})
+	
+	const disabledActiveTextColorC  = computed((): string => {
+		return useFormatProp('color', props.disabledActiveTextColor, colors.value.disabledText)
+	})
+	
+	const subsectionStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('padding', props.padding)
+		styles.set('border-radius', borderRadiusC.value)
+		styles.set('background', props.disabled?disabledBgColorC.value:bgColorC.value)
+		styles.set('transition-duration',$snui.configs.aniTime.normal)
+		return styles
+	})
+	
+	const itemStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('padding', props.blockPadding)
+		styles.set('transition-duration',$snui.configs.aniTime.normal)
+		return styles
+	})
+	
+	const blockStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('width', snu.addPx(blockWidthC.value))
+		styles.set('height', snu.addPx(blockHeightC.value))
+		styles.set('background', props.disabled?disabledBlockBgColorC.value:blockBgColorC.value)
+		styles.set('border-radius', snu.addPx(snu.getInnerRadius(subsectionHeight.value, snu.getPx(borderRadiusC.value),blockHeightC.value)))
+		styles.set('transform', `translateX(${blockTransformC.value}px)`)
+		styles.set('transition-duration',$snui.configs.aniTime.normal)
+		return styles
+	})
+	
+	// 方法
+	function changeValue(index : number) {
+		if (!props.disabled) {
+			model.value = index
+			emit('change', index)
+		}
+	}
+	
+	function init(){
+		nextTick(() => {
+			uni.createSelectorQuery().in(instance.proxy!).select('.sn-subsection').boundingClientRect().exec((ret) => {
+				let info = ret[0] as NodeInfo
+				subsectionWidth.value = info.width as number
+				subsectionHeight.value = (info.height as number) 
+			})
+		})
+	}
+	
+	// 生命周期
+	onMounted(()=> {
+		init()
+	})
+	
+	onUpdated(()=> {
+		init()
+	})
+</script>
+
+<style lang="scss">
+	.sn-subsection {
+		flex-direction: row;
+		align-items: center;
+		width: 100%;
+		padding: 2px;
+		// #ifdef WEB
+		cursor: pointer;
+		// #endif
+
+		&-item {
+			flex: 1;
+			padding: 5px 0;
+			z-index: 2;
+		}
+
+		&-block {
+			position: absolute;
+			transition-property: transform;
+			z-index: 1;
+		}
+	}
+	
+	.disabled {
+		// #ifdef WEB
+		cursor: not-allowed;
+		// #endif
+	}
+</style>

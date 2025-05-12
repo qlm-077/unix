@@ -1,0 +1,105 @@
+/* ==================
+          列表
+ ==================== */
+/* #ifdef APP */
+
+/* #endif */
+.text-cut {
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	overflow: hidden;
+}
+
+/*标签*/
+.tag-sm {
+	margin-left: 10rpx;
+	font-size: 16rpx;
+	padding: 0 10rpx;
+	height: 28rpx;
+	line-height: 30rpx;
+}
+
+/*圆角*/
+.round {
+	border-radius: 5000rpx;
+}
+
+.radius {
+	border-radius: 6rpx;
+}
+
+/*背景色*/
+.bg-red {
+	background-color: #e54d42;
+	color: #ffffff;
+}
+
+.bg-orange {
+	background-color: #f37b1d;
+	color: #ffffff;
+}
+
+.bg-yellow {
+	background-color: #fbbd08;
+	color: #333333;
+}
+
+.bg-olive {
+	background-color: #8dc63f;
+	color: #ffffff;
+}
+
+.bg-green {
+	background-color: #39b54a;
+	color: #ffffff;
+}
+
+.bg-cyan {
+	background-color: #1cbbb4;
+	color: #ffffff;
+}
+
+.bg-blue {
+	background-color: #0081ff;
+	color: #ffffff;
+}
+
+.bg-purple {
+	background-color: #6739b6;
+	color: #ffffff;
+}
+
+.bg-mauve {
+	background-color: #9c26b0;
+	color: #ffffff;
+}
+
+.bg-pink {
+	background-color: #e03997;
+	color: #ffffff;
+}
+
+.bg-brown {
+	background-color: #a5673f;
+	color: #ffffff;
+}
+
+.bg-grey {
+	background-color: #8799a3;
+	color: #ffffff;
+}
+
+.bg-gray {
+	background-color: #f0f0f0;
+	color: #333333;
+}
+
+.bg-black {
+	background-color: #333333;
+	color: #ffffff;
+}
+
+.bg-white {
+	background-color: #ffffff;
+	color: #666666;
+}

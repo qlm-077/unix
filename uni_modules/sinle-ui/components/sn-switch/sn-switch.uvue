@@ -1,0 +1,294 @@
+<template>
+	<view class="sn-switch" 
+	:class="{'disabled':disabled, 'loading':loading}" 
+	@click="onClick"
+	:style="switchStylesC">
+		<sn-text v-if="showTextC"
+		class="sn-switch-text" 
+		:text="text"
+		:style="textStylesC"></sn-text>
+		<view class="sn-switch-block" 
+		ref="blockEle" 
+		:style="blockStylesC">
+			<sn-loading v-if="loading"
+			class="sn-switch-icon" 
+			:iconSize="`${blockSizeC*0.6}px`"
+			:iconColor="disabled?colors.info:(model?activeBgColorC:bgColorC)"></sn-loading>
+			<sn-icon v-if="showIconC&&!loading" 
+			class="sn-switch-icon" 
+			:name="icon"
+			:color="disabled?colors.info:(model?activeBgColorC:bgColorC)"
+			:size="iconSizeC"></sn-icon>
+		</view>
+	</view>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-switch
+	 * @tutorial https://sinleui.pages.dev/components/sn-switch
+	 * @description  Switch 开关
+	 *
+	 *- 跟官方的很相似，但扩展了一些功能
+	 * @property {Boolean} vModel    Boolean | 当前开关状态
+	 * @property {String} width    String | 开关宽度
+	 * @property {String} height    String | 开关高度
+	 * @property {String} text    String | 开关文本内容
+	 * @property {String} icon    String | 开关图标名称
+	 * @property {String} iconSize    String | 开关图标大小
+	 * @property {String} padding    String | 开关内边距
+	 * @property {String} borderRadius    String | 开关边框圆角
+	 * @property {String} bgColor    String | 开关背景颜色
+	 * @property {String} activeBgColor    String | 开启时背景颜色
+	 * @property {String} disabledBgColor    String | 禁用状态背景颜色
+	 * @property {String} disabledActiveBgColor    String | 禁用状态下开启时背景颜色
+	 * @property {String} blockColor    String | 小球颜色
+	 * @property {String} activeBlockColor    String | 开启时小球颜色
+	 * @property {String} disabledBlockColor    String | 禁用状态小球颜色
+	 * @property {String} disabledActiveBlockColor    String | 禁用状态下开启时的小球颜色
+	 * @property {String} blockBorderRadius    String | 小球圆角大小
+	 * @property {String} textColor    String | 开关文本颜色
+	 * @property {String} textSize    String | 开关文本大小
+	 * @property {Boolean} loading    Boolean | 是否进入加载状态
+	 * @property {Boolean} disabled    Boolean | 是否禁用开关
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义开关样式
+	 * @event {Function} change   (value:boolean)=>void | 状态改变时触发
+	 */
+
+	// 依赖
+	import { $snui, useFormatProp } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-switch'
+	})
+	
+	// SinleUI 配置
+	const colors = $snui.colors
+	const snu = $snui.utils
+
+	// 事件注册
+	const emit = defineEmits(['change'])
+	
+	const model = defineModel({
+		type: Boolean,
+		default: false
+	})
+	// 组件属性
+	const props = defineProps({
+		width: {
+			type: String,
+			default: '50px'
+		},
+		height: {
+			type: String,
+			default: '25px'
+		},
+		text: {
+			type: String,
+			default: ''
+		},
+		icon: {
+			type: String,
+			default: ''
+		},
+		iconSize: {
+			type: String,
+			default: ''
+		},
+		padding: {
+			type: String,
+			default: '5px'
+		},
+		borderRadius: {
+			type: String,
+			default: ''
+		},
+		bgColor: {
+			type: String,
+			default: ''
+		},
+		activeBgColor: {
+			type: String,
+			default: ''
+		},
+		disabledBgColor: {
+			type: String,
+			default: ''
+		},
+		disabledActiveBgColor: {
+			type: String,
+			default: ''
+		},
+		blockColor: {
+			type: String,
+			default: '#fff'
+		},
+		activeBlockColor: {
+			type: String,
+			default: '#fff'
+		},
+		disabledBlockColor: {
+			type: String,
+			default: '#fff'
+		},
+		disabledActiveBlockColor: {
+			type: String,
+			default: '#fff'
+		},
+		blockBorderRadius: {
+			type: String,
+			default: ''
+		},
+		textColor: {
+			type: String,
+			default: '#fff'
+		},
+		textSize: {
+			type: String,
+			default: ''
+		},
+		loading: {
+			type: Boolean,
+			default: false
+		},
+		disabled: {
+			type: Boolean,
+			default: false
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+	})
+
+	// 基本变量
+	const blockEle = ref(null as UniElement | null)
+
+
+	// 计算属性
+	const blockSizeC = computed(() : number => {
+		return Math.min(snu.getPx(props.width), snu.getPx(props.height)) - snu.getPx(props.padding) * 2
+	})
+
+	const blockOffsetC = computed(() : number => {
+		return (model.value ? snu.getPx(props.width) - blockSizeC.value - snu.getPx(props.padding) * 2 : 0)
+	})
+
+	const textOffsetC = computed(() : number => {
+		return blockSizeC.value + snu.getPx(props.padding) * 2
+	})
+
+	const showTextC = computed(() : boolean => {
+		return !snu.isEmpty(props.text)
+	})
+
+	const showIconC = computed(() : boolean => {
+		return !snu.isEmpty(props.icon)
+	})
+	
+	const iconSizeC = computed((): string => {
+		return useFormatProp('font', props.iconSize, $snui.configs.font.size(1))
+	})
+	
+	const borderRadiusC = computed((): string => {
+		return useFormatProp('radius', props.borderRadius, $snui.configs.radius.circle)
+	})
+	
+	const bgColorC = computed((): string => {
+		return useFormatProp('color', props.bgColor, colors.value.line)
+	})
+	
+	const activeBgColorC = computed((): string => {
+		return useFormatProp('color', props.activeBgColor, colors.value.primary)
+	})
+	
+	const disabledBgColorC = computed((): string => {
+		return useFormatProp('color', props.disabledBgColor, colors.value.disabled)
+	})
+	
+	const disabledActiveBgColorC = computed((): string => {
+		return useFormatProp('color', props.disabledActiveBgColor, colors.value.disabledDark)
+	})
+	
+	const blockBorderRadiusC = computed((): string => {
+		return useFormatProp('radius', props.blockBorderRadius, $snui.configs.radius.circle)
+	})
+	
+	const textSizeC = computed((): string => {
+		return useFormatProp('font', props.textSize, $snui.configs.font.size(2))
+	})
+	
+	const switchStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('border-radius', borderRadiusC.value)
+		styles.set('padding', props.padding)
+		styles.set('height', props.height)
+		styles.set('width', props.width)
+		styles.set('background', props.disabled?(model.value?disabledActiveBgColorC.value:disabledBgColorC.value):(model.value?activeBgColorC.value:bgColorC.value))
+		styles.set('transition-duration',$snui.configs.aniTime.normal)
+		return styles
+	})
+	
+	const textStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('color', props.textColor)
+		styles.set('fontSize', textSizeC.value)
+		styles.set('left', !model.value? `${textOffsetC.value}px` :'')
+		styles.set('right', model.value? `${textOffsetC.value}px` :'')
+		return styles
+	})
+	
+	const blockStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('width', `${blockSizeC.value}px`)
+		styles.set('height', `${blockSizeC.value}px`)
+		styles.set('border-radius', blockBorderRadiusC.value)
+		styles.set('background', props.disabled?(model.value?props.disabledActiveBlockColor:props.disabledBlockColor):(model.value?props.activeBlockColor:props.blockColor))
+		styles.set('transform', `translateX(${blockOffsetC.value}px)`)
+		styles.set('transition-duration',$snui.configs.aniTime.normal)
+		return styles
+	})
+
+
+
+	// 内部方法
+	function onClick() {
+		if (!(props.disabled) && !(props.loading)) {
+			model.value = !model.value
+			emit('change', { value: model.value })
+		}
+	}
+</script>
+
+<style lang="scss">
+	.sn-switch {
+		flex-direction: row;
+		// #ifdef WEB
+		cursor: pointer;
+		// #endif
+
+		&-icon {
+			margin: 0 auto;
+		}
+
+		&-block {
+			justify-content: center;
+		}
+
+		&-text {
+			position: absolute;
+			line-height: 1;
+		}
+	}
+	
+	.disabled {
+		// #ifdef WEB
+		cursor: not-allowed;
+		// #endif
+	}
+	.loading {
+		// #ifdef WEB
+		cursor: wait;
+		// #endif
+	}
+</style>

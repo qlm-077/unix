@@ -1,0 +1,372 @@
+<template>
+	<sn-drawer ref="drawerEle"
+	renderMode="v-show"
+	:height="height"
+	:maskClose="maskClose"
+	:showLine="false"
+	:slideClose="false"
+	padding="15px 15px 10px 15px"
+	@open="onOpened"
+	@close="onClosed">
+		<view class="sn-picker-header"
+		:style="headerStylesC">
+			<sn-text v-if="showTitle"
+			class="sn-picker-title"
+			:align="titleAlign"
+			:text="title"
+			:color="titleColorC"
+			:size="titleSizeC"
+			:style="titleStylesC"></sn-text>
+			<sn-button v-if="showClose"
+			round
+			:roundSize="roundSizeC"
+			:style="closeButtonStylesC"
+			@click="close">
+				<sn-icon name="close-fill"
+				:size="closeIconSizeC"></sn-icon>
+			</sn-button>
+		</view>
+		<sn-picker-view v-if="firstRendered"
+		v-model="viewValue"
+		:disabled="disabled"
+		:itemHeight="itemHeight"
+		:itemBorderRadius="itemBorderRadius"
+		:itemTextColor="itemTextColor"
+		:itemTextSize="itemTextSize"
+		:activeItemTextColor="activeItemTextColor"
+		:disabledItemTextColor="disabledItemTextColor"
+		:columnSpacing="columnSpacing"
+		:data="(data as SnDataItem[][])"
+		style="flex: 1;">
+		</sn-picker-view>
+		<view v-if="showCancel || showConfirm"
+		class="sn-picker-actions">
+			<sn-button v-if="showCancel"
+			type="info"
+			long
+			:disabled="disabled"
+			:text="cancelText"
+			:textSize="cancelTextSizeC"
+			:style="[{
+				marginRight: showConfirm ? halfActionSpacing : '0'
+			} as Map<string,any>]"
+			@click="onCanceled"></sn-button>
+			<sn-button v-if="showConfirm"
+			type="primary"
+			long
+			:disabled="disabled"
+			:text="confirmText"
+			:textSize="confirmTextSizeC"
+			:style="[{
+				marginLeft: showCancel ? halfActionSpacing : '0'
+			} as Map<string,any>]"
+			@click="onConfirmed"></sn-button>
+		</view>
+	</sn-drawer>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-picker
+	 * @tutorial https://sinleui.pages.dev/components/sn-picker
+	 * @description  Picker 选择器
+	 *
+	 *- 用于创建弹出式的选择器。
+	 *
+	 *- 用于数据量较大或较复杂的数据选择。对于简单的数据选择推荐使用 `sn-select` 组件
+	 *
+	 *- 支持多列选择，自定义标题、取消和确认按钮。
+	 * @property {Array<Number>} vModel    Array<Number> | 当前选中的选项索引数组
+	 * @property {Array<SnDataItem[][]>} data    Array<SnDataItem[][]> | 选择器数据数组，每个子数组代表一列
+	 * @property {Boolean} maskClose    Boolean | 是否可以通过点击蒙层关闭选择器
+	 * @property {String} height    String | 选择器高度
+	 * @property {String} title    String | 选择器标题
+	 * @property {String} titleAlign=[left|center|right]    String | 标题对齐方式
+	 * @value left
+	 * @value center
+	 * @value right
+	 * @property {String} titleColor    String | 标题颜色
+	 * @property {String} titleSize    String | 标题大小
+	 * @property {String} cancelText    String | 取消按钮文字
+	 * @property {String} confirmText    String | 确认按钮文字
+	 * @property {String} cancelTextSize    String | 取消按钮文字大小
+	 * @property {String} confirmTextSize    String | 确认按钮文字大小
+	 * @property {Boolean} showCancel    Boolean | 是否显示取消按钮
+	 * @property {Boolean} showConfirm    Boolean | 是否显示确认按钮
+	 * @property {Boolean} showClose    Boolean | 是否显示关闭按钮
+	 * @property {String} columnSpacing    String | 列之间的间距
+	 * @property {String} actionSpacing    String | 按钮之间的间距
+	 * @property {String} itemHeight    String | 选项高度
+	 * @property {String} itemBorderRadius    String | 选项圆角大小
+	 * @property {String} itemTextColor    String | 选项文字颜色
+	 * @property {String} itemTextSize    String | 选项文字大小
+	 * @property {String} activeItemTextColor    String | 激活选项文字颜色
+	 * @property {Boolean} disabled    Boolean | 是否禁用选择器
+	 * @property {String} disabledItemTextColor    String | 禁用选项文字颜色
+	 * @event {Function} change   (v:number[])=>void | 选项改变时触发
+	 * @event {Function} cancel   ()=>void | 取消操作时触发
+	 * @event {Function} confirm   ()=>void | 确认操作时触发（仅用户点击确认时选择的结果才会作为选择器的结果）
+	 * @event {Function} close   ()=>void | 选择器关闭时触发
+	 * @event {Function} open   ()=>void | 选择器打开时触发
+	 */
+
+
+	// 依赖
+	import { $snui, useFormatProp, SnDataItem } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-picker'
+	})
+	
+	// 事件注册
+	const emit = defineEmits(['update:modelValue', 'change', 'cancel', 'confirm', 'close', 'open'])
+	
+	// SinleUI 配置
+	const snu = $snui.utils;
+	const colors = $snui.colors
+	
+	const props = defineProps({
+		modelValue: {
+			type: Array as PropType<number[]>,
+			default: [] as number[]
+		},
+		data: {
+			type: Array as PropType<SnDataItem[][]>,
+			default: [] as SnDataItem[][]
+		},
+		maskClose: {
+			type: Boolean,
+			default: true,
+		},
+		height: {
+			type: String,
+			default: '350px'
+		},
+		title: {
+			type: String,
+			default: '',
+		},
+		titleAlign: {
+			type: String,
+			default: 'center',
+		},
+		titleColor: {
+			type: String,
+			default: '',
+		},
+		titleSize: {
+			type: String,
+			default: '',
+		},
+		cancelText: {
+			type: String,
+			default: '取消',
+		},
+		confirmText: {
+			type: String,
+			default: '确定',
+		},
+		cancelTextSize: {
+			type: String,
+			default: '',
+		},
+		confirmTextSize: {
+			type: String,
+			default: '',
+		},
+		showCancel: {
+			type: Boolean,
+			default: true,
+		},
+		showConfirm: {
+			type: Boolean,
+			default: true,
+		},
+		showClose: {
+			type: Boolean,
+			default: true,
+		},
+		columnSpacing: {
+			type: String,
+			default: '10px',
+		},
+		actionSpacing: {
+			type: String,
+			default: '10px',
+		},
+		itemHeight: {
+			type: String,
+			default: '50px',
+		},
+		itemBorderRadius: {
+			type: String,
+			default: '',
+		},
+		itemTextColor: {
+			type: String,
+			default: ''
+		},
+		itemTextSize: {
+			type: String,
+			default: '',
+		},
+		activeItemTextColor: {
+			type: String,
+			default: '',
+		},
+		disabledItemTextColor: {
+			type: String,
+			default: '',
+		},
+		disabled: {
+			type: Boolean,
+			default: false,
+		}
+	})
+	
+	// 基本变量
+	const drawerEle = ref(null as SnDrawerComponentPublicInstance | null)
+	const viewValue = ref([0,0] as number[])
+	const firstRendered = ref(false)
+	
+	function formatValue(value: number[]): number[] {
+		if (value.length < props.data.length) {
+			let delta = props.data.length - value.length
+			for (let i = 0; i < delta; i++) {
+				value.push(0)
+			}
+		} else if (value.length > props.data.length) {
+			value = value.slice(0, props.data.length)
+		}
+		return value
+	}
+	
+	// 计算属性
+	const model = computed<number[]>({
+		get: () : number[] => props.modelValue,
+		set: (value : number[]) => {
+			value = formatValue(value)
+			
+			emit('update:modelValue', value)
+			emit('change', value)
+		}
+	} as WritableComputedOptions<number[]>)
+	
+	const showTitle = computed(():boolean => props.title.trim() != '')
+	
+	const halfActionSpacing = computed(():string=>{
+		return snu.addPx(snu.getPx(props.actionSpacing)/2)
+	})
+	
+	const cancelTextSizeC = computed(():string=>{
+		return useFormatProp('font',props.cancelTextSize, $snui.configs.font.size(3))
+	})
+	
+	const confirmTextSizeC = computed(():string=>{
+		return useFormatProp('font',props.confirmTextSize, $snui.configs.font.size(3))
+	})
+	
+	const titleColorC = computed(():string=>{
+		return useFormatProp('color',props.titleColor, colors.value.title)
+	})
+	
+	const titleSizeC = computed(():string=>{
+		return useFormatProp('font',props.titleSize, $snui.configs.font.size(3))
+	})
+	
+	const roundSizeC = computed(():string=>{
+		return snu.addPx(snu.getPx(titleSizeC.value) * 1.8 )
+	})
+	
+	const closeIconSizeC = computed(():string=>{
+		return snu.addPx(snu.getPx(titleSizeC.value) * 1.2)
+	})
+	
+	const headerStylesC = computed((): Map<string,any>=>{
+		const styles = new Map<string, any>()
+		styles.set('height', roundSizeC.value)
+		return styles
+	})
+	
+	const closeButtonStylesC = computed((): Map<string,any>=>{
+		const styles = new Map<string, any>()
+		styles.set('position', 'absolute')
+		styles.set('right', '0px')
+		return styles
+	})
+	
+	const titleStylesC = computed((): Map<string,any>=>{
+		const styles = new Map<string, any>()
+		styles.set('flex', '1')
+		if (props.titleAlign == 'right') {
+			styles.set('margin-right', roundSizeC.value)
+		}
+		return styles
+	})
+	
+	
+	// 方法
+	function init(){
+		model.value = formatValue(props.modelValue)
+	}
+	
+	function onOpened(){
+		init()
+		firstRendered.value = true
+		emit('open')
+	}
+	
+	function onClosed(){
+		emit('close')
+	}
+	
+	function open(){
+		onOpened()
+		drawerEle.value?.open?.()
+		viewValue.value = snu.deepClone(model.value)
+		// #ifndef APP
+		setTimeout(()=>{
+			viewValue.value = snu.deepClone(model.value)
+		}, 200)
+		// #endif
+	}
+	
+	function close(){
+		onClosed()
+		drawerEle.value?.close?.()
+	}
+	
+	function onCanceled(){
+		close()
+		emit('cancel')
+	}
+	
+	function onConfirmed(){
+		close()
+		emit('confirm')
+		model.value = snu.deepClone(viewValue.value)
+	}
+	
+	defineExpose({
+		open,
+		close
+	})
+	
+	onBeforeMount(()=>{
+		init()
+	})
+</script>
+
+<style lang="scss">
+	.sn-picker {
+		&-header {
+			flex-direction: row;
+			align-items: center;
+		}
+		&-actions {
+			flex-direction: row;
+			align-items: center;
+			margin-top: 10px;
+		}
+	}
+</style>

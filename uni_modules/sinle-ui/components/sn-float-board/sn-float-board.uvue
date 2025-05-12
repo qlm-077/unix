@@ -1,0 +1,399 @@
+<template>
+	<view class="sn-float-board"
+	:class="boardClassesC" 
+	@click.stop 
+	:style="[boardStylesC, customStyle]">
+		<sn-view :padding="padding"
+		@touchmove="ontouchmove"
+		@touchend="ontouchend"
+		@touchcancel="ontouchend"
+		style="flex: 1;">
+			<view v-if="showLine"
+			class="sn-float-board-line"
+			:style="lineStylesC"></view>
+			<slot></slot>
+		</sn-view>
+	</view>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-float-board
+	 * @tutorial https://sinleui.pages.dev/components/sn-float-board
+	 * @description Float Board 浮动面板
+	 * 
+	 * - 通常用于半屏窗口的场景。
+	 * - 请注意区分  `sn-drawer`和 `sn-float-board`。 `sn-drawer`是弹出层，需要调用方法才能显示；而  `sn-float-board` 则始终显示，且可以通过用户手势操作完全显露。（可以把  `sn-drawer` 理解为关闭的浮动面板， `sn-float-board` 则是半开的浮动面板）
+	 * @property {String} position=[top|right|bottom|left]    String | 浮动面板显示的位置
+	 * @value top 顶部
+	 * @value right 右侧
+	 * @value bottom 底部
+	 * @value left 左侧
+	 * @property {Boolean} showLine    Boolean | 是否显示指示条
+	 * @property {String} maxWidth    String | 当`position`为`left``right`且展开时浮动面板的宽度
+	 * @property {String} minWidth    String | 当`position`为`left``right`且折叠时浮动面板的宽度
+	 * @property {String} maxHeight    String | 当`position`为`top``bottom`且展开时浮动面板的宽度
+	 * @property {String} minHeight    String | 当`position`为`top``bottom`且折叠时浮动面板的宽度
+	 * @property {String} slideHeight    String | 浮动面板纵向滑动阈值（达到阈值则折叠或展开）
+	 * @property {String} slideWidth    String | 浮动面板横向滑动阈值（达到阈值则折叠或展开）
+	 * @property {String} bgColor    String | 浮动面板的背景颜色
+	 * @property {String} lineColor    String | 浮动面板指示条颜色
+	 * @property {String} padding    String | 浮动面板内边距
+	 * @property {String} borderRadius    String | 浮动面板圆角大小
+	 * @property {Number} aniTime    String | 浮动面板展开/折叠动画时长（单位`ms`）
+	 * @property {Boolean} disabled    Boolean | 是否禁用滑动手势
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义浮动面板样式
+	 * @event {Function} unfold   ()=>void | 展开浮动面板时触发
+	 * @event {Function} fold   ()=>void | 折叠浮动面板时触发
+	 */
+	// 依赖
+	import { $snui, SnTouchEvent, useFormatProp } from '../../index.uts'
+
+	defineOptions({
+		name: 'sn-float-board'
+	})
+
+	// SinleUI 配置
+	const snu = $snui.utils;
+	const colors = $snui.colors
+
+	// 事件注册
+	const emit = defineEmits(['unfold', 'fold'])
+
+	// 组件属性
+	const props = defineProps({
+		position: {
+			type: String,
+			default: 'bottom'
+		},
+		showLine: {
+			type: Boolean,
+			default: true
+		},
+		maxWidth: {
+			type: String,
+			default: '300px'
+		},
+		minWidth: {
+			type: String,
+			default: '50px'
+		},
+		slideWidth: {
+			type: String,
+			default: '100px'
+		},
+		maxHeight: {
+			type: String,
+			default: '500px'
+		},
+		minHeight: {
+			type: String,
+			default: '50px'
+		},
+		slideHeight: {
+			type: String,
+			default: '100px'
+		},
+		bgColor: {
+			type: String,
+			default: ''
+		},
+		lineColor: {
+			type: String,
+			default: ''
+		},
+		padding: {
+			type: String,
+			default: '25px 15px 10px 15px'
+		},
+		borderRadius: {
+			type: String,
+			default: ''
+		},
+		aniTime: {
+			type: String,
+			default: $snui.configs.aniTime.long
+		},
+		disabled: {
+			type: Boolean,
+			default: false
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+	})
+
+	// 基本变量
+	const minTranslate = ref(0)
+	const translate = ref(0)
+	const animating = ref(false)
+	const full = ref(false)
+	const id = ref(snu.randomComId())
+
+	// 计算属性
+	const positionC = computed(() : string => {
+		let positions = ['top', 'bottom', 'left', 'right']
+		return positions.includes(props.position) ? props.position : 'bottom'
+	})
+
+	const verticalC = computed(() : boolean => {
+		return positionC.value == 'top' || positionC.value == 'bottom'
+	})
+	
+	const maxElongationC = computed(() : number => {
+		if (verticalC.value){
+			return snu.getPx(props.maxHeight) - snu.getPx(props.minHeight)
+		} else {
+			return snu.getPx(props.maxWidth) - snu.getPx(props.minWidth)
+		}
+		
+	})
+
+	const borderRadiusC = computed(() : string => {
+		return useFormatProp('radius', props.borderRadius,$snui.configs.radius.xlarge)
+	})
+	
+	const bgColorC = computed(() : string => {
+		return useFormatProp('color', props.bgColor, colors.value.infoActive)
+	})
+	
+	const lineColorC = computed(() : string => {
+		return useFormatProp('color', props.lineColor, colors.value.lineText)
+	})
+	
+	const aniTimeC = computed(() : string => {
+		return useFormatProp('aniTime', props.aniTime, $snui.configs.aniTime.long)
+	})
+
+	const lineStylesC = computed(() : Map<string, any> => {
+		const styles = new Map<string, any>()
+		styles.set('background', lineColorC.value)
+		styles.set('border-radius', $snui.configs.radius.circle)
+		if (verticalC.value) {
+			styles.set('height', '5px')
+			styles.set('left', '50%')
+			styles.set('width', '60px')
+			styles.set('transform', 'translateX(-50%)')
+			styles.set(positionC.value == 'bottom' ? 'top' : 'bottom', '10px')
+		} else {
+			styles.set('width', '5px')
+			styles.set('top', '50%')
+			styles.set('height', '60px')
+			styles.set('transform', 'translateY(-50%)')
+			styles.set(positionC.value == 'left' ? 'right' : 'left', '10px')
+		}
+		return styles
+	})
+
+	const boardStylesC = computed(() : Map<string, any> => {
+		const styles = new Map<string, any>()
+		let radius = borderRadiusC.value
+		if (verticalC.value) {
+			styles.set('width', '100%')
+			styles.set('height', props.maxHeight)
+		} else {
+			styles.set('height', '100%')
+			styles.set('width',props.maxWidth)
+		}
+		switch (positionC.value) {
+			case 'top':
+				styles.set('border-radius', `0 0 ${radius} ${radius}`)
+				break
+			case 'bottom':
+				styles.set('border-radius', `${radius} ${radius} 0 0`)
+				styles.set('bottom', `0`)
+				break
+			case 'left':
+				styles.set('border-radius', `0 ${radius} ${radius} 0`)
+				break
+			case 'right':
+				styles.set('border-radius', `${radius} 0 0 ${radius}`)
+				break
+		}
+		styles.set('transform', `translate${verticalC.value ? 'Y' : 'X'}(${minTranslate.value+translate.value}px)`)
+		styles.set('background', bgColorC.value)
+		styles.set('transition-duration', `${animating.value ? parseInt(aniTimeC.value) : 0}ms`)
+		styles.set('zIndex', $snui.configs.zIndex.popup)
+		return styles
+	})
+
+	const boardClassesC = computed(() : Map<string, any> => {
+		let classes = new Map<string, any>()
+		classes.set('animation', parseInt(aniTimeC.value) > 0)
+		classes.set(positionC.value, true)
+		return classes
+	})
+
+	// 方法
+	function unfold(){
+		full.value = true
+		animating.value = true
+		translate.value = maxElongationC.value * (positionC.value == 'bottom' || positionC.value == 'right' ? -1 : 1)
+		snu.debounce(()=>{
+			animating.value = false
+		}, parseInt(aniTimeC.value), id.value)
+		emit('unfold')
+	}
+	
+	function fold(){
+		full.value = false
+		animating.value = true
+		translate.value = 0
+		snu.debounce(()=>{
+			animating.value = false
+		}, parseInt(aniTimeC.value), id.value)
+		emit('fold')
+	}
+	
+	function ontouchmove(e : SnTouchEvent) {
+		if (props.disabled) return
+		// #ifndef APP
+		e.event.preventDefault()
+		// #endif
+		// #ifdef APP
+		e.event.stopPropagation()
+		// #endif
+		let touch = e.touches[0]
+		let bottom = positionC.value == 'bottom'
+		let right = positionC.value == 'right'
+		let vertical = verticalC.value 
+		let diffX = Math.abs(touch.diffX)
+		let diffY = Math.abs(touch.diffY)
+		if (full.value) {
+			if (vertical) {
+				if (bottom) {
+					translate.value = touch.direction == 'down' ? Math.min(diffY, maxElongationC.value) - maxElongationC.value : translate.value
+				} else {
+					translate.value = touch.direction == 'up' ? maxElongationC.value - Math.min(diffY, maxElongationC.value)  : translate.value
+				}
+			} else {
+				if (right) {
+					translate.value = touch.direction == 'right' ? Math.min(diffX, maxElongationC.value) - maxElongationC.value : translate.value
+				} else {
+					translate.value = touch.direction == 'left' ? maxElongationC.value - Math.min(diffX, maxElongationC.value)  : translate.value
+				}
+			}
+		} else {
+			if (vertical) {
+				if (bottom) {
+					translate.value = touch.direction == 'up' ? Math.max(-diffY, -maxElongationC.value) : translate.value
+				} else {
+					translate.value = touch.direction == 'down' ? Math.min(diffY, maxElongationC.value) : translate.value
+				}
+			} else {
+				if (right) {
+					translate.value = touch.direction == 'left' ? Math.max(-diffX, -maxElongationC.value) : translate.value
+				} else {
+					translate.value = touch.direction == 'right' ? Math.min(diffX, maxElongationC.value) : translate.value
+				}
+			}
+		}
+	}
+
+	function ontouchend(e: SnTouchEvent) {
+		let slideLength = 0
+		
+		if (verticalC.value) {
+			slideLength = snu.getPx(props.slideHeight)
+		} else {
+			slideLength = snu.getPx(props.slideWidth)
+		}
+		if (!props.disabled && full.value) {
+			let rule = true
+			if (positionC.value == 'bottom' || positionC.value == 'right') {
+				rule = translate.value+maxElongationC.value < slideLength
+			} else {
+				rule = maxElongationC.value - translate.value < slideLength
+			}
+			if (rule) {
+				unfold()
+			} else {
+				fold()
+			}
+		}
+		if (!props.disabled && !full.value) {
+			if (Math.abs(translate.value) < slideLength) {
+				fold()
+			} else {
+				unfold()
+			}
+		}
+	}
+	
+	function init(){
+		if (verticalC.value){
+			minTranslate.value = snu.getPx(props.maxHeight) - snu.getPx(props.minHeight)
+			if (positionC.value == 'top'){
+				minTranslate.value = -minTranslate.value
+			}
+		} else {
+			minTranslate.value = snu.getPx(props.maxWidth) - snu.getPx(props.minWidth)
+			if (positionC.value == 'left'){
+				minTranslate.value = -minTranslate.value
+			}
+		}
+	}
+	
+	// 对外暴露展开/折叠方法
+	defineExpose({
+		unfold,
+		fold
+	})
+	
+	watch(():string=>props.position,()=>{
+		init()
+	})
+	
+	watch(():string=>props.maxHeight,()=>{
+		init()
+	})
+	
+	watch(():string=>props.minHeight,()=>{
+		init()
+	})
+	
+	watch(():string=>props.maxWidth,()=>{
+		init()
+	})
+	
+	watch(():string=>props.minWidth,()=>{
+		init()
+	})
+	
+	onMounted(()=>{
+		init()
+	})
+</script>
+
+<style lang="scss">
+	.sn-float-board {
+		width: 100%;
+		position: fixed;
+		
+		&-line {
+			position: absolute;
+		}
+
+		&.bottom {
+			bottom: 0;
+			left: 0;
+			right: 0;
+		}
+		&.top {
+			top: 0;
+			left: 0;
+			right: 0;
+		}
+		&.left {
+			left: 0;
+			top: 0;
+			bottom: 0;
+		}	
+		&.right {
+			right: 0;
+			top: 0;
+			bottom: 0;
+		}
+	}
+</style>

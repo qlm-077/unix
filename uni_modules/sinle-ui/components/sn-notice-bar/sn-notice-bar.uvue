@@ -1,0 +1,381 @@
+<template>
+	<view ref="noticeBarEle" 
+	v-if="!close"
+	class="sn-notice-bar" 
+	:style="[barStylesC, customStyle]">
+		<sn-icon v-if="showIcon" 
+		class="sn-notice-bar-icon" 
+		:name="icon" 
+		:color="iconColorC"
+		:size="iconSizeC"
+		:style="[iconStylesC, customIconStyle]"></sn-icon>
+		<view v-if="modeC=='scroll'" class="sn-notice-bar-wrap">
+			<view ref="scrollWrapEle" 
+			class="sn-notice-bar-wrap-row transform" 
+			:style="rowStylesC" 
+			@transitionend="onEnd">
+				<sn-text class="sn-notice-bar-scroll-text"
+				ref="scrollTextsEle"
+				v-for="(t, i) in texts" 
+				:key="i"
+				:lines="1"
+				:text="texts[0] ?? ''" 
+				:color="textColorC"
+				:size="textSizeC"
+				:style="{lineHeight: textSizeC}">
+				</sn-text>
+			</view>
+		</view>
+		<view v-else-if="modeC=='swiper'" class="sn-notice-bar-wrap">
+			<swiper class="sn-notice-bar-wrap-row"
+			:vertical="vertical" 
+			:circular="true" 
+			:disable-touch="true"
+			:indicator-dots="false" 
+			:autoplay="true" 
+			:interval="swiperInterval">
+				<swiper-item v-for="(t, i) in texts" 
+				class="sn-notice-bar-wrap-row-swiper-item"
+				:key="i">
+					<sn-text
+					:text="t ?? ''" 
+					:color="textColorC"
+					:size="textSizeC"
+					:lines="1"
+					:style="[customTextStyle]"></sn-text>
+				</swiper-item>
+			</swiper>
+		</view>
+		<sn-icon class="sn-notice-bar-close" 
+		name="close-large-line" 
+		v-if="closable"
+		:color="iconColorC"
+		:size="iconSizeC"
+		:style="[closeBtnStylesC, customIconStyle]"
+		@click="closeBar"></sn-icon>
+	</view>
+</template>
+
+<script setup>
+	
+	/**
+	 * @name sn-notice-bar
+	 * @tutorial https://sinleui.pages.dev/components/sn-notice-bar
+	 * @description  Notice Bar 通知栏
+	 *
+	 *- 用于展示通知信息。
+	 *
+	 *- 支持滚动和轮播两种模式，其中轮播支持纵向步进和横向步进。
+	 *
+	 *- 可自定义样式和内容。
+	 * @property {Array<String>} texts    Array<String> | 通知文本数组
+	 * @property {String} bgColor    String | 通知栏背景颜色
+	 * @property {String} borderRadius    String | 通知栏圆角大小
+	 * @property {String} textColor    String | 通知文本颜色
+	 * @property {String} textSize    String | 通知文本大小
+	 * @property {String} icon    String | 通知图标名称
+	 * @property {String} iconColor    String | 图标颜色
+	 * @property {String} iconSize    String | 图标大小
+	 * @property {Number} speed    Number | 滚动速度（单位：px/s）
+	 * @property {String} mode=[scroll|swiper]    String | 显示模式（滚动或轮播）
+	 * @value scroll  滚动
+	 * @value swiper  轮播
+	 * @property {Number} swiperInterval    Number | 轮播间隔时间（单位：ms）
+	 * @property {Boolean} vertical    Boolean | 是否纵向步进（仅`mode="swiper"`时生效）
+	 * @property {Boolean} closable    Boolean | 是否显示关闭按钮
+	 * @property {Boolean} disabled    Boolean | 是否禁用通知栏
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义通知栏样式
+	 * @property {UTSJSONObject} customTextStyle    UTSJSONObject | 自定义通知栏文本样式
+	 * @property {UTSJSONObject} customIconStyle    UTSJSONObject | 自定义通知栏图标样式
+	 */
+
+
+	import { $snui, useFormatProp, useResize } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-notice-bar'
+	})
+	
+	// 事件注册
+	const emit = defineEmits(['close'])
+	
+	// SinleUI 配置
+	const colors = $snui.colors
+	const snu = $snui.utils
+	
+	// 组件属性
+	const props = defineProps({
+		texts: {
+			type: Array as PropType<string[]>,
+			default: [] as string[]
+		},
+		bgColor: {
+			type: String,
+			default: ''
+		},
+		textColor: {
+			type: String,
+			default: ''
+		},
+		textSize: {
+			type: String,
+			default: ''
+		},
+		icon: {
+			type: String,
+			default: 'volume-up-line'
+		},
+		iconColor: {
+			type: String,
+			default: ''
+		},
+		iconSize: {
+			type: String,
+			default: ''
+		},
+		borderRadius: {
+			type: String,
+			default: ''
+		},
+		speed: {
+			type: Number,
+			default: 50
+		},
+		swiperInterval: {
+			type: Number,
+			default: 2000
+		},
+		vertical: {
+			type: Boolean,
+			default: false
+		},
+		closable: {
+			type: Boolean,
+			default: false
+		},
+		padding: {
+			type: Number,
+			default: 10,
+		},
+		disabled: {
+			type: Boolean,
+			default: false
+		},
+		mode: {
+			type: String,
+			default: 'scroll'
+		},
+		customStyle: {
+			type: Object,
+			default: {}
+		},
+		customTextStyle: {
+			type: Object,
+			default: {}
+		},
+		customIconStyle: {
+			type: Object,
+			default: {}
+		},
+	})
+	
+	const instance = getCurrentInstance()!
+	const noticeBarEle = ref(null as UniElement | null)
+	const scrollWrapEle = ref(null as UniElement | null)
+	const scrollTextsEle = ref(null as SnTextComponentPublicInstance[] | null)
+	const boxWidth = ref(0)
+	const textWidth = ref(0)
+	const duration = ref(3)
+	const stop = ref(false)
+	const close = ref(false)
+	const scrolling = ref(false)
+	
+	const showIcon = computed(() : boolean => !snu.isEmpty(props.icon))
+	
+	const bgColorC = computed((): string => {
+		return useFormatProp('color', props.bgColor, colors.value.warningLight)
+	})
+	
+	const borderRadiusC = computed((): string => {
+		return useFormatProp('radius', props.borderRadius, $snui.configs.radius.small)
+	})
+	
+	const textColorC = computed((): string => {
+		return useFormatProp('color', props.textColor, colors.value.warning)
+	})
+	
+	const textSizeC = computed((): string => {
+		return useFormatProp('font', props.textSize, $snui.configs.font.baseSize)
+	})
+	
+	const iconColorC = computed(() : string => {
+		return useFormatProp('color', props.iconColor, textColorC.value)
+	})
+	
+	const iconSizeC = computed((): string => {
+		return useFormatProp('font', props.iconSize, $snui.configs.font.size(3))
+	})
+	
+	const heightC = computed((): number => {
+		return props.padding * 2 + snu.getPx(textSizeC.value)
+	})
+	
+	const modeC = computed((): string=>{
+		const modes = ['scroll', 'swiper']
+		let mode = ''
+		mode = modes.includes(props.mode) ? props.mode : 'scroll'
+		if (props.vertical){
+			mode = 'swiper'
+		}
+		return mode
+	})
+
+	
+	const barStylesC = computed((): Map<string, any> => {
+		let styles = new Map<string, any>()
+		styles.set('background', bgColorC.value)
+		styles.set('border-radius', borderRadiusC.value)
+		styles.set('height', `${heightC.value}px`)
+		return styles
+	})
+	
+	const iconStylesC = computed((): Map<string, any> => {
+		let styles = new Map<string, any>()
+		styles.set('line-height', `${heightC.value}px`)
+		styles.set('padding', `0 ${snu.getPx(iconSizeC.value)/2}px`)
+		return styles
+	})
+	
+	const rowStylesC = computed((): Map<string, any> => {
+		let styles = new Map<string, any>()
+		styles.set('visibility', scrolling.value? 'visible' : 'hidden')
+		styles.set('width', `${scrolling.value? textWidth.value : boxWidth.value}px`)
+		return styles
+	})
+	
+	const closeBtnStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('line-height', `${heightC.value}px`)
+		styles.set('padding', `0 ${snu.getPx(iconSizeC.value)/2}px`)
+		return styles
+	})
+		
+	// 方法
+	function closeBar(e: UniPointerEvent){
+		e.stopPropagation()
+		close.value = true
+		stop.value = true
+		scrolling.value = false
+		emit('close')
+	}
+	
+	function onEnd() {
+		if(stop.value) {
+			scrolling.value = false
+			scrollWrapEle.value?.style?.setProperty('transition-duration', `40ms`)
+			scrollWrapEle.value?.style?.setProperty('transform', `translateX(${boxWidth.value}px)`)
+			return
+		}
+		
+		if (scrolling.value) {
+			scrolling.value = false
+			scrollWrapEle.value?.style?.setProperty('transition-duration', `30ms`)
+			scrollWrapEle.value?.style?.setProperty('transform', `translateX(${boxWidth.value}px)`)
+		} else {
+			scrolling.value = true
+			scrollWrapEle.value?.style?.setProperty('transition-duration', `${duration.value}ms`)
+			scrollWrapEle.value?.style?.setProperty('transform', `translateX(${-textWidth.value}px)`)
+		}
+	}
+	
+	function init() {
+		let width = 0
+		let children: SnTextComponentPublicInstance[] = scrollTextsEle.value ?? [] as SnTextComponentPublicInstance[]
+		for (let i = 0; i < children.length; i++) {
+			const child = children[i]
+			if (child.$el != null) {
+				width += child.$el!.getBoundingClientRect().width
+			}
+		}
+		
+		let parent = noticeBarEle.value!.parentElement
+		if (parent != null) {
+			boxWidth.value = Math.ceil(parent!.getBoundingClientRect().width)
+			// #ifndef APP
+			textWidth.value = Math.ceil(width)
+			// #endif
+			// #ifdef APP
+			textWidth.value = Math.ceil(Math.max(width, boxWidth.value))
+			// #endif
+			duration.value = Math.ceil((boxWidth.value + textWidth.value) / props.speed) * 1000
+		}
+		
+		if (modeC.value == 'scroll') {
+			scrollWrapEle.value?.style?.setProperty('transition-duration', `${duration.value}ms`)
+			scrollWrapEle.value?.style?.setProperty('transform', `translateX(${-textWidth.value}px)`)
+			scrolling.value = true
+		}
+	}
+	
+	watch(():string[]=>props.texts, () => {
+		init()
+	})
+	
+	// 生命周期
+	onMounted(() => {
+		nextTick(()=>{
+			init()
+		})
+		useResize(noticeBarEle.value, ()=>{
+			init()
+		})
+		
+	})
+	
+	onPageShow(() => {
+		if(stop.value) {
+			stop.value = false
+			init()
+		}
+	})
+	
+	onPageHide(() => {
+		stop.value = true
+	})
+</script>
+
+<style lang="scss">
+	.sn-notice-bar {
+		display: flex;
+		flex-direction: row;
+		margin: 5px 0;
+		
+		&-wrap {
+			flex: 1;
+
+			&-row {
+				flex: 1;
+				display: flex;
+				flex-direction: row;
+				align-items: center;
+				flex-wrap: nowrap;
+				justify-content: flex-start;
+				
+				&-swiper-item {
+					justify-content: center;
+				}
+
+				&-text {
+					padding-left: 10px;
+				}
+			}
+		}
+	}
+
+	.transform {
+		transition-property: transform;
+		transition-duration: 0ms;
+		transition-timing-function: linear;
+	}
+	
+</style>

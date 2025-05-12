@@ -1,0 +1,192 @@
+<template>
+	<sn-text :text="textC"
+	:color="textColorC"
+	:size="textSizeC"
+	:customStyle="customStyle"></sn-text>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-countto
+	 * @tutorial https://sinleui.pages.dev/components/sn-countto
+	 * @description Countto 数字滚动组件
+	 * 
+	 * - 滚动的数字，常用在 PPT 的大屏上
+	 * @property {Number} duration    Number | 动画时长（单位`ms`）
+	 * @property {Number} startVal    Number | 开始值
+	 * @property {Number} endVal    Number | 结束值
+	 * @property {Number} decimals    Number | 小数位数（值为`0`则不显示小数部分）
+	 * @property {Number} separate    Number | 分割数字位数（值为`0`则不分割）
+	 * @property {Boolean} easing    Boolean | 以easeOutSine缓动动画代替默认的linear动画，使得动画在结束前减速
+	 * @property {Boolean} autoplay    Boolean | 自动开始计时
+	 * @property {String} textSize    String | 数字滚动文本字体大小
+	 * @property {String} textColor    String | 数字滚动文本颜色
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义数字滚动样式
+	 * @event {Function} finish   ()=>void | 动画播放完成时触发
+	 */
+	// 依赖
+	import { $snui, useFormatProp } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-countto'
+	})
+	
+	// SinleUI 配置
+	const snu = $snui.utils;
+	const colors = $snui.colors
+	
+	// 事件注册
+	const emit = defineEmits(['finish'])
+	
+	// 组件属性
+	const props = defineProps({
+		startVal: {
+			type: Number,
+			default: 0
+		},
+		endVal: {
+			type: Number,
+			default: 0
+		},
+		duration: {
+			type: Number,
+			default: 2000
+		},
+		decimals: {
+			type: Number,
+			default: 0
+		},
+		separate: {
+			type: Number,
+			default: 0
+		},
+		autoplay: {
+			type: Boolean,
+			default: true
+		},
+		easing: {
+			type: Boolean,
+			default: false
+		},
+		textSize: {
+			type: String,
+			default: ''
+		},
+		textColor: {
+			type: String,
+			default: ''
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+	})
+	
+	// 基本变量
+	const value = ref('')
+	const steps = ref(0)
+	const timer  = ref(0)
+	const running = ref(false)
+	
+	// 计算属性
+	const decimalsC = computed(():number=>Math.max(0, props.decimals))
+	
+	const textSizeC = computed((): string => {
+		return useFormatProp('font', props.textSize,$snui.configs.font.baseSize)
+	})
+	
+	const textColorC = computed((): string => {
+		return useFormatProp('color', props.textColor, colors.value.text)
+	})
+	
+	const textC = computed(():string=>{
+		return props.separate != 0 ? snu.separateNumber(value.value, props.separate) : value.value
+	})
+
+		
+	// 方法
+	function pause() {
+		if (running.value) {
+			running.value = false
+			clearInterval(timer.value)
+		}
+	}
+	
+	function stop() {
+		running.value = false
+		clearInterval(timer.value)
+		steps.value = 0
+		value.value = props.endVal.toFixed(decimalsC.value)
+		emit('finish')
+	}
+	
+	
+	function play() {
+		running.value = true
+		let total = props.endVal - props.startVal
+		timer.value = setInterval(() => {
+			if (running.value) {
+				let v = props.easing ? snu.easeOutSine(10*steps.value/props.duration): snu.linear(10*steps.value/props.duration)
+				steps.value += 1
+				value.value = (props.startVal + v * total + snu.randomNumber(decimalsC.value)*Math.pow(10, -decimalsC.value)).toFixed(decimalsC.value)
+				if (parseFloat(value.value) >= props.endVal) {
+					stop()
+				}
+			}
+		}, 10)
+	}
+	
+	function start() {
+		clearInterval(timer.value)
+		running.value = true
+		value.value = props.startVal.toString()
+		play()
+	}
+		
+	function init() {
+		steps.value = 0
+		value.value = props.startVal.toString()
+		
+		if (props.autoplay) {
+			start()
+		}
+	}
+	
+	function reset() {
+		clearInterval(timer.value)
+		init()
+	}
+	
+	defineExpose({
+		play,
+		stop,
+		pause,
+		reset
+	})
+	
+	
+	// 监听属性
+	const startValC = computed(():number=>props.startVal)
+	const endValC = computed(():number=>props.endVal)
+	
+	watch(startValC, () => {
+		init()
+	})
+	
+	watch(endValC, () => {
+		init()
+	})
+	
+	// 生命周期
+	onMounted(() => {
+		init()
+	})
+		
+	onUnmounted(() => {
+		clearInterval(timer.value)
+	})
+</script>
+
+<style>
+		
+</style>

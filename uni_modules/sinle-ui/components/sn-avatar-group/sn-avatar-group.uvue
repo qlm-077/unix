@@ -1,0 +1,174 @@
+<template>
+	<view class="sn-avatar-group">
+		<sn-avatar v-for="(e, index) in (avatars as SnAvatarGroupItem[])"
+		:mode="e.mode ?? ''"
+		:src="e.src ?? ''"
+		:text="e.text ?? ''"
+		:icon="e.icon ?? ''"
+		:textSize="textSize"
+		:iconSize="iconSize"
+		:textColor="randomBgColor ? randomColors[index][1]:textColor"
+		:iconColor="randomBgColor ? randomColors[index][1]:iconColor"
+		:bgColor="randomBgColor?randomColors[index][0]:bgColor"
+		:shape="shape"
+		:borderRadius="borderRadius"
+		:style="({
+			marginLeft: index > 0 ? (modeC=='spread'?spacing:offsetC) : '0',
+		} as Map<string, any>)"
+		:customStyle="customAvatarStyle"
+		@click="onClick(index)"
+		@dbclick="onDbclick(index)">
+			<template v-if="max!=-1&&data.length>max&&index==avatars.length-1">
+				<sn-text :text="`${max}+`"
+				align="center"
+				:color="colors.textLight"
+				:size="moreTextSizeC"></sn-text>
+			</template>
+		</sn-avatar>
+	</view>
+</template>
+
+<script setup>
+	// 依赖
+	import { $snui, useFormatProp, SnAvatarGroupItem } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-avatar-group'
+	})
+	
+	// SinleUI 配置
+	const snu = $snui.utils;
+	const colors = $snui.colors
+	
+	// 事件注册
+	const emit = defineEmits(['click', 'dbclick'])
+	
+	// 组件属性
+	const props = defineProps({
+		// 头像组
+		data: {
+			type: Array as PropType<SnAvatarGroupItem[]>,
+			default: [] as SnAvatarGroupItem[]
+		},
+		size: {
+			type: String,
+			default: '40px'
+		},
+		spacing: {
+			type: String,
+			default: '5px'
+		},
+		max: {
+			type: Number,
+			default: -1,
+		},
+		mode: {
+			type: String,
+			default: 'heap'
+		},
+		borderRadius: {
+			type: String,
+			default: ''
+		},
+		textSize: {
+			type: String,
+			default: '20px',
+		},
+		iconSize: {
+			type: String,
+			default: '20px',
+		},
+		textColor: {
+			type: String,
+			default: '',
+		},
+		iconColor: {
+			type: String,
+			default: '',
+		},
+		bgColor: {
+			type: String,
+			default: ''
+		},
+		randomBgColor: {
+			type: Boolean,
+			default: false
+		},
+		shape: {
+			type: String,
+			default: 'circle',
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customAvatarStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+	})
+	
+	// 计算属性
+	const avatars = computed((): SnAvatarGroupItem[] => {
+		let max = props.max == -1 ? props.data.length : props.max
+		let arr = props.data.slice(0, max)
+		if (props.max != -1 && props.data.length > props.max) {
+			arr.push({
+				mode: 'text'
+			} as SnAvatarGroupItem)
+		}
+		return arr
+	})
+	
+	const randomColors = computed((): string[][] => {
+		const colors = [] as string[][]
+		for (let i = 0; i < avatars.value.length; i++) {
+			if (props.max != -1 && avatars.value.length > props.max && i == avatars.value.length - 1) {
+				colors.push(['', ''])
+			} else {
+				let bg = $snui.libs.color.random()
+				let front = bg.contrasting()
+				colors.push([bg.toHexString(), front.toHexString()])
+			}
+		}
+		return colors
+	})
+	
+	const modeC = computed((): string => {
+		let modes = ['heap', 'spread']
+		return modes.includes(props.mode) ? props.mode : 'heap'
+	})
+	
+	const sizeC = computed((): string => {
+		return useFormatProp('other', props.size, '40px')
+	})
+	
+	const sizeN = computed((): number => {
+		return snu.getPx(sizeC.value)
+	})
+	
+	const offsetC = computed((): string => {
+		return snu.addPx(-sizeN.value / 3)
+	})
+	
+	const moreTextSizeC = computed((): string => {
+		return snu.addPx(sizeN.value * 0.4)
+	})
+	// 方法
+	function onClick(index: number) {
+		if (index == avatars.value.length-1) return
+		emit('click', avatars.value[index])
+	}
+	
+	function onDbclick(index: number) {
+		if (index == avatars.value.length-1) return
+		emit('dbclick', avatars.value[index])
+	}
+		
+</script>
+
+<style lang="scss">
+	.sn-avatar-group {
+		flex-direction: row;
+	}
+</style>

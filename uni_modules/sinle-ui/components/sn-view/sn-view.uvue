@@ -1,0 +1,538 @@
+<template>
+	<!--#ifndef WEB-->
+	<view :data-sn-id="id"
+	@click="onClick"
+	@longpress="onLongpress" 
+	@touchstart="onTouchstart" 
+	@touchmove="onTouchmove"
+	@touchend="onTouchend" 
+	@touchcancel="onTouchcancel"
+	:style="[viewStylesC , customStyle]">
+		<slot v-if="!loading"></slot>
+		<sn-loading v-if="!disabled&&loading"></sn-loading>
+		<view class="sn-view-disabled-mask"
+		v-if="disabledVIF"
+		ref="maskEle"
+		:style="[maskStylesC]"></view>
+	</view>
+	<!--#endif-->
+	<!--#ifdef WEB-->
+	<view :data-sn-id="id"
+	:class="{'disabled':disabled, 'loading':loading}" 
+	@click="onClick"
+	@longpress="onLongpress" 
+	@touchstart="onTouchstart" 
+	@touchmove="onTouchmove"
+	@touchend="onTouchend" 
+	@touchcancel="onTouchcancel"
+	@mousedown="onMousedown"
+	:style="[viewStylesC , customStyle]">
+		<slot v-if="!loading"></slot>
+		<sn-loading v-if="!disabled&&loading"></sn-loading>
+		<view class="sn-view-disabled-mask" 
+		v-if="disabledVIF"
+		ref="maskEle"
+		:style="[maskStylesC]"></view>
+	</view>
+	<!--#endif-->
+</template>
+
+<script setup>
+	/**
+	 * @name sn-view
+	 * @tutorial https://sinleui.pages.dev/components/sn-view
+	 * @description  View  视图容器
+	 *
+	 *- 用于包裹各种元素内容。
+	 *
+	 *- 用法与内置 `view` 组件无异。更好地设置组件样式；扩展了组件的手势事件，相当于简化版的 `sn-e-gesture`
+	 * @property {Boolean} loading    Boolean | 是否区域加载状态，为`true`时不会载入默认插槽的组件
+	 * @property {Boolean} disabled    Boolean | 是否区域禁用状态，为`true`时会屏蔽区域内所有组件的使用
+	 * @property {String} bgColor    String | 背景颜色
+	 * @property {String} borderRadius    String | 圆角大小
+	 * @property {String} margin    String | 外边距
+	 * @property {String} padding    String | 内边距
+	 * @property {String} boxShadow    String | 阴影，一般不要设置，`uni-appx`的阴影在App端时有异常
+	 * @property {String} aniTime    String | 动画时长
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义样式
+	 * @event {Function} click   (event:[SnPointerEvent](https://sinleui.pages.dev/api/types/api#snpointerevent))=>void | 点击事件
+	 * @event {Function} longpress   (event:[SnTouchEvent](https://sinleui.pages.dev/api/types/api#sntouchevent))=>void | 长按事件
+	 * @event {Function} dbclick   (event:[SnPointerEvent](https://sinleui.pages.dev/api/types/api#snpointerevent))=>void | 双击事件
+	 * @event {Function} touchstart   (event:[SnTouchEvent](https://sinleui.pages.dev/api/types/api#sntouchevent))=>void | 手指落下事件
+	 * @event {Function} touchmove   (event:[SnTouchEvent](https://sinleui.pages.dev/api/types/api#sntouchevent))=>void | 手指移动事件
+	 * @event {Function} touchend   (event:[SnTouchEvent](https://sinleui.pages.dev/api/types/api#sntouchevent))=>void | 手指抬起事件
+	 * @event {Function} touchcancel   (event:[SnTouchEvent](https://sinleui.pages.dev/api/types/api#sntouchevent))=>void | 触摸打断事件
+	 * @event {Function} down   (event:[SnPointerEvent](https://sinleui.pages.dev/api/types/api#snpointerevent))=>void | 按下事件
+	 */
+
+	// 依赖
+	import { $snui, SnTouch, SnTouchEvent, SnPointerEvent, useFormatProp, SnScaleEvent, SnRotateEvent } from '../../index.uts'
+
+	defineOptions({
+		name: 'sn-view'
+	})
+	
+	// SinleUI 配置
+	const colors = $snui.colors
+	const snu = $snui.utils;
+
+	// 事件注册
+	const emit = defineEmits(['click', 'longpress', 'dbclick', 'touchstart', 'touchmove', 'touchend', 'touchcancel', 'down', 'scale', 'rotate']);
+
+	// 组件属性
+	const props = defineProps({
+		loading: {
+			type: Boolean,
+			default: false
+		},
+		disabled: {
+			type: Boolean,
+			default: false
+		},
+		bgColor: {
+			type: String,
+			default: ''
+		},
+		borderRadius: {
+			type: String,
+			default: ''
+		},
+		margin: {
+			type: String,
+			default: '0'
+		},
+		padding: {
+			type: String,
+			default: '0'
+		},
+		boxShadow: {
+			type: String,
+			default: ''
+		},
+		aniTime: {
+			type: String,
+			default: $snui.configs.aniTime.long
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+	})
+
+	// 基本变量
+	const dbclickTimer = ref(null as number | null)
+	const lastTouchesRecords : Map<number, Map<string, number>> = new Map()
+	const pressing = ref(false)
+	const disabledVIF = ref(false)
+	const id = ref(snu.randomComId())
+	const maskEle = ref(null as UniElement | null)
+	const scale = ref(1)
+	const touchesLastDiagonal = ref(0)
+	const touchesLastAngle = ref(0)
+	const moving = ref(false)
+	const firstRotate = ref(true)
+	
+	watch(() : boolean => props.disabled, (v: boolean)=>{
+		if (v) {
+			disabledVIF.value = true
+			nextTick(()=>{
+				snu.debounce(()=>{
+					maskEle.value?.style?.setProperty('opacity', 0.3)
+				}, 50, id.value)
+			})
+		} else {
+			maskEle.value?.style?.setProperty('opacity', 0)
+			snu.debounce(()=>{
+				disabledVIF.value = false
+			}, parseInt(props.aniTime), id.value)
+		}
+	}, {immediate: true})
+
+	// 计算属性
+	const bgColorC = computed(() : string => {
+		return useFormatProp('color', props.bgColor, '')
+	})
+	
+	const borderRadiusC = computed(() : string => {
+		return useFormatProp('radius', props.borderRadius, '')
+	})
+	
+	const aniTimeC = computed(() : string => {
+		return useFormatProp('aniTime', props.aniTime, '0ms')
+	})
+	
+	const viewStylesC = computed(() : Map<string, any> => {
+		const styles = new Map<string, any>()
+		styles.set('background', bgColorC.value)
+		styles.set('padding', props.padding)
+		styles.set('box-shadow', props.boxShadow)
+		styles.set('border-radius', borderRadiusC.value)
+		styles.set('justify-content', props.loading ? 'center' : '')
+		styles.set('align-items', props.loading ? 'center' : '')
+		styles.set('transition-duration', aniTimeC.value)
+		return styles
+	})
+	
+	const maskStylesC = computed(() : Map<string, any> => {
+		const styles = new Map<string, any>()
+		styles.set('background', colors.value.disabled)
+		styles.set('transition-duration', aniTimeC.value)
+		return styles
+	})
+	
+	// 方法
+	
+	function onClick(event : UniPointerEvent) {
+		let type = 'click'
+		if (dbclickTimer.value == null) {
+			dbclickTimer.value = setTimeout(() => {
+				dbclickTimer.value = null
+			}, 300)
+		} else {
+			clearTimeout(dbclickTimer.value!)
+			dbclickTimer.value = null
+			type = 'dbclick'
+		}
+		let e = {
+			type,
+			event,
+			x: event.clientX,
+			y: event.clientY,
+		} as SnPointerEvent
+		
+		emit('down', e)
+		if (type == 'dbclick') {
+			emit('dbclick', e)
+		} else {
+			emit('click', e)
+		}
+	}
+
+	function removeTouchesRecords(items : number[]) {
+		for (let i = 0; i < items.length; i++) {
+			lastTouchesRecords.delete(items[i])
+		}
+	}
+
+	function getTouchDiffPosAndDirection(t : UniTouch) : any[] {
+		let diffPos = [] as any[]
+		if (lastTouchesRecords.has(t.identifier)) {
+			let info = lastTouchesRecords.get(t.identifier)!
+			let diffX = t.clientX - info.get('x')!
+			let diffY = t.clientY - info.get('y')!
+			let direction = Math.abs(diffX) > Math.abs(diffY) ? (diffX < 0 ? 'left' : 'right') : (diffY < 0 ? 'up' : 'down')
+			diffPos = [diffX, diffY, direction]
+		} else {
+			let info = new Map<string, number>()
+			info.set('x', t.clientX)
+			info.set('y', t.clientY)
+			diffPos = [0, 0, '']
+			lastTouchesRecords.set(t.identifier, info)
+		}
+		return diffPos
+	}
+
+	function onLongpress(event : UniTouchEvent) {
+		if (moving.value) return
+		let touches = [] as Touch[]
+		touches = event.touches
+		// #ifdef WEB
+		touches = [] as Touch[]
+		for (let i = 0; i < event.touches.length; i++) {
+			touches.push(event.touches[i])
+		}
+		// #endif
+		let e = {
+			type: 'longpress',
+			touches: touches.map((t : UniTouch) : SnTouch => {
+				let diffPos = getTouchDiffPosAndDirection(t)
+				return {
+					x: t.clientX,
+					y: t.clientY,
+					diffX: diffPos[0] as number,
+					diffY: diffPos[1] as number,
+					direction: '',
+					id: t.identifier
+				} as SnTouch
+			}) as SnTouch[],
+			event
+		} as SnTouchEvent
+		emit('longpress', e)
+	}
+
+	function onTouchstart(event : UniTouchEvent) {
+		moving.value = false
+		pressing.value = true
+		firstRotate.value = true
+		let touches = [] as Touch[]
+		touches = event.touches
+		// #ifdef WEB
+		touches = [] as Touch[]
+		for (let i = 0; i < event.touches.length; i++) {
+			touches.push(event.touches[i])
+		}
+		// #endif
+		let e = {
+			type: 'touchstart',
+			touches: touches.map((t : UniTouch) : SnTouch => {
+				let diffPos = getTouchDiffPosAndDirection(t)
+				return {
+					x: t.clientX,
+					y: t.clientY,
+					diffX: diffPos[0] as number,
+					diffY: diffPos[1] as number,
+					direction: diffPos[2] as string,
+					id: t.identifier
+				} as SnTouch
+			}) as SnTouch[],
+			event
+		} as SnTouchEvent
+		if (touches.length == 2) {
+			let touch1 = touches[0]
+			let touch2 = touches[1]
+			touchesLastDiagonal.value = snu.getDistance(touch1.clientX, touch1.clientY, touch2.clientX, touch2.clientY)
+		}
+		emit('down', e)
+		emit('touchstart', e)
+	}
+
+	function onTouchend(event : UniTouchEvent) {
+		moving.value = false
+		pressing.value = false
+		firstRotate.value = true
+		let toRemove = [] as number[]
+		let changedTouches = [] as Touch[]
+		changedTouches = event.changedTouches
+		// #ifdef WEB
+		changedTouches = [] as Touch[]
+		for (let i = 0; i < event.changedTouches.length; i++) {
+			changedTouches.push(event.changedTouches[i])
+		}
+		// #endif
+		let e = {
+			type: 'touchend',
+			touches: changedTouches.map((t : UniTouch) : SnTouch => {
+				let diffPos = getTouchDiffPosAndDirection(t)
+				toRemove.push(t.identifier)
+				return {
+					x: t.clientX,
+					y: t.clientY,
+					diffX: diffPos[0] as number,
+					diffY: diffPos[1] as number,
+					direction: diffPos[2] as string,
+					id: t.identifier
+				} as SnTouch
+			}) as SnTouch[],
+			event
+		} as SnTouchEvent
+		touchesLastDiagonal.value = 0
+		touchesLastAngle.value = 0
+		removeTouchesRecords(toRemove)
+		emit('touchend', e)
+	}
+
+	function onTouchcancel(event : UniTouchEvent) {
+		moving.value = false
+		pressing.value = false
+		firstRotate.value = true
+		let toRemove = [] as number[]
+		let changedTouches = [] as Touch[]
+		changedTouches = event.changedTouches
+		// #ifdef WEB
+		changedTouches = [] as Touch[]
+		for (let i = 0; i < event.changedTouches.length; i++) {
+			changedTouches.push(event.changedTouches[i])
+		}
+		// #endif
+		let e = {
+			type: 'touchcancel',
+			touches: changedTouches.map((t : UniTouch) : SnTouch => {
+				let diffPos = getTouchDiffPosAndDirection(t)
+				toRemove.push(t.identifier)
+				return {
+					x: t.clientX,
+					y: t.clientY,
+					diffX: diffPos[0] as number,
+					diffY: diffPos[1] as number,
+					direction: diffPos[2] as string,
+					id: t.identifier
+				} as SnTouch
+			}) as SnTouch[],
+			event
+		} as SnTouchEvent
+		touchesLastDiagonal.value = 0
+		touchesLastAngle.value = 0
+		removeTouchesRecords(toRemove)
+		emit('touchcancel', e)
+	}
+	
+	
+
+
+	function onTouchmove(event : UniTouchEvent) {
+		if (!pressing.value) return
+		moving.value = true
+		let touches = [] as Touch[]
+		touches = event.touches
+		// #ifdef WEB
+		touches = [] as Touch[]
+		for (let i = 0; i < event.touches.length; i++) {
+			touches.push(event.touches[i])
+		}
+		// #endif
+		let e = {
+			type: 'touchmove',
+			touches: touches.map((t : UniTouch) : SnTouch => {
+				let diffPos = getTouchDiffPosAndDirection(t)
+				return {
+					x: t.clientX,
+					y: t.clientY,
+					diffX: diffPos[0] as number,
+					diffY: diffPos[1] as number,
+					direction: diffPos[2] as string,
+					id: t.identifier
+				} as SnTouch
+			}) as SnTouch[],
+			event
+		} as SnTouchEvent
+		emit('touchmove', e)
+		
+		// scale 事件
+		if (touches.length == 2) {
+			const touch1 = event.touches[0]
+			const touch2 = event.touches[1]
+			const diagonal = snu.getDistance(touch1.clientX, touch1.clientY, touch2.clientX, touch2.clientY)
+			const scale = diagonal / touchesLastDiagonal.value
+			const angle = snu.getRotateAngle(touch1.clientX, touch1.clientY, touch2.clientX, touch2.clientY)
+			const rotation = angle - touchesLastAngle.value
+			touchesLastAngle.value = angle
+		    touchesLastDiagonal.value = diagonal
+			const zoom = parseFloat(scale.toFixed(7))
+			emit('scale', {
+				zoom
+			} as SnScaleEvent)
+			if (firstRotate.value) {
+				firstRotate.value = false
+			} else {
+				emit('rotate', {
+					rotate: rotation
+				} as SnRotateEvent)
+			}
+		}
+	}
+
+	// 兼容 PC WEB
+	// #ifdef WEB
+	function getMouseDiffPosAndDirection(event : UniMouseEvent) : any[] {
+		let diffPos = [] as any[]
+		if (lastTouchesRecords.has(0)) {
+			let info = lastTouchesRecords.get(0)!
+			let diffX = event.clientX - info.get('x')!
+			let diffY = event.clientY - info.get('y')!
+			let direction = Math.abs(diffX) > Math.abs(diffY) ? (diffX < 0 ? 'left' : 'right') : (diffY < 0 ? 'up' : 'down')
+			diffPos = [diffX, diffY, direction]
+		} else {
+			let info = new Map<string, number>()
+			info.set('x', event.clientX)
+			info.set('y', event.clientY)
+			diffPos = [0, 0, '']
+			lastTouchesRecords.set(0, info)
+		}
+		return diffPos
+	}
+
+	function onMousemove(event : UniMouseEvent) {
+		if (!pressing.value) return
+		moving.value = true
+		let diffPos = getMouseDiffPosAndDirection(event)
+		let touch = {
+			x: event.clientX,
+			y: event.clientY,
+			diffX: diffPos[0] as number,
+			diffY: diffPos[1] as number,
+			direction: diffPos[2] as string,
+			id: 0
+		} as SnTouch
+		let e = {
+			type: 'touchmove',
+			touches: [touch],
+			event
+		} as SnTouchEvent
+		emit('touchmove', e)
+	}
+
+	function onMouseup(event : UniMouseEvent) {
+		moving.value = false
+		pressing.value = false
+		let diffPos = getMouseDiffPosAndDirection(event)
+		let touch = {
+			x: event.clientX,
+			y: event.clientY,
+			diffX: diffPos[0] as number,
+			diffY: diffPos[1] as number,
+			direction: diffPos[2] as string,
+			id: 0
+		} as SnTouch
+		let e = {
+			type: 'touchend',
+			touches: [touch],
+			event
+		} as SnTouchEvent
+		removeTouchesRecords([0])
+		emit('touchend', e)
+	}
+
+	function onMousedown(event : UniMouseEvent) {
+		moving.value = false
+		pressing.value = true
+		let diffPos = getMouseDiffPosAndDirection(event)
+		let touch = {
+			x: event.clientX,
+			y: event.clientY,
+			diffX: diffPos[0] as number,
+			diffY: diffPos[1] as number,
+			direction: diffPos[2] as string,
+			id: 0
+		} as SnTouch
+		let e = {
+			type: 'touchstart',
+			touches: [touch],
+			event
+		} as SnTouchEvent
+		emit('down', e)
+		emit('touchstart', e)
+	}
+	// #endif
+	
+	onMounted(()=>{
+		// #ifdef WEB
+		window.addEventListener('mouseup', onMouseup);
+		window.addEventListener('mousemove', onMousemove);
+		// #endif
+	})
+</script>
+
+<style lang="scss">
+	.sn-view {
+		&-disabled-mask {
+			position: absolute;
+			top: 0;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			opacity: 0;
+		}
+	}
+	
+	.disabled {
+		// #ifdef WEB
+		cursor: not-allowed;
+		// #endif
+	}
+	
+	.loading {
+		// #ifdef WEB
+		cursor: wait;
+		// #endif
+	}
+</style>

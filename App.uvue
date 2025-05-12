@@ -1,0 +1,96 @@
+<script lang="uts">
+	import theme from '@/common/theme/index.uts'
+	import { getLocation, setAppAuthorize } from './store'
+	let firstBackTime = 0
+	export default {
+		globalData: {
+			theme: theme,
+			permConfigs: new Map<string, UTSJSONObject>()
+		},
+		onLaunch: function () {
+			console.log('App Launch')
+			this.setPermConfigs()
+		},
+		onShow: function () {
+			console.log('App Show')
+			let AppAuthorize = uni.getAppAuthorizeSetting()
+			setAppAuthorize(AppAuthorize)
+		},
+		onHide: function () {
+			console.log('App Hide')
+		},
+		// #ifdef APP-ANDROID
+		onLastPageBackPress: function () {
+			console.log('App LastPageBackPress')
+			if (firstBackTime == 0) {
+				uni.showToast({
+					title: '再按一次退出应用',
+					position: 'bottom',
+				})
+				firstBackTime = Date.now()
+				setTimeout(() => {
+					firstBackTime = 0
+				}, 2000)
+			} else if (Date.now() - firstBackTime < 2000) {
+				firstBackTime = Date.now()
+				uni.exit()
+			}
+		},
+		// #endif
+		onExit: function () {
+			console.log('App Exit')
+		},
+		methods: {
+			setPermConfigs() {
+				getApp().globalData.permConfigs.set('android.permission.CAMERA', {
+					title: '正在请求相机权限',
+					content: '仅用于扫描二维码，不会将您的任何隐私数据上传云端'
+				})
+				getApp().globalData.permConfigs.set('android.permission.READ_MEDIA_IMAGES', {
+					title: '正在请求图片权限',
+					content: '仅用于选择图片，不会将您的任何隐私数据上传云端',
+					icon: 'image-circle-fill'
+				})
+				getApp().globalData.permConfigs.set('android.permission.READ_MEDIA_VIDEO', {
+					title: '正在请求视频权限',
+					content: '仅用于选择视频，不会将您的任何隐私数据上传云端',
+					icon: 'movie-fill',
+				})
+				getApp().globalData.permConfigs.set('android.permission.READ_MEDIA_AUDIO', {
+					title: '正在请求音频权限',
+					content: '仅用于选择音频，不会将您的任何隐私数据上传云端',
+					icon: 'disc-fill'
+				})
+				getApp().globalData.permConfigs.set('android.permission.ACCESS_FINE_LOCATION', {
+					title: '正在请求定位权限',
+					content: '仅用于根据位置信息推荐附近热门',
+					icon: 'map-pin-fill'
+				})
+				getApp().globalData.permConfigs.set('android.permission.CALL_PHONE', {
+					title: '正在请求拨号权限',
+					content: '仅用于快速拨打电话，不会将您的任何隐私数据上传云端',
+					icon: 'phone-fill'
+				})
+				getApp().globalData.permConfigs.set('android.permission.READ_CALENDAR', {
+					title: '正在请求日历权限',
+					content: '仅用于辅助填写日程',
+					icon: 'calendar-2-fill'
+				})
+			}
+		}
+	}
+</script>
+
+<style lang="scss">
+	/*每个页面公共css */
+	@import "common/style.css";
+	@import "@/uni_modules/sinle-ui/static/styles/fonts.scss";
+
+	.uni-row {
+		flex-direction: row;
+	}
+
+	.uni-column {
+		flex-direction: column;
+	}
+</style>

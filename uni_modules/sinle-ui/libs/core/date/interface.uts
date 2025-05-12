@@ -1,0 +1,240 @@
+export type LDayutsConfig = {
+	/**
+	 * 日期对象
+	 */
+	date: any|null
+	/**
+	 * 格式化字符串
+	 */
+	format : string|null
+	/**
+	 * 语言
+	 */
+	locale : string|null
+}
+
+export type LDayutsUnit = 'year' | 'month' | 'day' | 'week' | 'date' | 'hour' | 'minute' | 'second' | 'millisecond' | 'quarter'
+
+export type LDayutsFormats = {
+	/**
+	 * 小时和分钟的格式化字符串。
+	 */
+	LT : string;
+
+	/**
+	 * 小时、分钟和秒的格式化字符串。
+	 */
+	LTS : string;
+
+	/**
+	 * 年份、月份和日期的格式化字符串。
+	 */
+	L : string;
+
+	/**
+	 * 年份、月份、日期和星期的格式化字符串。
+	 */
+	LL : string;
+
+	/**
+	 * 年份、月份、日期、星期和小时的格式化字符串。
+	 */
+	LLL : string;
+
+	/**
+	 * 年份、月份、日期、星期、小时和分钟的格式化字符串。
+	 */
+	LLLL : string;
+
+	/**
+	 * 缩小的年份、月份和日期的格式化字符串。
+	 */
+	l : string;
+
+	/**
+	 * 缩小的年份、月份、日期和星期的格式化字符串。
+	 */
+	ll : string;
+
+	/**
+	 * 缩小的年份、月份、日期、星期和小时的格式化字符串。
+	 */
+	lll : string;
+
+	/**
+	 * 缩小的年份、月份、日期、星期、小时和分钟的格式化字符串。
+	 */
+	llll : string;
+}
+export type LDayutsRelativeTime = {
+	/**
+	 * 时间单位之后的格式化字符串。
+	 */
+	future : string;
+
+	/**
+	 * 时间单位之前的格式化字符串。
+	 */
+	past : string;
+
+	/**
+	 * 秒的格式化字符串。
+	 */
+	s : string;
+
+	/**
+	 * 分钟的格式化字符串。
+	 */
+	m : string;
+
+	/**
+	 * 分钟（带前缀）的格式化字符串。
+	 */
+	mm : string;
+
+	/**
+	 * 小时的格式化字符串。
+	 */
+	h : string;
+
+	/**
+	 * 小时（带前缀）的格式化字符串。
+	 */
+	hh : string;
+
+	/**
+	 * 天的格式化字符串。
+	 */
+	d : string;
+
+	/**
+	 * 天（带前缀）的格式化字符串。
+	 */
+	dd : string;
+
+	/**
+	 * 月的格式化字符串。
+	 */
+	M : string;
+
+	/**
+	 * 月（带前缀）的格式化字符串。
+	 */
+	MM : string;
+
+	/**
+	 * 年的格式化字符串。
+	 */
+	y : string;
+
+	/**
+	 * 年（带前缀）的格式化字符串。
+	 */
+	yy : string;
+}
+
+/**
+ * 本地化对象接口。
+ */
+export type LDayutsLocale = {
+	/**
+	 * 区域设置名称。
+	 */
+	name : string;
+
+	/**
+	 * 一周中每天的完整名称。
+	 */
+	weekdays : string[];
+
+	/**
+	 * 一周中每天的缩写名称。
+	 */
+	weekdaysShort ?: string[];
+
+	/**
+	 * 一周中每天的最小缩写名称。
+	 */
+	weekdaysMin ?: string[];
+
+	/**
+	 * 一年中的每个月份的名称。
+	 */
+	months : string[];
+
+	/**
+	 * 一年中的每个月份的缩写名称。
+	 */
+	monthsShort ?: string[];
+
+	/**
+	 * 返回序数词的函数。
+	 *
+	 * @param number - 要格式化的数字。
+	 * @param period - 周期类型（如 "W" 表示周）。
+	 * @returns 返回格式化后的序数词字符串。
+	 */
+	// ordinal : (number : number) => string;
+	ordinal : (number : number, period : string) => string;
+
+	/**
+	 * 一周的开始日期（星期几）。
+	 */
+	weekStart ?: number;
+
+	/**
+	 * 年的开始月份。
+	 */
+	yearStart ?: number;
+
+	/**
+	 * 日期和时间格式化选项。
+	 */
+	formats ?: LDayutsFormats;
+
+	/**
+	 * 相对时间格式化选项。
+	 */
+	relativeTime ?: LDayutsRelativeTime;
+
+	/**
+	 * 根据小时和分钟返回上午或下午的函数。
+	 *
+	 * @param hour - 小时数（0-23）。
+	 * @param minute - 分钟数（0-59）。
+	 * @returns 返回上午或下午的字符串。
+	 */
+	meridiem ?: (hour : number, minute : number, isLowercase : boolean) => string;
+}
+
+
+export type LDayutsObject = {
+	/**
+	 * 年
+	 */
+	years : number;
+	/**
+	 * 月
+	 */
+	months : number;
+	/**
+	 * 日
+	 */
+	date : number;
+	/**
+	 * 时
+	 */
+	hours : number;
+	/**
+	 * 分
+	 */
+	minutes : number;
+	/**
+	 * 秒
+	 */
+	seconds : number;
+	/**
+	 * 毫秒
+	 */
+	milliseconds : number;
+}

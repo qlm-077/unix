@@ -1,0 +1,33 @@
+import { utils } from './index'
+
+const themes = ['light', 'dark']
+const lightBgColor = ref('#f9f9f9')
+const darkBgColor = ref('#262628')
+const topbarHeight = ref('80px')
+
+
+export class PageConfig {
+	get topbarHeight(): string {
+		return topbarHeight.value
+	}
+	
+	set topbarHeight(height: string) {
+		topbarHeight.value = `${utils.getPx(height)}px`
+	}
+	
+	get lightBgColor() : string {
+		return lightBgColor.value
+	}
+
+	set lightBgColor(bgColor : string) {
+		darkBgColor.value = bgColor
+	}
+	
+	get darkBgColor() : string {
+		return darkBgColor.value
+	}
+	
+	set darkBgColor(bgColor : string) {
+		darkBgColor.value = bgColor
+	}
+}

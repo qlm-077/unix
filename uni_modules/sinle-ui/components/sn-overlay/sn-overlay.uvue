@@ -1,0 +1,167 @@
+<template>
+	<view class="sn-overlay-contain"
+	v-show="showV"
+	:style="containStylesC">
+		<view v-if="renderModeC=='v-if'?showV:true"
+		v-show="renderModeC=='v-show'?showV:true" 
+		class="sn-overlay" 
+		ref="overlayEle"
+		:style="[overlayStylesC, customStyle]"
+		@click="onClick">
+			<slot></slot>
+		</view>
+	</view>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-overlay
+	 * @tutorial https://sinleui.pages.dev/components/sn-overlay
+	 * @description  Overlay 遮罩层
+	 *
+	 *- 强调特定元素，常与弹出层等组件搭配使用
+	 * @property {Boolean} maskClose    Boolean | 点击遮罩是否关闭遮罩层
+	 * @property {String} renderMode=[v-if|v-show]    String | 遮罩层的渲染方式（v-if或v-show）
+	 * @value v-if
+	 * @value v-show
+	 * @property {Number} opacity    Number | 遮罩层的透明度
+	 * @property {String} aniTime    String | 遮罩层动画时长
+	 * @property {String} bgColor    String | 遮罩层背景颜色
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义遮罩层样式
+	 * @event {Function} clickMask   ()=>void | 点击遮罩时触发
+	 * @event {Function} close   ()=>void | 关闭时触发
+	 * @event {Function} open   ()=>void | 打开时触发
+	 */
+
+	
+	// 依赖
+	import { $snui, useFormatProp } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-overlay'
+	})
+	
+	// 事件注册
+	const emit = defineEmits(['clickMask', 'open', 'close'])
+	
+	// SinleUI 配置
+	const snu = $snui.utils;
+	
+	// 组件属性
+	const props = defineProps({
+		maskClose: {
+			type: Boolean,
+			default: true
+		},
+		renderMode: {
+			type: String,
+			default: 'v-if'
+		},
+		opacity: {
+			type: Number,
+			default: 0.3
+		},
+		aniTime: {
+			type: String,
+			default: $snui.configs.aniTime.long
+		},
+		bgColor: {
+			type: String,
+			default: '#000'
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+	})
+
+	// 基本变量
+	const showV = ref(false)
+	const overlayEle = ref(null as UniElement | null)
+	const id = ref(snu.randomComId())
+	const animeId = ref(snu.randomComId())
+
+	// 计算属性
+	const bgColorC = computed(() : number[] => {
+		let origin = useFormatProp('color', props.bgColor, '#000')
+		let color = $snui.libs.color.tinyColor(origin)
+		let rgb = color.isValid?color.toRgb():$snui.libs.color.tinyColor('#000').toRgb()
+		return [rgb.r, rgb.g, rgb.b]
+	})
+
+	const aniTimeC = computed((): string => {
+	  return useFormatProp('aniTime', props.aniTime, $snui.configs.aniTime.long)
+	})
+	
+	const renderModeC = computed(():string=>{
+		return props.renderMode == 'v-show'?'v-show':'v-if'
+	})
+	
+	const containStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('zIndex', $snui.configs.zIndex.overlay)
+		return styles
+	})
+	
+	const overlayStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('transition-duration',aniTimeC.value)
+		return styles
+	})
+	
+	function setStatus(status: boolean){
+		nextTick(()=>{
+			snu.throttle(()=>{
+				overlayEle.value?.style?.setProperty('background-color',`rgba(${bgColorC.value[0]}, ${bgColorC.value[1]}, ${bgColorC.value[2]}, ${props.opacity})`)
+				overlayEle.value?.style?.setProperty('opacity', `${status?1:0}`)
+			}, 20, animeId.value)
+		})
+	}
+	
+	function open(){
+		showV.value = true
+		nextTick(()=>{
+			setStatus(true)
+		})
+		emit('open')
+	}
+	
+	function close(){
+		setStatus(false)
+		snu.throttle(()=>{
+			showV.value = false
+			emit('close')
+		}, parseInt(aniTimeC.value), id.value)
+	}
+	
+	function onClick(){
+		emit('clickMask');
+		if (props.maskClose){
+			close()
+		}
+	}
+	
+	defineExpose({
+		open,
+		close
+	})
+</script>
+
+<style lang="scss">
+	.sn-overlay {
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background: transparent;
+	}
+	
+	.sn-overlay-contain {
+		position: fixed;
+		left: 0;
+		bottom: 0;
+		right: 0;
+		top: 0;
+	}
+</style>

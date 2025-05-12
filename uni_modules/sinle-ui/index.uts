@@ -1,0 +1,21 @@
+
+import { Snui, _colors } from './libs/configs/index.uts'
+import { init } from './libs/init.uts'
+export { StoreLib } from './libs/core/store/index.uts'
+export * from './libs/types/index.uts'
+
+export const $snui: Snui = new Snui()
+export const colors = _colors
+export * from './libs/use/useResize.uts'
+export * from './libs/use/useFormatProp.uts'
+
+
+// #ifdef WEB
+window.$snui = $snui
+// #endif
+
+export const install = (): Snui => {
+	return $snui
+}
+
+init()

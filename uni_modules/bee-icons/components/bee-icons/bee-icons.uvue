@@ -1,0 +1,58 @@
+<template>
+	<text ref="bee-text" class="wz" :style="{color, fontSize: size + 'px'}">{{icons}}</text>
+</template>
+
+<script>
+	import { useIcons } from './logic/icons.uts'
+	export default {
+		name: "bee-icons",
+		
+		data() {
+			return {
+				icons: null as string | null
+			};
+		},
+		
+		props: {
+			// 图标名称
+			name: {
+				type: String,
+				default: ''
+			},
+			
+			// 图标大小
+			size: {
+				type: Number,
+				default: 16
+			},
+			
+			// 图标颜色
+			color: {
+				type: String,
+				default: '#333'
+			}
+		},
+		
+		watch: {
+			name(val): void {
+				this.icons = useIcons(val)
+			}
+		},
+		
+		created() {
+			this.icons = useIcons(this.name)
+		}
+	}
+</script>
+
+<style lang="scss">
+	@font-face {
+		font-family: 'bee';
+		src: url('/uni_modules/bee-icons/components/bee-icons/fonts/bee.ttf');
+	}
+
+	.wz {
+		font-family: 'bee';
+		font-size: 16px;
+	}
+</style>

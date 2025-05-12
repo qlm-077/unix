@@ -1,0 +1,437 @@
+<template>
+	<view v-show="placed ? true : display" 
+	class="sn-transition" 
+	ref="transitionEle" 
+	@transitionend="onEnd"
+	:style="[transitionStylesC, customStyle]">
+		<slot></slot>
+	</view>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-transition
+	 * @tutorial https://sinleui.pages.dev/components/sn-transition
+	 * @description  Transition 过渡动画
+	 *
+	 *- 用于实现元素的过渡动画效果。
+	 *
+	 *- 可通过不同的模式和动画时长自定义动画效果。
+	 * @property {Boolean} show    Boolean | 是否显示元素
+	 * @property {Boolean} placed    Boolean | 元素隐藏时是否占位
+	 * @property {String} mode=[fade|zoom|fadeZoom|fadeUp|fadeRight|fadeDown|fadeLeft|slideUp|slideRight|slideDown|slideLeft]    String | 动画模式
+	 * @value fade 淡入淡出
+	 * @value zoom 缩放
+	 * @value fadeZoom 淡入淡出缩放
+	 * @value fadeUp 上方淡入淡出
+	 * @value fadeRight 右侧淡入淡出
+	 * @value fadeDown 下方淡入淡出
+	 * @value fadeLeft 左侧淡入淡出
+	 * @value slideUp 上方滑入滑出
+	 * @value slideRight 右侧滑入滑出
+	 * @value slideDown 下方滑入滑出
+	 * @value slideLeft 左侧滑入滑出
+	 * @property {Number} aniTime    String | 动画时长（单位：毫秒）
+	 * @property {String} timingFunction    String | 动画时间函数
+	 * @property {Object} customStyle    Object | 自定义样式
+	 * @event {Function} beforeEnter   ()=>void | 动画开始前触发
+	 * @event {Function} enter   ()=>void | 动画开始时触发
+	 * @event {Function} afterEnter   ()=>void | 动画开始后触发
+	 * @event {Function} beforeLeave   ()=>void | 动画结束前前触发
+	 * @event {Function} leave   ()=>void | 动画结束时触发
+	 * @event {Function} afterLeave   ()=>void | 动画结束后触发
+	 * @event {Function} transitionend   ()=>void | 每个过渡动画阶段结束时触发
+	 */
+
+	// 依赖
+	import { $snui, useFormatProp } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-transition'
+	})
+	
+	// 事件注册
+	const emit = defineEmits(['beforeEnter', 'enter', 'afterEnter', 'beforeLeave', 'leave', 'afterLeave', 'transitionend'])
+
+	// 组件属性
+	const props = defineProps({
+		show: {
+			type: Boolean,
+			default: false
+		},
+		placed: {
+			type: Boolean,
+			default: true
+		},
+		mode: {
+			type: String,
+			default: 'fade'
+		},
+		aniTime: {
+			type: String,
+			default: $snui.configs.aniTime.long
+		},
+		timingFunction: {
+			type: String,
+			default: 'ease-out'
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+	})
+
+	// 基本变量
+	const transitionEle = ref<Element | null>(null)
+	const display = ref(false)
+	const playing = ref(false)
+	const beforeEnd = ref(false)
+	const delay = 60
+
+	// 计算属性
+	const transitionStylesC = computed(() : Map<string, any> => {
+		const styles = new Map<string, any>()
+		styles.set('transitionTimingFunction', $snui.configs.aniTime.normal)
+		return styles
+	})
+
+	const aniTimeC = computed(() : string => {
+		return useFormatProp('aniTime', props.aniTime, $snui.configs.aniTime.long)
+	})
+
+	// 方法
+	function fade(enter : boolean) {
+		if (enter) {
+			playing.value = true
+			emit('beforeEnter')
+			transitionEle.value?.style?.setProperty('transition-duration', `${10}ms`)
+			transitionEle.value?.style?.setProperty('opacity', 0)
+
+			setTimeout(() => {
+				emit('enter')
+				transitionEle.value?.style?.setProperty('transition-duration', aniTimeC.value)
+				transitionEle.value?.style?.setProperty('opacity', 1)
+				beforeEnd.value = true
+			}, delay);
+		} else {
+			emit('beforeLeave')
+			emit('leave')
+			transitionEle.value?.style?.setProperty('opacity', 0)
+		}
+	}
+
+	function zoom(enter : boolean) {
+		if (enter) {
+			playing.value = true
+			emit('beforeEnter')
+			transitionEle.value?.style?.setProperty('transition-duration', `${10}ms`)
+			transitionEle.value?.style?.setProperty('opacity', 0)
+			transitionEle.value?.style?.setProperty('transform', 'scale(0)')
+
+			setTimeout(() => {
+				emit('enter')
+				transitionEle.value?.style?.setProperty('transition-duration', aniTimeC.value)
+				transitionEle.value?.style?.setProperty('opacity', 1)
+				transitionEle.value?.style?.setProperty('transform', 'scale(1)')
+				beforeEnd.value = true
+			}, delay);
+		} else {
+			emit('beforeLeave')
+			emit('leave')
+			transitionEle.value?.style?.setProperty('transform', 'scale(0)')
+		}
+	}
+
+	function fadeZoom(enter : boolean) {
+		if (enter) {
+			playing.value = true
+			emit('beforeEnter')
+			transitionEle.value?.style?.setProperty('transition-duration', `${10}ms`)
+			transitionEle.value?.style?.setProperty('opacity', 0)
+			transitionEle.value?.style?.setProperty('transform', 'scale(0)')
+
+			setTimeout(() => {
+				emit('enter')
+				transitionEle.value?.style?.setProperty('transition-duration', aniTimeC.value)
+				transitionEle.value?.style?.setProperty('opacity', 1)
+				transitionEle.value?.style?.setProperty('transform', 'scale(1)')
+				beforeEnd.value = true
+			}, delay);
+		} else {
+			emit('beforeLeave')
+			emit('leave')
+			transitionEle.value?.style?.setProperty('opacity', 0)
+			transitionEle.value?.style?.setProperty('transform', 'scale(0)')
+		}
+	}
+
+	function fadeUp(enter : boolean) {
+		if (enter) {
+			playing.value = true
+			emit('beforeEnter')
+			transitionEle.value?.style?.setProperty('transition-duration', `${10}ms`)
+			transitionEle.value?.style?.setProperty('opacity', 0)
+			transitionEle.value?.style?.setProperty('transform', `translate(0, 120%)`)
+
+			setTimeout(() => {
+				emit('enter')
+				transitionEle.value?.style?.setProperty('transition-duration', aniTimeC.value)
+				transitionEle.value?.style?.setProperty('opacity', 1)
+				transitionEle.value?.style?.setProperty('transform', `translate(0, 0)`)
+				beforeEnd.value = true
+			}, delay);
+		} else {
+			emit('beforeLeave')
+			emit('leave')
+			transitionEle.value?.style?.setProperty('opacity', 0)
+			transitionEle.value?.style?.setProperty('transform', `translate(0, 120%)`)
+		}
+	}
+
+	function fadeLeft(enter : boolean) {
+		if (enter) {
+			playing.value = true
+			emit('beforeEnter')
+			transitionEle.value?.style?.setProperty('transition-duration', `${10}ms`)
+			transitionEle.value?.style?.setProperty('opacity', 0)
+			transitionEle.value?.style?.setProperty('transform', `translate(-120%, 0)`)
+
+			setTimeout(() => {
+				emit('enter')
+				transitionEle.value?.style?.setProperty('transition-duration', aniTimeC.value)
+				transitionEle.value?.style?.setProperty('opacity', 1)
+				transitionEle.value?.style?.setProperty('transform', `translate(0, 0)`)
+				beforeEnd.value = true
+			}, delay);
+		} else {
+			emit('beforeLeave')
+			emit('leave')
+			transitionEle.value?.style?.setProperty('opacity', 0)
+			transitionEle.value?.style?.setProperty('transform', `translate(-120%, 0)`)
+		}
+	}
+
+	function fadeRight(enter : boolean) {
+		if (enter) {
+			playing.value = true
+			emit('beforeEnter')
+			transitionEle.value?.style?.setProperty('transition-duration', `${10}ms`)
+			transitionEle.value?.style?.setProperty('opacity', 0)
+			transitionEle.value?.style?.setProperty('transform', `translate(120%, 0)`)
+
+			setTimeout(() => {
+				emit('enter')
+				transitionEle.value?.style?.setProperty('transition-duration', aniTimeC.value)
+				transitionEle.value?.style?.setProperty('opacity', 1)
+				transitionEle.value?.style?.setProperty('transform', `translate(0, 0)`)
+				beforeEnd.value = true
+			}, delay);
+		} else {
+			emit('beforeLeave')
+			emit('leave')
+			transitionEle.value?.style?.setProperty('opacity', 0)
+			transitionEle.value?.style?.setProperty('transform', `translate(120%, 0)`)
+		}
+	}
+
+	function fadeDown(enter : boolean) {
+		if (enter) {
+			playing.value = true
+			emit('beforeEnter')
+			transitionEle.value?.style?.setProperty('transition-duration', `${10}ms`)
+			transitionEle.value?.style?.setProperty('opacity', 0)
+			transitionEle.value?.style?.setProperty('transform', `translate(0, -120%)`)
+
+			setTimeout(() => {
+				emit('enter')
+				transitionEle.value?.style?.setProperty('transition-duration', aniTimeC.value)
+				transitionEle.value?.style?.setProperty('opacity', 1)
+				transitionEle.value?.style?.setProperty('transform', `translate(0, 0)`)
+				beforeEnd.value = true
+			}, delay);
+		} else {
+			emit('beforeLeave')
+			emit('leave')
+			transitionEle.value?.style?.setProperty('opacity', 0)
+			transitionEle.value?.style?.setProperty('transform', `translate(0, -120%)`)
+		}
+	}
+
+	function slideUp(enter : boolean) {
+		if (enter) {
+			playing.value = true
+			emit('beforeEnter')
+			transitionEle.value?.style?.setProperty('transition-duration', `${10}ms`)
+			transitionEle.value?.style?.setProperty('opacity', 0)
+			transitionEle.value?.style?.setProperty('transform', `translate(0, 130%)`)
+
+			setTimeout(() => {
+				emit('enter')
+				transitionEle.value?.style?.setProperty('transition-duration', aniTimeC.value)
+				transitionEle.value?.style?.setProperty('opacity', 1)
+				transitionEle.value?.style?.setProperty('transform', `translate(0, 0)`)
+				beforeEnd.value = true
+			}, delay);
+		} else {
+			emit('beforeLeave')
+			emit('leave')
+			transitionEle.value?.style?.setProperty('transform', `translate(0, 130%)`)
+		}
+	}
+
+	function slideDown(enter : boolean) {
+		if (enter) {
+			playing.value = true
+			emit('beforeEnter')
+			transitionEle.value?.style?.setProperty('transition-duration', `${10}ms`)
+			transitionEle.value?.style?.setProperty('opacity', 0)
+			transitionEle.value?.style?.setProperty('transform', `translate(0, -130%)`)
+	
+			setTimeout(() => {
+				emit('enter')
+				transitionEle.value?.style?.setProperty('transition-duration', aniTimeC.value)
+				transitionEle.value?.style?.setProperty('opacity', 1)
+				transitionEle.value?.style?.setProperty('transform', `translate(0, 0)`)
+				beforeEnd.value = true
+			}, delay);
+		} else {
+			emit('beforeLeave')
+			emit('leave')
+			transitionEle.value?.style?.setProperty('transform', `translate(0, -130%)`)
+		}
+	}
+
+	function slideLeft(enter : boolean) {
+		if (enter) {
+			playing.value = true
+			emit('beforeEnter')
+			transitionEle.value?.style?.setProperty('transition-duration', `${10}ms`)
+			transitionEle.value?.style?.setProperty('opacity', 0)
+			transitionEle.value?.style?.setProperty('transform', `translate(-120%, 0)`)
+
+			setTimeout(() => {
+				emit('enter')
+				transitionEle.value?.style?.setProperty('transition-duration', aniTimeC.value)
+				transitionEle.value?.style?.setProperty('opacity', 1)
+				transitionEle.value?.style?.setProperty('transform', `translate(0, 0)`)
+				beforeEnd.value = true
+			}, delay);
+		} else {
+			emit('beforeLeave')
+			emit('leave')
+			transitionEle.value?.style?.setProperty('transform', `translate(-120%, 0)`)
+		}
+	}
+
+	function slideRight(enter : boolean) {
+		if (enter) {
+			playing.value = true
+			emit('beforeEnter')
+			transitionEle.value?.style?.setProperty('transition-duration', `${10}ms`)
+			transitionEle.value?.style?.setProperty('opacity', 0)
+			transitionEle.value?.style?.setProperty('transform', `translate(120%, 0)`)
+
+			setTimeout(() => {
+				emit('enter')
+				transitionEle.value?.style?.setProperty('transition-duration', aniTimeC.value)
+				transitionEle.value?.style?.setProperty('opacity', 1)
+				transitionEle.value?.style?.setProperty('transform', `translate(0, 0)`)
+				beforeEnd.value = true
+			}, delay);
+		} else {
+			emit('beforeLeave')
+			emit('leave')
+			transitionEle.value?.style?.setProperty('transform', `translate(120%, 0)`)
+		}
+	}
+
+	function exec(enter : boolean) {
+		switch (props.mode) {
+			case 'zoom':
+				zoom(enter)
+				break;
+			case 'fade':
+				fade(enter)
+				break;
+			case 'fadeZoom':
+				fadeZoom(enter)
+				break;
+			case 'fadeUp':
+				fadeUp(enter)
+				break;
+			case 'fadeRight':
+				fadeRight(enter)
+				break;
+			case 'fadeDown':
+				fadeDown(enter)
+				break;
+			case 'fadeLeft':
+				fadeLeft(enter)
+				break;
+			case 'slideUp':
+				slideUp(enter)
+				break;
+			case 'slideRight':
+				slideRight(enter)
+				break;
+			case 'slideDown':
+				slideDown(enter)
+				break;
+			case 'slideLeft':
+				slideLeft(enter)
+				break;
+		}
+	}
+
+	function enter() {
+		if (playing.value) {
+			return
+		}
+		exec(true)
+	}
+
+	function leave() {
+		exec(false)
+	}
+
+	function onEnd() {
+		playing.value = false
+
+		if (beforeEnd.value) {
+			if (props.show) {
+				emit('afterEnter')
+			} else {
+				emit('afterLeave')
+			}
+		}
+		emit('transitionend')
+	}
+
+	// 监听属性
+	watch(() : boolean => props.show, (v : boolean) => {
+		if (v) {
+			display.value = true
+
+			nextTick(() => {
+				enter()
+			})
+		} else {
+			nextTick(()=>{
+				leave()
+			})
+			if (!props.placed) {
+				setTimeout(() => {
+					display.value = v
+				}, parseInt(aniTimeC.value))
+			}
+		}
+	}, {
+		immediate: true
+	})
+</script>
+
+<style lang="scss">
+	.sn-transition {
+		transition-property: opacity, transform;
+	}
+</style>

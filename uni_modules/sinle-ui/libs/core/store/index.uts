@@ -1,0 +1,299 @@
+import { SnError } from '../../types/index.uts'
+ 
+const STORE_KEYS = ref<string[]>([])
+
+/**
+ * @name StoreLib
+ * @description 创建一个 StoreLib 存储库实例，用于提供全局可用的存储管理。
+ * 
+ * 应用内可存在多个 StoreLib 实例，互不干扰
+ * @param {string} storeKey - 存储库的唯一标识，不允许重复。
+ * @returns {void}
+ * @example
+ * // 示例用法：创建一个 StoreLib 存储库实例
+ * const mystore = new StoreLib('my_own_storelib');
+ */
+export class StoreLib {
+	/**
+	 * @name storeKey
+	 * @description 存储库的唯一标识，不允许重复。
+	 */
+	storeKey: string = ''
+	private STORE = reactive(new Map<string, any>())
+	private EXPIRESLIST = ref(new Map<string, number>())
+	private LASTINGLIST = ref<string[]>([])
+	private KEYSLIST = ref<string[]>([])
+	
+	constructor(storeKey: string){
+		if (STORE_KEYS.value.includes(storeKey)){
+			throw new SnError('store', 'newStoreLib', 9010015)
+		}
+		this.storeKey = storeKey
+		STORE_KEYS.value.push(storeKey)
+		this.init()
+	}
+	
+	/**
+	 * @name 获取数据
+	 * @description 从存储中获取指定键的数据，如果数据存在且未过期，则返回数据，否则返回 null。
+	 * @param {string} key - 数据的键名。
+	 * @returns {any | null} 如果数据存在且未过期，则返回数据，否则返回 null。
+	 * @example
+	 * const value = get('myKey');
+	 */
+	get(key : string) : any | null {
+		let isExpired = this.isExpired(key)
+		if (!isExpired){
+			return this.STORE.get(key)
+		} else {
+			this.delete(key)
+			return null
+		}
+	}
+	
+	
+	/**
+	 * @name 存储数据
+	 * @description 将数据存储到存储中，并设置数据的过期时间。如果数据已经存在，则更新数据。
+	 * @param {string} key - 数据的键名。
+	 * @param {any} value - 要存储的数据。
+	 * @param {boolean} lasting - 是否持久化存储。如果为 true，则数据将会存储到本地 storage 中。
+	 * @param {number} expire - 数据的过期时间，单位为秒。如果为 0，则数据永不过期。
+	 * @example
+	 * set('myKey', 'myValue', true);
+	 */
+	set(key : string, value : any, lasting:boolean = false, expire: number = 0) {
+		if (this.isExpired(key)){
+			this.delete(key)
+		}
+		if (!this.KEYSLIST.value.includes(key)){
+			this.KEYSLIST.value.push(key)
+		}
+		this.STORE.set(key, value)
+		if (expire > 0){
+			this.EXPIRESLIST.value.set(key, Date.now() + expire*1000)
+			this.saveExpiresList()
+		}
+		if (lasting) {
+			this.saveKey(key, value)
+		}
+	}
+	
+	
+	/**
+	 * @name 删除数据
+	 * @description 从存储中删除指定键的数据。
+	 * @param {string} key - 数据的键名。
+	 * @example
+	 * delete('myKey');
+	 */
+	delete(key : string) {
+		this.STORE.delete(key)
+		let index = this.KEYSLIST.value.indexOf(key)
+		if (index != -1){
+			this.KEYSLIST.value.splice(index, 1)
+		}
+		if (this.EXPIRESLIST.value.has(key)){
+			this.EXPIRESLIST.value.delete(key)
+			this.saveExpiresList()
+		}
+		if (this.LASTINGLIST.value.includes(key)){
+			this.deleteKeyFromStorage(key)
+		}
+	}
+	
+	/**
+	 * @name 初始化
+	 * @description 初始化存储库。从本地 storage 中读取持久化数据，并设置过期数据。
+	 * @example
+	 * init();
+	 */
+	private init() {
+		this.STORE.clear()
+		this.EXPIRESLIST.value.clear()
+		this.KEYSLIST.value = []
+		this.LASTINGLIST.value = []
+		this.readLastingList()
+		this.readExpiresList()
+		this.deleteAllExpiredKeys()
+	}
+	
+	/**
+	 * @name 保存过期数据列表
+	 * @description 将过期数据列表保存到本地 storage 中。
+	 * @example
+	 * saveExpiresList();
+	 */
+	private saveExpiresList(){
+		let expireslist = {}
+		this.EXPIRESLIST.value.forEach((value, key) => {
+			expireslist[key] = value
+		})
+		uni.setStorage({
+			key: 'sinle_ui_store_lib_expireslist',
+			data: expireslist
+		})
+	}
+	
+	/**
+	 * @name 读取过期数据列表
+	 * @description 从本地 storage 中读取过期数据列表。
+	 * @example
+	 * readExpiresList();
+	 */
+	private readExpiresList(){
+		uni.getStorage({
+			key: 'sinle_ui_store_lib_expireslist',
+			success: (res) => {
+				if (res.data != null){
+					this.EXPIRESLIST.value = (res.data as UTSJSONObject).toMap() as Map<string, number>
+				}
+			}
+		})
+	}
+	
+	/**
+	 * @name 保存持久化数据列表
+	 * @description 将持久化数据列表保存到本地 storage 中。
+	 * @example
+	 * saveLastingList();
+	 */
+	private saveLastingList(){
+		uni.setStorage({
+			key: 'sinle_ui_store_lib_lastinglist',
+			data: this.LASTINGLIST.value
+		})
+	}
+	
+	/**
+	 * @name 读取持久化数据列表
+	 * @description 从本地 storage 中读取持久化数据列表。
+	 * @example
+	 * readLastingList();
+	 */
+	private readLastingList(){
+		uni.getStorage({
+			key: 'sinle_ui_store_lib_lastinglist',
+			success: (res) => {
+				this.LASTINGLIST.value = res.data as string[]
+				this.readKeysFromStorage()
+			}
+		})
+	}
+	
+	
+	/**
+	 * @name 读取持久化数据
+	 * @description 从本地 storage 中读取持久化数据，并将其存储到存储库中。
+	 * @example
+	 * readKeysFromStorage();
+	 */
+	private readKeysFromStorage(){
+		this.LASTINGLIST.value.forEach((key) => {
+			let data = uni.getStorageSync(this.getStorageKey(key))
+			this.STORE.set(key, data ?? '')
+		})
+	}
+	
+	/**
+	 * @name 生成持久化数据键名
+	 * @description 根据指定的键名生成存储到本地 storage 的持久化数据的键名。
+	 * @param {string} key - 数据的键名。
+	 * @returns {string} - 持久化数据的键名。
+	 * @example
+	 * getStorageKey('myKey');
+	 */
+	private getStorageKey(key : string) : string {
+		return `${this.storeKey}_key_${key}`
+	}
+	
+	
+	/**
+	 * @name 保存持久化数据
+	 * @description 将指定键的数据保存到本地 storage 中。
+	 * @param {string} key - 数据的键名。
+	 * @param {any} value - 要保存的数据。
+	 * @example
+	 * saveKey('myKey', 'myValue');
+	 */
+	private saveKey(key: string, value: any) {
+		if (!this.LASTINGLIST.value.includes(key)){
+			this.LASTINGLIST.value.push(key)
+			this.saveLastingList()
+		}
+		uni.setStorage({
+			key: this.getStorageKey(key),
+			data: value
+		})
+	}
+	
+	
+	/**
+	 * @name 删除持久化数据
+	 * @description 从本地 storage 中删除指定持久化数据。
+	 * @param {string} key - 数据的键名。
+	 * @example
+	 * deleteKeyFromStorage('myKey');
+	 */
+	private deleteKeyFromStorage(key: string) {
+		let index = this.LASTINGLIST.value.indexOf(key)
+		if (index != -1){
+			this.LASTINGLIST.value.splice(index, 1)
+			this.saveLastingList()
+		}
+		uni.removeStorage({
+			key: this.getStorageKey(key)
+		})
+	}
+	
+	/**
+	 * @name 判断数据是否过期
+	 * @description 判断指定键的数据是否过期。
+	 * @param {string} key - 数据的键名。
+	 * @returns {boolean} - 如果数据已过期，则返回 true；否则返回 false。
+	 * @example
+	 * isExpired('myKey');
+	 */
+	private isExpired(key: string):boolean{
+		return this.EXPIRESLIST.value.has(key) &&  this.EXPIRESLIST.value.get(key)!<= Date.now() 
+	}
+	
+	/**
+	 * @name 删除所有过期的键
+	 * @description 遍历过期列表，删除所有已过期的键；若是持久化数据，还会从存储中移除相应的条目。
+	 * @private
+	 * @returns {void}
+	 * @example
+	 * deleteAllExpiredKeys();
+	 */
+	private deleteAllExpiredKeys(){
+		let deleteList = [] as string[]
+		this.EXPIRESLIST.value.forEach((_: any, key: string) => {
+			if (this.isExpired(key)){
+				deleteList.push(key)
+			}
+		})
+		deleteList.forEach((key:string)=>{
+			this.STORE.delete(key)
+			this.EXPIRESLIST.value.delete(key)
+			if (this.LASTINGLIST.value.includes(key)) {
+				this.deleteKeyFromStorage(key)
+			}
+		})
+	}
+	
+}
+
+/**
+ * 应用全局存储对象
+ * 
+ * 应用内可存在多个 StoreLib 实例，互不干扰
+ */
+export const store = new StoreLib('app_store')
+
+/**
+ * 框架内部存储对象
+ * 
+ * 应用内可存在多个 StoreLib 实例，互不干扰
+ */
+export const frameStore = new StoreLib('sinle_ui_store')

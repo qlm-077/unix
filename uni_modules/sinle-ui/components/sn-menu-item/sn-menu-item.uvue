@@ -1,0 +1,301 @@
+<template>
+	<view v-if="!listMode"
+	class="sn-menu-item"
+	:class="{'disabled':disabled}" 
+	@touchstart="isHover = true"
+	@touchend="isHover = false"
+	@touchcancel="isHover = false" 
+	@mousedown="isHover = true"
+	:style="[itemStylesC,customStyle]">
+	<slot>
+		<slot name="header">
+		<sn-icon v-if="showIcon&&iconPositionC=='left'"
+		:name="icon" 
+		:size="iconSizeC"
+		:color="disabled?disabledIconColorC:iconColorC" 
+		:customStyle="customIconStyle"
+		:style="iconStylesC"></sn-icon>
+		</slot>
+		<slot name="body">
+		<sn-text class="sn-menu-item-text"
+		:text="text" 
+		:align="textAlign" 
+		:size="textSizeC"
+		:color="disabled?disabledTextColorC:textColorC" 
+		:customStyle="customTextStyle" ></sn-text>
+		</slot>
+		<slot name="footer">
+		<sn-icon v-if="showIcon&&iconPositionC=='right'"
+		:name="icon" 
+		:size="iconSizeC"
+		:color="disabled?disabledIconColorC:iconColorC" 
+		:customStyle="customIconStyle"
+		:style="iconStylesC"></sn-icon>
+		</slot>
+	</slot>
+	</view>
+
+	<!--用于列表-->
+	<list-item v-else-if="listMode" 
+	class="sn-menu-item" 
+	@touchstart="isHover = true"
+	@touchend="isHover = false" 
+	@touchcancel="isHover = false" 
+	@mousedown="isHover = true"
+	@mouseup="isHover = false"
+	:style="[itemStylesC,customStyle]">
+	<slot>
+		<slot name="header">
+		<sn-icon v-if="showIcon&&iconPositionC=='left'" 
+		:name="icon" 
+		:size="iconSizeC"
+		:color="disabled?disabledIconColorC:iconColorC" 
+		:customStyle="customIconStyle"
+		:style="iconStylesC"></sn-icon>
+		</slot>
+		<slot name="body">
+		<sn-text class="sn-menu-item-text"
+		:text="text" 
+		:align="textAlign" 
+		:size="textSizeC"
+		:color="disabled?disabledTextColorC:textColorC" 
+		:customStyle="customTextStyle"></sn-text>
+		</slot>
+		<slot name="footer">
+		<sn-icon v-if="showIcon&&iconPositionC=='right'"
+		:name="icon" 
+		:size="iconSizeC"
+		:color="disabled?disabledIconColorC:iconColorC" 
+		:customStyle="customIconStyle"
+		:style="iconStylesC"></sn-icon>
+		</slot>
+	</slot>
+	</list-item>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-menu-item
+	 * @tutorial https://sinleui.pages.dev/components/sn-menu-item
+	 * @description  Menu Item 菜单项
+	 *
+	 *- 主要作为菜单型组件的子项，可设置图标、文本、背景颜色等多个属性
+	 *
+	 *- 设置 `listMode` 后支持作为 `list-view` 的子组件
+	 * @property {Boolean} listMode    Boolean | 是否作为`list-view`的子项
+	 * @property {String} icon    String | 菜单项图标名称
+	 * @property {String} text    String | 菜单项文本
+	 * @property {String} iconColor    String | 菜单项图标颜色
+	 * @property {String} iconSize    String | 菜单项图标大小
+	 * @property {String} iconPosition=[left|right]    String | 菜单项图标位置
+	 * @value left 左侧
+	 * @value right 右侧
+	 * @property {String} textColor    String | 菜单项文本颜色
+	 * @property {String} textSize    String | 菜单项文本大小
+	 * @property {String} borderRadius    String | 菜单项圆角大小
+	 * @property {String} textAlign    String | 菜单项文本对齐方式
+	 * @property {String} padding    String | 菜单项内边距
+	 * @property {Boolean} disabled    Boolean | 是否禁用菜单项
+	 * @property {String} bgColor    String | 菜单项背景颜色
+	 * @property {String} activeBgColor    String | 激活时的菜单项背景颜色
+	 * @property {String} disabledBgColor    String | 禁用时的菜单项背景颜色
+	 * @property {String} disabledIconColor    String | 禁用时的菜单项图标颜色
+	 * @property {String} disabledTextColor    String | 禁用时的菜单项文本颜色
+	 * @property {UTSJSONObject} customIconStyle    UTSJSONObject | 自定义图标样式
+	 * @property {UTSJSONObject} customTextStyle    UTSJSONObject | 自定义文本样式
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义样式
+	 */
+
+	
+	// 依赖
+	import { $snui, useFormatProp } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-menu-item'
+	})
+
+	// SinleUI 配置
+	const colors = $snui.colors
+	const snu = $snui.utils
+
+	// 组件属性
+	const props = defineProps({
+		listMode: {
+			type: Boolean,
+			default: false
+		},
+		icon: {
+			type: String,
+			default: ''
+		},
+		text: {
+			type: String,
+			default: ''
+		},
+		iconColor: {
+			type: String,
+			default: ''
+		},
+		iconSize: {
+			type: String,
+			default: ''
+		},
+		iconPosition: {
+			type: String,
+			default: 'left'
+		},
+		borderRadius: {
+			type: String,
+			default: ''
+		},
+		textColor: {
+			type: String,
+			default: ''
+		},
+		textSize: {
+			type: String,
+			default: ''
+		},
+		textAlign: {
+			type: String,
+			default: 'left'
+		},
+		padding: {
+			type: String,
+			default: '12px 15px'
+		},
+		disabled: {
+			type: Boolean,
+			default: false
+		},
+		bgColor: {
+			type: String,
+			default: ''
+		},
+		disabledBgColor: {
+			type: String,
+			default: ''
+		},
+		disabledIconColor: {
+			type: String,
+			default: ''
+		},
+		disabledTextColor: {
+			type: String,
+			default: '',
+		},
+		activeBgColor: {
+			type: String,
+			default: ''
+		},
+		customIconStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customTextStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+	})
+
+	// 基本变量
+	const isHover = ref(false)
+
+	// 计算属性
+	const iconPositionC = computed((): string => {
+		let positions = ['left', 'right']
+		return positions.includes(props.iconPosition) ? props.iconPosition : 'left'
+	})
+	
+	const iconColorC = computed((): string => {
+		return useFormatProp('color',props.iconColor, colors.value.text)
+	})
+	
+	const textColorC = computed((): string => {
+		return useFormatProp('color',props.textColor, colors.value.text)
+	})
+
+	const activeBgColorC = computed((): string => {
+		return useFormatProp('color',props.activeBgColor, colors.value.info)
+	})
+	
+	const disabledBgColorC = computed((): string => {
+		return useFormatProp('color',props.disabledBgColor, colors.value.disabled)
+	})
+	
+	const disabledTextColorC = computed((): string => {
+		return useFormatProp('color',props.disabledTextColor, colors.value.disabledText)
+	})
+	
+	const disabledIconColorC = computed((): string => {
+		return useFormatProp('color',props.disabledIconColor, colors.value.disabledText)
+	})
+
+	const iconSizeC = computed((): string => {
+		return useFormatProp('font',props.iconSize, $snui.configs.font.size(4))
+	})
+	
+	const bgColorC = computed((): string => {
+		return useFormatProp('color',props.bgColor, colors.value.front)
+	})
+	
+	const textSizeC = computed((): string => {
+		return useFormatProp('font',props.textSize, $snui.configs.font.size(2))
+	})
+	
+	const itemStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		let bgColor = props.disabled ? disabledBgColorC.value : (isHover.value ? activeBgColorC.value : bgColorC.value)
+		styles.set('background', bgColor)
+		styles.set('border-radius', props.borderRadius)
+		styles.set('padding', props.padding)
+		styles.set('transition-duration',$snui.configs.aniTime.normal)
+		return styles
+	})
+	
+	const iconStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('marginRight', `${snu.getPx(iconSizeC.value)/2}px`)
+		styles.set('transition-duration',$snui.configs.aniTime.normal)
+		return styles
+	})
+
+
+	const showIcon = computed(() : boolean => {
+		return !snu.isEmpty(props.icon)
+	})
+	
+	onMounted(() => {
+		// #ifdef WEB
+		window.addEventListener('mouseup', ()=>{
+			isHover.value = false
+		});
+		// #endif
+	})
+</script>
+
+<style lang="scss">
+	.sn-menu-item {
+		display: flex;
+		width: 100%;
+		min-width: 150px;
+		flex-direction: row;
+		align-items: center;
+		// #ifdef WEB
+		cursor: pointer;
+		// #endif
+		&-text {
+			text-overflow: ellipsis;
+			flex: 1;
+		}
+	}
+	.disabled {
+		// #ifdef WEB
+		cursor: not-allowed;
+		// #endif
+	}
+</style>

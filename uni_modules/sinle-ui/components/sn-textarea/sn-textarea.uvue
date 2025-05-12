@@ -1,0 +1,450 @@
+<template>
+	<view class="sn-textarea-contain" 
+	:style="[containStylesC,customContainStyle]">
+		<view class="sn-textarea" 
+		ref="sn-textarea" 
+		:style="textareaViewStylesC">
+			<textarea class="sn-textarea__textarea" 
+			:name="name" 
+			:value="model"
+			:disabled="disabled || readonly"
+			:autoFocus="autoFocus" 
+			:autoHeight="autoHeight" 
+			:cursorColor="cursorColor"
+			:focus="focus" 
+			:inputmode="inputmode"
+			:adjustPosition="adjustPosition" 
+			:cursor="cursor"
+			:selectionStart="selectionStart" 
+			:selectionEnd="selectionEnd"
+			:holdKeyboard="holdKeyboard" 
+			:cursorSpacing="cursorSpacing"
+			:confirmHold="confirmHold" 
+			:maxlength="maxlength"
+			:placeholder="placeholder"
+			:placeholderStyle="placeholderStyle" 
+			:placeholderClass="placeholderClass"
+			@input="onInput" 
+			@keyboardheightchange="onKeyboardheightchange"
+			@focus="onFocus"
+			@blur="onBlur" 
+			@confirm="onConfirm"
+			@linechange="onLinechange"
+			:style="[textareaStylesC, customStyle]" />
+			<slot name="counter">
+				<sn-text v-if="maxlength!=-1" 
+				class="sn-textarea__counter" 
+				:text="`${textLength}/${maxlength}`"
+				:style="[counterStylesC,customCounterStyle]"></sn-text>
+			</slot>
+		</view>
+	</view>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-textarea
+	 * @tutorial https://sinleui.pages.dev/components/sn-textarea
+	 * @description  Textarea 文本域
+	 * @property {String} vModel    String | 文本域的值
+	 * @property {String} name    String | 表单的控件名称，作为键值对的一部分与表单(form组件)一同提交。同[`textarea`](https://doc.dcloud.net.cn/uni-app-x/component/textarea.html#%E5%B1%9E%E6%80%A7)。
+	 * @property {String} height    String | 文本域高度
+	 * @property {Boolean} showBorder    Boolean | 是否显示边框
+	 * @property {String} borderColor    String | 文本域边框颜色
+	 * @property {String} activeBorderColor    String | 激活状态下的文本域边框颜色
+	 * @property {String} bgColor    String | 文本域背景颜色
+	 * @property {String} activeBgColor    String | 激活状态下的文本域背景颜色
+	 * @property {String} inputmode=[none|text|decimal|numeric|tel|search|email|url]    String | 是一个枚举属性，它提供了用户在编辑元素或其内容时可能输入的数据类型的提示。在符合条件的高版本webview里，uni-app的web和app-vue平台中可使用本属性。同[`textarea`](https://doc.dcloud.net.cn/uni-app-x/component/textarea.html#%E5%B1%9E%E6%80%A7)。
+	 * @value none 默认值，不指定任何模式
+	 * @value text 文本输入键盘
+	 * @value decimal 小数点输入键盘
+	 * @value numeric 数字输入键盘
+	 * @value tel 电话号码输入键盘
+	 * @value search 搜索输入键盘
+	 * @value email 电子邮件输入键盘
+	 * @value url 网址输入键盘
+	 * @property {Number} cursor    Number | 指定focus时的光标位置。同[`textarea`](https://doc.dcloud.net.cn/uni-app-x/component/textarea.html#%E5%B1%9E%E6%80%A7)。
+	 * @property {String} cursorColor    String | 指定光标颜色
+	 * @property {Number} cursorSpacing    Number | 指定光标与键盘的距离，单位`px`。取input距离底部的距离和`cursorSpacing`指定的距离的最小值作为光标与键盘的距离。同[`textarea`](https://doc.dcloud.net.cn/uni-app-x/component/textarea.html#%E5%B1%9E%E6%80%A7)。
+	 * @property {Number} selectionStart    Number | 光标起始位置，自动聚集时有效，需与`selectionEnd`搭配使用。同[`textarea`](https://doc.dcloud.net.cn/uni-app-x/component/textarea.html#%E5%B1%9E%E6%80%A7)。
+	 * @property {Number} selectionEnd    Number | 光标结束位置，自动聚集时有效，需与`selectionStart`搭配使用。同[`textarea`](https://doc.dcloud.net.cn/uni-app-x/component/textarea.html#%E5%B1%9E%E6%80%A7)。
+	 * @property {String} placeholder    String | 输入框为空时占位符。同[`textarea`](https://doc.dcloud.net.cn/uni-app-x/component/textarea.html#%E5%B1%9E%E6%80%A7)。
+	 * @property {String} placeholderStyle    String | 指定placeholder的样式。同[`textarea`](https://doc.dcloud.net.cn/uni-app-x/component/textarea.html#%E5%B1%9E%E6%80%A7)。
+	 * @property {String} placeholderClass    String | 指定placeholder的样式类，目前仅支持color,font-size和font-weight。同[`textarea`](https://doc.dcloud.net.cn/uni-app-x/component/textarea.html#%E5%B1%9E%E6%80%A7)。
+	 * @property {Boolean} autoHeight    Boolean | 是否自动增高，设置auto-height时，style.height不生效。同[`textarea`](https://doc.dcloud.net.cn/uni-app-x/component/textarea.html#%E5%B1%9E%E6%80%A7)。
+	 * @property {Boolean} confirmHold    Boolean | 点击键盘右下角按钮时是否保持键盘不收起。同[`textarea`](https://doc.dcloud.net.cn/uni-app-x/component/textarea.html#%E5%B1%9E%E6%80%A7)。
+	 * @property {Boolean} holdKeyboard    Boolean | focus时，点击页面的时候不收起键盘。同[`textarea`](https://doc.dcloud.net.cn/uni-app-x/component/textarea.html#%E5%B1%9E%E6%80%A7)。
+	 * @property {Boolean} adjustPosition    Boolean | 键盘弹起时，是否自动上推页面。同[`textarea`](https://doc.dcloud.net.cn/uni-app-x/component/textarea.html#%E5%B1%9E%E6%80%A7)。
+	 * @property {Boolean} activeBorder    Boolean | 是否在激活时显示边框
+	 * @property {Boolean} focus    Boolean | 是否自动获取焦点
+	 * @property {Boolean} disabled    Boolean | 是否禁用文本域
+	 * @property {String} disabledTextColor    String | 禁用状态下文本域文本颜色
+	 * @property {String} disabledBgColor    String | 禁用状态下文本域背景颜色
+	 * @property {Boolean} readonly    Boolean | 是否只读（只读与禁用的区别是：禁用时除不可点击外，颜色也有所变化）
+	 * @property {Boolean} autoFocus    Boolean | 自动获取焦点，与`focus`属性对比，此属性只会首次生效。同[`textarea`](https://doc.dcloud.net.cn/uni-app-x/component/textarea.html#%E5%B1%9E%E6%80%A7)。
+	 * @property {String} borderRadius    String | 文本域圆角大小
+	 * @property {String} borderWidth    String | 文本域边框宽度
+	 * @property {String} padding    String | 文本域内边距
+	 * @property {Number} maxlength    Number | 最大输入长度，0和正数为合法值，非法值的时候不限制最大长度
+	 * @property {String} textSize    String | 文本字体大小
+	 * @property {String} textColor    String | 文本颜色
+	 * @property {String} textFont    String | 文本字体
+	 * @property {String} align=[left|right|center]    String | 文本对齐方式
+	 * @value left 左对齐
+	 * @value right 右对齐
+	 * @value center 居中对齐
+	 * @property {String} counterSize    String | 计数器字体大小
+	 * @property {String} counterColor    String | 计数器文本颜色
+	 * @property {String} counterBgColor    String | 计数器背景颜色
+	 * @property {UTSJSONObject} customCounterStyle    UTSJSONObject | 自定义计数器样式
+	 * @property {UTSJSONObject} customContainStyle    UTSJSONObject | 自定义容器样式
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义文本域样式
+	 * @event {Function} input   (event:UniInputEvent)=>void | 当键盘输入时，触发input事件，event.detail={value,cursor}，@input处理函数的返回值并不会反映到textarea上
+	 * @event {Function} confirm   	(event:UniInputConfirmEvent)=>void | 点击完成时，触发confirm事件，event.detail={value:value}
+	 * @event {Function} blur   (event:UniTextareaBlurEvent)=>void	 | 输入框失去焦点时触发，event.detail={value,cursor}
+	 * @event {Function} focus   (event:UniTextareaFocusEvent)=>void	 | 输入框聚焦时触发，event.detail={value,height}，height为键盘高度，在基础库1.9.90起支持
+	 * @event {Function} keyboardheightchange   (event:UniInputKeyboardHeightChangeEvent)=>void | 键盘高度发生变化的时候触发此事件，event.detail={height:height,duration:duration}
+	 * @event {Function} linechange   (event:UniTextareaLineChangeEvent)=>void | 输入框行数变化时调用，event.detail={height:0,heightRpx:0,lineCount:0}
+	 */
+
+	// 依赖
+	import { $snui, useFormatProp } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-textarea'
+	})
+	
+	// SinleUI 配置
+	const colors = $snui.colors
+	const snu = $snui.utils
+
+	// 事件注册
+	const emit = defineEmits(['input', 'confirm', 'blur', 'focus', 'keyboardheightchange', 'linechange'])
+	
+	const model = defineModel({
+		type: String,
+		default: ''
+	})
+
+	// 组件属性
+	const props = defineProps({
+		name: {
+			type: String,
+			default: ''
+		},
+		height: {
+			type: String,
+			default: '100px'
+		},
+		showBorder: {
+			type: Boolean,
+			default: true
+		},
+		borderColor: {
+			type: String,
+			default: ''
+		},
+		activeBorderColor: {
+			type: String,
+			default: ''
+		},
+		bgColor: {
+			type: String,
+			default: ''
+		},
+		activeBgColor: {
+			type: String,
+			default: ''
+		},
+		cursor: {
+			type: Number,
+			default: 0
+		},
+		cursorColor: {
+			type: String,
+			default: ''
+		},
+		cursorSpacing: {
+			type: Number,
+			default: 0
+		},
+		selectionStart: {
+			type: Number,
+			default: -1
+		},
+		selectionEnd: {
+			type: Number,
+			default: -1
+		},
+		placeholder: {
+			type: String,
+			default: ''
+		},
+		placeholderStyle: {
+			type: String,
+			default: ''
+		},
+		placeholderClass: {
+			type: String,
+			default: ''
+		},
+		autoHeight: {
+			type: Boolean,
+			default: false
+		},
+		confirmHold: {
+			type: Boolean,
+			default: false
+		},
+		holdKeyboard: {
+			type: Boolean,
+			default: false
+		},
+		adjustPosition: {
+			type: Boolean,
+			default: true
+		},
+		activeBorder: {
+			type: Boolean,
+			default: true
+		},
+		focus: {
+			type: Boolean,
+			default: false
+		},
+		disabled: {
+			type: Boolean,
+			default: false
+		},
+		disabledTextColor: {
+			type: String,
+			default: ''
+		},
+		disabledBgColor: {
+			type: String,
+			default: ''
+		},
+		readonly: {
+			type: Boolean,
+			default: false
+		},
+		autoFocus: {
+			type: Boolean,
+			default: false
+		},
+		borderRadius: {
+			type: String,
+			default: ''
+		},
+		borderWidth: {
+			type: String,
+			default: '2px'
+		},
+		inputmode: {
+			type: String,
+			default: 'text'
+		},
+		padding: {
+			type: String,
+			default: '8px 13px'
+		},
+		maxlength: {
+			type: Number,
+			default: -1
+		},
+		textSize: {
+			type: String,
+			default: ''
+		},
+		textColor: {
+			type: String,
+			default: ''
+		},
+		textFont: {
+			type: String,
+			default: ''
+		},
+		align: {
+			type: String,
+			default: 'left'
+		},
+		counterSize: {
+			type: String,
+			default: ''
+		},
+		counterColor: {
+			type: String,
+			default: ''
+		},
+		counterBgColor: {
+			type: String,
+			default: ''
+		},
+		customCounterStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customContainStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+	})
+
+	// 基本变量
+	const inputId = snu.randomComId()
+
+	// 计算属性
+	const isActive = computed(() : boolean => {
+		return $snui.store.get('sn-input:FocusId') == inputId
+	})
+	
+	const textLength = computed(():number=>{
+		return snu.len(model.value)
+	})
+	
+	const borderColorC = computed((): string => {
+		return useFormatProp('color', props.borderColor, colors.value.line)
+	})
+	
+	const activeBorderColorC = computed((): string => {
+		return useFormatProp('color', props.activeBorderColor, colors.value.primary)
+	})
+	
+	const bgColorC = computed((): string => {
+		return useFormatProp('color', props.bgColor, colors.value.front)
+	})
+	
+	const activeBgColorC = computed((): string => {
+		return useFormatProp('color', props.activeBgColor, colors.value.front)
+	})
+	
+	const counterColorC = computed((): string => {
+		return useFormatProp('color', props.counterColor, colors.value.text)
+	})
+	
+	const counterBgColorC = computed((): string => {
+		return useFormatProp('color', props.counterBgColor, colors.value.info)
+	})
+	
+	const textColorC = computed((): string => {
+		return useFormatProp('color', props.textColor, colors.value.text)
+	})
+	
+	const disabledBgColorC = computed((): string => {
+		return useFormatProp('color', props.disabledBgColor, colors.value.disabled)
+	})
+	
+	const disabledTextColorC = computed((): string => {
+		return useFormatProp('color', props.disabledTextColor, colors.value.disabledText)
+	})
+	
+	const borderRadiusC = computed((): string => {
+		return useFormatProp('radius', props.borderRadius, $snui.configs.radius.small)
+	})
+	
+	const textSizeC = computed((): string => {
+		return useFormatProp('font', props.textSize, $snui.configs.font.baseSize)
+	})
+	
+	const counterSizeC = computed((): string => {
+		return useFormatProp('font', props.counterSize, $snui.configs.font.baseSize)
+	})
+	
+	const containStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('border-radius', borderRadiusC.value)
+		styles.set('transition-duration',$snui.configs.aniTime.normal)
+		return styles
+	})
+	
+	const textareaViewStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('border-radius', borderRadiusC.value)
+		styles.set('padding', props.padding)
+		styles.set('background-color', props.disabled?disabledBgColorC.value:(isActive.value?activeBgColorC.value: bgColorC.value))
+		if (props.showBorder) {
+			styles.set('border-style', 'solid')
+			styles.set('border-width', props.borderWidth)
+			styles.set('border-color', props.activeBorder&&isActive.value?activeBorderColorC.value:borderColorC.value)
+		}
+		if (!props.autoHeight){
+			styles.set('height', snu.addPx(snu.getPx(props.height)+16))
+		}
+		styles.set('transition-duration',$snui.configs.aniTime.normal)
+		return styles
+	})
+	
+	const textareaStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('fontSize', textSizeC.value)
+		styles.set('textAlign', props.align)
+		styles.set('fontFamily', props.textFont)
+		styles.set('color', props.disabled?disabledTextColorC.value:textColorC.value)
+		if (!props.autoHeight){
+			styles.set('height', snu.addPx(snu.getPx(props.height)))
+		}
+		return styles
+	})
+	
+	const counterStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('fontSize', counterSizeC.value)
+		styles.set('background', counterBgColorC.value)
+		styles.set('border-radius', $snui.configs.radius.circle)
+		styles.set('color', counterColorC.value)
+		styles.set('transition-duration',$snui.configs.aniTime.normal)
+		return styles
+	})
+
+	// 方法
+	function onInput(e : UniInputEvent) {
+		model.value = e.detail.value
+		emit('input', e)
+	}
+	function onFocus(e : UniTextareaFocusEvent) {
+		$snui.store.set('sn-input:FocusId', inputId)
+		emit('focus', e)
+	}
+	function onBlur(e : UniTextareaBlurEvent) {
+		$snui.store.set('sn-input:FocusId', '')
+		emit('blur', e)
+	}
+	function onConfirm(e : UniInputConfirmEvent) {
+		$snui.store.set('sn-input:FocusId', '')
+		emit('confirm', e)
+	}
+	function onKeyboardheightchange(e : UniInputKeyboardHeightChangeEvent) {
+		emit('keyboardheightchange', e)
+	}
+	function onLinechange(e : UniTextareaLineChangeEvent) {
+		emit('linechange', e)
+	}
+</script>
+
+<style lang="scss">
+	.sn-textarea {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+
+		&__counter {
+			position: absolute;
+			bottom: 10px;
+			right: 10px;
+			padding: 3px 10px;
+		}
+
+		&__textarea {
+			border-width: 0 !important;
+			flex: 1;
+		}
+	}
+
+	.sn-textarea-contain {
+		flex: 1;
+	}
+</style>

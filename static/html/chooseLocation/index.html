@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+		<title>chooseLocation</title>
+		<script src="./assets/uni.webview.1.5.5.js"></script>
+	</head>
+	<body>
+		<div id="container"></div>
+	</body>
+	<script type="text/javascript">
+		window._AMapSecurityConfig = {
+			securityJsCode: "2fc73934f66699ac72818a8f61aef875",
+		};
+	</script>
+	<script src="./assets/loader.js"></script>
+	<script type="text/javascript">
+		let AMapContext = null
+		window.onload = () => {
+			uni.webView.postMessage({
+				data: {
+					msg: 'OK'
+				}
+			})
+		}
+
+		function init(data) {
+			let {
+				lng,
+				lat
+			} = data
+			AMapLoader.load({
+					key: "0fd9878ca055d722630451ad408b19ea", //申请好的Web端开发者key，调用 load 时必填
+					version: "2.0", //指定要加载的 JS API 的版本，缺省时默认为 1.4.15
+				})
+				.then((AMap) => {
+					AMapContext = new AMap.Map("container", {
+						viewMode: '2D', //默认使用 2D 模式
+						zoom: 16, //地图级别
+						center: [lng, lat], //地图中心点
+					});
+					addMarker(AMap, {
+						lng,
+						lat
+					})
+				})
+				.catch((e) => {
+					console.error(e); //加载错误提示
+				});
+		}
+
+		function addMarker(AMap, data) {
+			let {
+				lng,
+				lat,
+				title
+			} = data
+			const marker = new AMap.Marker({
+				position: new AMap.LngLat(lng, lat),
+				title: title || '我的位置',
+				content: `<div class="marker">${title || '我的位置'}</div>`,
+				offset: [-30, -20]
+			});
+			AMapContext.add(marker)
+		}
+	</script>
+	<style>
+		* {
+			padding: 0;
+			margin: 0;
+		}
+
+		html,
+		body,
+		#container {
+			width: 100%;
+			height: 400px;
+		}
+
+		.marker {
+			font-size: 12px;
+			width: fit-content;
+			background-color: #fff;
+			border-radius: 30px;
+			white-space: nowrap;
+			padding: 10px 14px;
+		}
+	</style>
+</html>

@@ -1,0 +1,347 @@
+<template>
+	<view class="sn-stepper" :style="[numberBoxStylesC, customStyle]">
+		<sn-button class="sn-stepper-action" 
+		:disabled="disableDecrease" 
+		:bgColor="buttonBgColorC"
+		:borderRadius="borderRadiusC" 
+		@click="decrease()" 
+		@longpress="startTimer('decrease')"
+		@touchend="cancelTimer" 
+		@touchcancel="cancelTimer"
+		
+		:style="actionStylesC">
+			<sn-icon name="subtract-line"
+			:color="disableDecrease?disabledTextColorC:textColorC"></sn-icon>
+		</sn-button>
+		<sn-input v-model="inputValue"
+		type="digit" 
+		class="sn-stepper-inout" 
+		borderWidth="0px"
+		align="center"
+		:borderRadius="borderRadiusC" 
+		:textSize="textSizeC"  
+		:cursorColor="textColorC"
+		:padding="`${inputPaddingC}px 5px`"
+		:bgColor="inputBgColorC" 
+		:activeBgColor="inputActiveBgColorC" 
+		:textColor="textColorC" 
+		:disabled="disabled"
+		:readonly="disableInput"
+		@blur="inputConfirm"
+		@confirm="inputConfirm"
+		:style="inputStylesC"></sn-input>
+		<sn-button class="sn-stepper-action"
+		:disabled="disableIncrease" 
+		:bgColor="buttonBgColorC"
+		:borderRadius="borderRadiusC" 
+		@click="increase()" 
+		@longpress="startTimer('increase')"
+		@touchend="cancelTimer" 
+		@touchcancel="cancelTimer"
+		:style="actionStylesC">
+			<sn-icon name="add-line"
+			:color="disableIncrease?disabledTextColorC:textColorC"></sn-icon>
+		</sn-button>
+	</view>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-stepper
+	 * @tutorial https://sinleui.pages.dev/components/sn-stepper
+	 * @description  Stepper 步进器
+	 *
+	 *- 用于创建可增减数值的步进器。
+	 *
+	 *- 可自定义步进器的样式、颜色、大小等。
+	 *
+	 *- 支持长按快速增减。
+	 * @property {Number} vModel    Number | 步进器的当前值
+	 * @property {String} size    String | 步进器按钮大小
+	 * @property {String} spacing    String | 按钮之间的间距
+	 * @property {String} inputWidth    String | 输入框宽度
+	 * @property {String} textSize    String | 文本大小
+	 * @property {String} textColor    String | 文本颜色
+	 * @property {String} disabledTextColor    String | 禁用状态文本颜色
+	 * @property {String} inputBgColor    String | 输入框背景颜色
+	 * @property {String} inputActiveBgColor    String | 输入框激活背景颜色
+	 * @property {String} buttonBgColor    String | 按钮背景颜色
+	 * @property {String} borderRadius    String | 边框圆角
+	 * @property {Number} min    Number | 最小值
+	 * @property {Number} max    Number | 最大值
+	 * @property {Number} step    Number | 步长
+	 * @property {Boolean} longpress    Boolean | 是否开启长按连续增减功能
+	 * @property {Boolean} disableInput    Boolean | 是否禁用输入框
+	 * @property {Boolean} disabled    Boolean | 是否禁用整个步进器
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义步进器样式
+	 * @event {Function} change   (value:number)=>void | 数据变化时触发
+	 */
+
+	// 依赖
+	import { $snui, useFormatProp } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-stepper'
+	})
+	
+	// SinleUI 配置
+	const colors = $snui.colors
+	const snu = $snui.utils;
+	
+	// 事件注册
+	const emit = defineEmits(['update:modelValue','change'])
+	
+	// 组件属性
+	const props = defineProps({
+		modelValue: {
+			type: Number,
+			default: 0
+		},
+		size: {
+			type: String,
+			default: '30px'
+		},
+		spacing: {
+			type: String,
+			default: '2px'
+		},
+		inputWidth: {
+			type: String,
+			default: '50px'
+		},
+		textSize: {
+			type: String,
+			default: ''
+		},
+		textColor: {
+			type: String,
+			default: ''
+		},
+		disabledTextColor: {
+			type: String,
+			default: ''
+		},
+		inputBgColor: {
+			type: String,
+			default: ''
+		},
+		inputActiveBgColor: {
+			type: String,
+			default: ''
+		},
+		buttonBgColor: {
+			type: String,
+			default: ''
+		},
+		borderRadius: {
+			type: String,
+			default: ''
+		},
+		min: {
+			type: Number,
+			default: 0
+		},
+		max: {
+			type: Number,
+			default: NaN
+		},
+		step: {
+			type: Number,
+			default: 1
+		},
+		longpress: {
+			type: Boolean,
+			default: true
+		},
+		disableInput: {
+			type: Boolean,
+			default: false
+		},
+		disabled: {
+			type: Boolean,
+			default: false
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+	})
+	
+	// 基本变量
+	const inputValue = ref('')
+	const increaseTimer = ref(null as number | null)
+	const decreaseTimer = ref(null as number | null)
+	
+	// 计算属性
+	const model = computed<number>({
+		get: () : number => props.modelValue,
+		set: (value : number) => {
+			let v = snu.formatNumber(value)
+			emit('update:modelValue', v)
+			emit('change', v)
+			inputValue.value = `${v}`
+		}
+	} as WritableComputedOptions<number>)
+
+	const disableIncrease = computed(() : boolean => {
+		return (isNaN(props.max) ? false : props.modelValue == props.max) || props.disabled
+	})
+	const disableDecrease = computed(() : boolean => {
+		return (isNaN(props.min) ? false : props.modelValue == props.min) || props.disabled
+	})
+	
+	const numberBoxStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('transition-duration',$snui.configs.aniTime.normal)
+		return styles
+	})
+	
+	const textSizeC = computed((): string => {
+		return useFormatProp('color', props.textSize, `${$snui.utils.getPx($snui.configs.font.size(2)) + 1}px`)
+	})
+	
+	const textColorC = computed((): string => {
+		return useFormatProp('color', props.textColor, colors.value.text)
+	})
+	
+	const disabledTextColorC = computed((): string => {
+		return useFormatProp('color', props.disabledTextColor, colors.value.disabledText)
+	})
+	
+	const inputBgColorC = computed((): string => {
+		return useFormatProp('color', props.inputBgColor, colors.value.info)
+	})
+	
+	const inputActiveBgColorC = computed((): string => {
+		return useFormatProp('color', props.inputActiveBgColor, colors.value.info)
+	})
+	
+	const buttonBgColorC = computed((): string => {
+		return useFormatProp('color', props.buttonBgColor, colors.value.info)
+	})
+	
+	const borderRadiusC = computed((): string => {
+		return useFormatProp('radius', props.borderRadius, $snui.configs.radius.small)
+	})
+	
+	const inputPaddingC = computed(():number=>{
+		return (snu.getPx(props.size)-snu.getPx(textSizeC.value))/2
+	})
+	
+	
+	const actionStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('width', props.size)
+		styles.set('height', props.size)
+		styles.set('padding', '')
+		styles.set('transition-duration',$snui.configs.aniTime.normal)
+		return styles
+	})
+	
+	const inputStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('width', props.inputWidth)
+		styles.set('size', props.size)
+		styles.set('flex', '')
+		styles.set('margin', `0 ${props.spacing}`)
+		return styles
+	})
+
+	
+	// 方法
+	function updateValue(value : number) {
+		model.value = value
+	}
+	
+	function decrease() {
+		if (!disableDecrease.value){
+			let after = parseFloat((props.modelValue - props.step).toFixed(2))
+			updateValue(isNaN(props.min) ? after : (after >= props.min ? after : props.min))
+		}
+	}
+	
+	function increase() {
+		if (!disableIncrease.value){
+			let after = parseFloat((props.modelValue + props.step).toFixed(2))
+			updateValue(isNaN(props.max) ? after : (after <= props.max ? after : props.max))
+		}
+	}
+	
+	function inputConfirm() {
+		let f : number = 0
+		
+		if (inputValue.value.trim() != '') {
+			if (inputValue.value == '-') {
+				f = -1
+			} else {
+				f = parseFloat(parseFloat(inputValue.value).toFixed(2))
+			}
+			
+			f = f > props.max ? props.max : (f < props.min ? props.min : f)
+		} else {
+			f = isNaN(props.min)?(isNaN(props.max)?0:props.max):props.min
+		}
+		model.value = f
+	}
+	
+	function cancelTimer() {
+		if (props.longpress && !props.disabled) {
+			if (increaseTimer .value != null) {
+				clearInterval(increaseTimer .value! as number)
+				increaseTimer .value = null
+			}
+			if (decreaseTimer.value != null) {
+				clearInterval(decreaseTimer.value as number)
+				decreaseTimer.value = null
+			}
+		}
+	}
+	
+	function startTimer(name : string) {
+		if (props.longpress && !props.disabled) {
+			if (name == 'decrease') {
+				decreaseTimer.value = setInterval(() => {
+					decrease()
+				}, 100)
+			}
+			if (name == 'increase') {
+				increaseTimer.value = setInterval(() => {
+					increase()
+				}, 100)
+			}
+		}
+	}
+	
+	// 监听属性
+	watch(model, (v : number) =>{
+		v = snu.formatNumber(v)
+		if (!isNaN(props.max) && v > props.max) {
+			updateValue(props.max)
+		}
+		if (!isNaN(props.min) && v < props.min) {
+			updateValue(props.min)
+		}
+		inputValue.value = v.toString()
+	}, {
+		immediate: true
+	})
+</script>
+
+<style lang="scss">
+	.sn-stepper {
+		flex-direction: row;
+		align-items: center;
+		// #ifndef APP
+		width: fit-content;
+		// #endif
+	
+		&-action {
+			justify-content: center;
+	
+			&-icon {
+				text-align: center;
+			}
+		}
+	
+	}
+</style>

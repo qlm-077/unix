@@ -1,0 +1,176 @@
+<template>
+	<view class="sn-result" :style="[resultStylesC,customStyle]">
+		<slot name="icon">
+			<sn-icon :name="iconNameC" 
+			:color="iconColorC" 
+			:size="iconSizeC"></sn-icon>
+		</slot>
+		<slot name="title">
+			<sn-text bold
+			:text="title" 
+			:color="titleColorC" 
+			:size="titleSizeC"
+			:customStyle="customTitleStyle" 
+			style="margin: 15px 0 5px 0"></sn-text>
+		</slot>
+		<slot name="text">
+			<sn-text :text="text" 
+			:color="textColorC" 
+			:size="textSizeC"
+			:customStyle="customTextStyle" ></sn-text>
+		</slot>
+		<slot name="action"></slot>
+	</view>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-result
+	 * @tutorial https://sinleui.pages.dev/components/sn-result
+	 * @description  Result 结果页
+	 *
+	 *- 用于展示某种结果信息，如成功、失败、警告等。
+	 *
+	 *- 可包含图标、标题和文本内容。
+	 * @property {String} mode=[info|success|warning|error|primary]    String | 结果页类型（图标类型）
+	 * @value info 信息
+	 * @value success 成功
+	 * @value warning 警告
+	 * @value error 错误
+	 * @value primary 主要
+	 * @property {String} title    String | 标题文本
+	 * @property {String} titleSize    String | 标题大小
+	 * @property {String} titleColor    String | 标题颜色
+	 * @property {String} text    String | 文本内容
+	 * @property {String} textSize    String | 文本大小
+	 * @property {String} textColor    String | 文本颜色
+	 * @property {String} iconSize    String | 图标大小
+	 * @property {String} iconColor    String | 图标颜色
+	 * @property {UTSJSONObject} customTitleStyle    UTSJSONObject | 自定义标题样式
+	 * @property {UTSJSONObject} customTextStyle    UTSJSONObject | 自定义文本样式
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义样式
+	 */
+
+	// 依赖
+	import { $snui, useFormatProp } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-result'
+	})
+
+	// SinleUI 配置
+	const colors = $snui.colors
+	const snu = $snui.utils
+
+	// 组件属性
+	const props = defineProps({
+		mode: {
+			type: String,
+			default: 'info'
+		},
+		title: {
+			type: String,
+			default: ''
+		},
+		titleSize: {
+			type: String,
+			default: ''
+		},
+		titleColor: {
+			type: String,
+			default: ''
+		},
+		text: {
+			type: String,
+			default: ''
+		},
+		textSize: {
+			type: String,
+			default: ''
+		},
+		textColor: {
+			type: String,
+			default: ''
+		},
+		iconSize: {
+			type: String,
+			default: ''
+		},
+		iconColor: {
+			type: String,
+			default: ''
+		},
+		customTitleStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customTextStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+	})
+
+	// 计算属性
+	const modeC = computed(() : string => {
+		return props.mode != null ? props.mode : 'info'
+	})
+	
+	const titleSizeC = computed((): string => {
+		return useFormatProp('font', props.titleSize, $snui.configs.font.size(5))
+	})
+	
+	const titleColorC = computed((): string => {
+		return useFormatProp('color', props.titleColor, colors.value.text)
+	})
+	
+	const textSizeC = computed((): string => {
+		return useFormatProp('font', props.textSize, $snui.configs.font.size(3))
+	})
+	
+	const textColorC = computed((): string => {
+		return useFormatProp('color', props.textColor, colors.value.primary)
+	})
+	
+	const iconSizeC = computed((): string => {
+		return useFormatProp('font', props.iconSize, $snui.configs.font.size(8))
+	})
+	
+	const iconNameC = computed(() : string => {
+		let icons = {
+			'info': 'information-fill',
+			'success': 'checkbox-circle-fill',
+			'warning': 'error-warning-fill',
+			'error': 'close-circle-fill'
+		};
+		return icons[modeC.value] as string;
+	});
+
+	const iconColorC = computed(() : string => {
+		if (!snu.isEmpty(props.iconColor)) return props.iconColor
+		let _colors = {
+			'info': colors.value.primary,
+			'success': colors.value.success,
+			'warning': colors.value.warning,
+			'error': colors.value.error
+		};
+		return _colors[modeC.value] as string;
+	});
+	
+	const resultStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('transition-duration',$snui.configs.aniTime.normal)
+		return styles
+	})
+	
+</script>
+
+<style lang="scss">
+	.sn-result {
+		align-items: center;
+		justify-content: center;
+	}
+</style>

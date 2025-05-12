@@ -1,0 +1,219 @@
+<template>
+	<!--#ifndef WEB -->
+	<web-view class="web-view" 
+	:id="id" 
+	src="/uni_modules/sinle-ui/hybrid/html/markdown/index.html"
+	@load="render()" 
+	:style="[webviewStylesC, customStyle]">
+	</web-view>
+	<!--#endif-->
+	<!--#ifdef WEB -->
+	<iframe class="web-view" 
+	:id="id" 
+	:src="baseC+'uni_modules/sinle-ui/hybrid/html/markdown/index.html'" 
+	@load="render()"
+	:style="[webviewStylesC, customStyle]">
+	</iframe>
+	<!--#endif-->
+</template>
+
+<script setup>
+	/**
+	 * @name sn-markdown
+	 * @tutorial https://sinleui.pages.dev/components/sn-markdown
+	 * @description  Markdown 富文本
+	 *
+	 *- 基于 `markdown-it` 实现 Markdown 富文本渲染
+	 *
+	 *- 支持暗黑模式，内置 highlight.js、上下标、Emoji、 自定义容器等插件，以及类 VitePress 的样式，帮助您更轻松地插入 Markdown 文本
+	 *
+	 *- 支持双向同步渲染
+	 * @property {String} width    String | 组件宽度
+	 * @property {String} height    String | 组件高度
+	 * @property {String} content    String | Markdown文本内容
+	 * @property {String} theme=[light|dark]    String | 主题风格.
+	 * @value light 亮色模式
+	 * @value dark 暗黑模式
+	 * @property {Boolean} linkify    Boolean | 是否识别并显示链接
+	 * @property {Boolean} typographer    Boolean | 启用一些语言中立的替换+引号美化
+	 * @property {Boolean} html    Boolean | 是否在源码中启用HTML标签
+	 * @property {Boolean} xhtmlOut    Boolean | 使用'/'来闭合单标签（比如\<br/\>）
+	 * @property {Boolean} breaks    Boolean | 转换段落里的'\n'为\<br\>。
+	 * @property {String} quotes    String | 引用符号，默认为中文引号
+	 * @property {String} langPrefix    String | 给围栏代码块的CSS语言前缀。对于额外的高亮代码非常有用。
+	 * @property {Boolean} sup    Boolean | 是否启用上标扩展功能。详见[markdown-it-sup](https://github.com/markdown-it/markdown-it-sup)。
+	 * @property {Boolean} sub    Boolean | 是否启用下标扩展功能。详见[markdown-it-sub](https://github.com/markdown-it/markdown-it-sub)。
+	 * @property {Boolean} container    Boolean | 是否启用容器扩展功能，如代码块、列表等。详见[自定义容器。](https://vitepress.dev/zh/guide/markdown#custom-containers)
+	 * @property {Boolean} emoji    Boolean | 是否启用Emoji扩展功能。详见[markdown-it-emoji](https://github.com/markdown-it/markdown-it-emoji)。
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义容器样式
+	 */
+
+	
+	// 依赖
+	import { $snui } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-markdown' 
+	})
+	
+	// SinleUI 配置
+	const snu = $snui.utils;
+	
+	const props = defineProps({
+		width: {
+			type: String,
+			default: '100%'
+		},
+		height: {
+			type: String,
+			default: '100%'
+		},
+		content: {
+			type: String,
+			default: ''
+		},
+		theme: {
+			type: String,
+			default: 'light'
+		},
+		linkify: {
+			type: Boolean,
+			default: false
+		},
+		typographer: {
+			type: Boolean,
+			default: false
+		},
+		html: {
+			type: Boolean,
+			default: false
+		},
+		xhtmlOut: {
+			type: Boolean,
+			default: false
+		},
+		breaks: {
+			type: Boolean,
+			default: false
+		},
+		quotes: {
+			type: String,
+			default: '“”‘’'
+		},
+		langPrefix: {
+			type: String,
+			default: 'language-'
+		},
+		// pluginsC
+		sup: {
+			type: Boolean,
+			default: true
+		},
+		sub: {
+			type: Boolean,
+			default: true
+		},
+		container: {
+			type: Boolean,
+			default: true
+		},
+		emoji: {
+			type: Boolean,
+			default: true
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject as UTSJSONObject
+		}
+	})
+	
+	
+	// 基本变量
+	const webcontext = ref(null as UniWebViewElement | null)
+	const id = snu.randomComId()
+	
+	// 计算属性
+	const themeC = computed(() : string => {
+		const themes = ['light', 'dark']
+		return themes.includes(props.theme) ? props.theme : 'light'
+	})
+	
+	// #ifdef WEB
+	const baseC = computed((): string=>{
+		return window?.__uniConfig?.router?.base ?? '/'
+	})
+	// #endif
+
+	const pluginsC = computed(() : UTSJSONObject => {
+		return {
+			sup: props.sup,
+			sub: props.sub,
+			container: props.container,
+			emoji: props.emoji
+		}
+	})
+
+	const optionsC = computed(() : UTSJSONObject => {
+		return {
+			// #ifdef WEB
+			$platform: 'web',
+			// #endif
+			linkify: props.linkify,
+			typographer: props.typographer,
+			quotes: props.quotes,
+			breaks: props.breaks,
+			html: props.html,
+			xhtmlOut: props.xhtmlOut,
+			langPrefix: props.langPrefix
+		}
+	})
+
+	const webviewStylesC = computed(() : Map<string, any> => {
+		const styles = new Map<string, any>()
+		styles.set('width', props.width)
+		styles.set('height', props.height)
+		return styles
+	})
+
+	function render() {
+		const markdown = props.content.replaceAll('\\|', '\\\\|').replaceAll('`', '\\`').replaceAll('\n', '\\n')
+		const evals = `window.render(\`${markdown}\`, '${themeC.value}', ${JSON.stringify(optionsC.value)}, ${JSON.stringify(pluginsC.value)})`
+		// #ifdef APP
+		webcontext.value = uni.getElementById(id) as UniWebViewElement | null
+		webcontext.value?.evalJS(evals)
+		// #endif
+		// #ifdef WEB
+		let frame = document.querySelector('#' + id)
+		frame?.contentWindow?.eval(evals)
+		// #endif
+	}
+	
+	const propsC = computed((): UTSJSONObject=>{
+		return {
+			content: props.content,
+			theme: props.theme,
+			linkify: props.linkify,
+			typographer: props.typographer,
+			html: props.html,
+			xhtmlOut: props.xhtmlOut,
+			breaks: props.breaks,
+			quotes: props.quotes,
+			langPrefix: props.langPrefix,
+			sup: props.sup,
+			sub: props.sub,
+			container: props.container,
+			emoji: props.emoji
+		}
+	})
+	
+	watch(propsC, ()=>{
+		render()
+	})
+
+</script>
+
+<style lang="scss">
+	.web-view {
+		border: none !important;
+	}
+</style>

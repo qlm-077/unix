@@ -1,0 +1,1410 @@
+export * from '../core/color/interface.uts'
+export { TinyColor } from '../core/color/color.uts'
+export * from '../core/date/interface.uts'
+export { Dayuts } from '../core/date/index.uts'
+import { SnError } from './unierror.uts'
+export { SnError }
+
+export type SnAvatarParams = {
+	/**
+	 * 显示模式
+	 * 可选值：image、text、icon
+	 */
+	mode ?: string | null,
+	/**
+	 * 图片显示模式
+	 */
+	imageMode ?: string | null,
+	/**
+	 * 尺寸大小
+	 */
+	size ?: string | null,
+	/**
+	 * 图片源地址
+	 */
+	src ?: string | null,
+	/**
+	 * 文本内容
+	 */
+	text ?: string | null,
+	/**
+	 * 图标名称
+	 */
+	icon ?: string | null,
+	/**
+	 * 图标大小
+	 */
+	iconSize ?: string | null,
+	/**
+	 * 图标颜色
+	 */
+	iconColor ?: string | null,
+	/**
+	 * 形状
+	 * 可选值：'circle'、'square'
+	 */
+	shape ?: 'circle' | 'square' | null,
+	/**
+	 * 文本颜色
+	 */
+	textColor ?: string | null,
+	/**
+	 * 背景颜色
+	 */
+	bgColor ?: string | null,
+	/**
+	 * 文本大小
+	 */
+	textSize ?: string | null,
+	/**
+	 * 圆角大小
+	 */
+	borderRadius ?: string | null,
+	/**
+	 * 是否启用图片预览
+	 */
+	enablePreview ?: boolean | null
+}
+
+export type SnBadgeParams = {
+	/**
+	 * 显示的值（仅number模式）
+	 */
+	value ?: number | null,
+	/**
+	 * 最大值（仅number模式）
+	 */
+	max ?: number | null,
+	/**
+	 * 大小
+	 */
+	size ?: string | null,
+	/**
+	 * 偏移量
+	 * 徽标的 transform 
+	 */
+	offset ?: string | null,
+	/**
+	 * 模式
+	 * 可选值：number、text、dot
+	 */
+	mode ?: 'number' | 'text' | 'dot' | null,
+	/**
+	 * 文本内容
+	 */
+	text ?: string | null,
+	/**
+	 * 是否显示0
+	 */
+	showZero ?: boolean | null,
+	/**
+	 * 文字颜色
+	 */
+	textColor ?: string | null,
+	/**
+	 * 背景颜色
+	 */
+	bgColor ?: string | null,
+}
+
+export type SnTabParams = {
+	/**
+	 * 标签页子项文本
+	 */
+	text : string,
+	/**
+	 * 标签页子项图标
+	 */
+	icon ?: string | null,
+	/**
+	 * 标签页 ID
+	 */
+	id : string,
+	/**
+	 * 是否禁用
+	 */
+	disabled ?: boolean | null,
+	/**
+	 * 是否选中
+	 */
+	checked ?: boolean | null,
+	/**
+	 * 是否显示徽标
+	 */
+	showBadge ?: boolean | null,
+	/**
+	 * 徽标配置
+	 */
+	badgeConfig ?: SnBadgeParams | null
+}
+
+
+
+export type SnTime = {
+	/**
+	 * 天
+	 */
+	d : number
+	/**
+	 * 小时
+	 */
+	h : number
+	/**
+	 * 分钟
+	 */
+	m : number
+	/**
+	 * 秒
+	 */
+	s : number
+	/**
+	 * 毫秒
+	 */
+	ms : number
+}
+
+export type SnFormItemRule = {
+	/**
+	 * 字段类型
+	 *
+	 * 可选值：string、number、boolean、integer、float、array、object、enum、url、email、qqnumber、chinese、abc、phone、landline、ipv6、ipv4、idcard、carnumber
+	 */
+	type ?: 'string' | 'number' | 'boolean' | 'integer' | 'float' | 'array' | 'object' | 'enum' | 'url' | 'email' | 'qqnumber' | 'chinese' | 'abc' | 'phone' | 'landline' | 'ipv6' | 'ipv4' | 'idcard' | 'carnumber' | null,
+	/**
+	 * 是否必填
+	 */
+	required ?: boolean | null,
+	/**
+	 * 校验失败提示信息
+	 */
+	message ?: string | null,
+	/**
+	 * 正则校验规则
+	 */
+	pattern ?: RegExp | null,
+	/**
+	 * 最小长度
+	 */
+	min ?: number | null,
+	/**
+	 * 最大长度
+	 */
+	max ?: number | null,
+	/**
+	 * 值的长度（同时设置 min、max 和 len，以len的值为准）
+	 */
+	len ?: number | null,
+	/**
+	 * 值的枚举值，限制值只能为此枚举数组的子项
+	 */
+	enum ?: Array<any> | null,
+	/**
+	 * 数据转换函数，校验前先执行此函数对原始数据进行处理
+	 */
+	transform ?: ((value : any) => any) | null,
+	/**
+	 * 自定义校验函数，在默认的校验前先执行此函数。
+	 *
+	 * 返回空文本串表示校验通过；返回其他字符串表示校验失败，且返回的字符串将作为校验失败的提示信息
+	 */
+	valid ?: ((value : any) => string) | null,
+}
+
+export type SnFormItemVerifyResult = {
+	/**
+	 * 子项校验是否通过
+	 */
+	valid : boolean,
+	/**
+	 * 子项校验失败的提示信息
+	 */
+	message ?: string | null,
+	/**
+	 * 子项的名称
+	 */
+	field : string
+}
+
+export type SnFormValidResult = {
+	/**
+	* 表单校验成功回调
+	*/
+	success ?: (() => void) | null,
+	/**
+	* 表单校验失败回调，会将所有校验失败的子项的错误信息作为 failResults 数组参数
+	*/
+	fail ?: ((failResults : SnFormItemVerifyResult[]) => void) | null
+}
+
+export type SnFormItemData = {
+	/**
+	 * 子项的名称
+	 */
+	field : string,
+	/**
+	 * 子项实例
+	*/
+	instance : ComponentPublicInstance
+}
+
+export type SnScanParams = {
+	/**
+	 * 是否启用扫描成功提示声
+	 */
+	enableDing ?: boolean | null,
+	/**
+	 * 是否启用手电筒
+	 */
+	showTorch ?: boolean | null,
+	/**
+	 * 扫描成功提示音文件路径
+	 */
+	dingFileSrc ?: string | null,
+	/**
+	 * 扫描类型
+	 * 可选值 ：barcode、qrcode、all
+	 */
+	scanType ?: 'barcode' | 'qrcode' | 'all' | null,
+	/**
+	 * 是否连续扫描（即扫描成功后触发 scanned 事件 但不会触发 goin 事件）
+	 */
+	continuous ?: boolean | null,
+	/**
+	 * 是否只扫描一次（同时设置 scanOnlyOnce 和 continuous，以 scanOnlyOnce 为准）
+	 */
+	scanOnlyOnce ?: boolean | null,
+	/**
+	 * 扫描页面标题
+	 */
+	title ?: string | null,
+	/**
+	 * 初始缩放比例
+	 */
+	initZoomScale ?: number | null,
+	/**
+	 * 连续扫描间隔时间（单位 ms）
+	 */
+	continuousSleep ?: number | null,
+	/**
+	 * 是否显示相册按钮
+	 */
+	showAlbum ?: boolean | null,
+	/**
+	 * 是否显示返回按钮
+	 */
+	showBackButton ?: boolean | null,
+	/**
+	 * 是否启用动画
+	*/
+	showAni ?: boolean | null,
+	/**
+	 * 是否启用手势缩放
+	 */
+	enableZoom ?: boolean | null
+}
+
+export type SnToastParams = {
+	/**
+	 * 文本内容
+	 */
+	text ?: string | null,
+	/**
+	 * 背景颜色
+	 */
+	bgColor ?: string | null,
+	/**
+	 * 是否显示透明遮罩层（防穿透）
+	 */
+	overlay ?: boolean | null,
+	/**
+	 * 显示位置
+	 * 可选值：top、bottom、center
+	 */
+	position ?: 'top' | 'center' | 'bottom' | null,
+	/**
+	 * 显示时长（单位 ms）
+	 */
+	duration ?: number | null,
+	/**
+	 * 文本大小
+	 */
+	textSize ?: string | null,
+	/**
+	 * 文本颜色
+	 */
+	textColor ?: string | null,
+	/**
+	 * 圆角大小
+	 */
+	borderRadius ?: string | null,
+	/**
+	 * 内边距
+	 */
+	padding ?: string | null,
+	/**
+	 * 图标名称
+	*/
+	icon ?: string | null,
+	/**
+	 * 图标颜色
+	 */
+	iconColor ?: string | null,
+	/**
+	 * 图标大小
+	 */
+	iconSize ?: string | null,
+	/**
+	 * 是否加载中（设置后 duration 失效，默认不会自动消失，可通过调用 close 方法关闭）
+	 */
+	loading ?: boolean | null,
+	/**
+	 * 文本行数
+	 */
+	textLines ?: number | null,
+	/**
+	 * 文本对齐方式
+	 */
+	textAlign ?: string | null
+}
+
+export type SnLoadmoreParams = {
+	/**
+	 * 加载更多时的文本
+	 */
+	loadmoreText ?: string | null,
+	/**
+	 * 没有更多内容时的文本
+	 */
+	nomoreText ?: string | null,
+	/**
+	 * 加载中的文本
+	 */
+	loadingText ?: string | null,
+	/**
+	 * 文本大小
+	 */
+	textSize ?: string | null,
+	/**
+	 * 文本颜色
+	 */
+	textColor ?: string | null,
+	/**
+	 * 图标大小
+	 */
+	iconSize ?: string | null,
+	/**
+	 * 图标颜色
+	 */
+	iconColor ?: string | null,
+	/**
+	 * 线条颜色
+	 */
+	lineColor ?: string | null,
+	/**
+	 * 线条高度
+	 */
+	lineHeight ?: string | null,
+	/**
+	 * 是否显示虚线
+	 */
+	dashed ?: boolean | null,
+	/**
+	 * 是否禁用加载更多功能
+	 */
+	disabled ?: boolean | null
+}
+
+export type SnRefresherParams = {
+	/**
+	 * 刷新时的文本
+	 */
+	refreshText ?: string | null,
+	/**
+	 * 正在刷新时的文本
+	 */
+	refreshingText ?: string | null,
+	/**
+	 * 文本大小
+	 */
+	textSize ?: string | null,
+	/**
+	 * 文本颜色
+	 */
+	textColor ?: string | null,
+	/**
+	 * 图标名称
+	 */
+	icon ?: string | null,
+	/**
+	 * 图标大小
+	 */
+	iconSize ?: string | null,
+	/**
+	 * 图标颜色
+	 */
+	iconColor ?: string | null
+}
+
+
+
+export type SnEmptyColorConfig = {
+	/**
+	 * 主题颜色
+	 */
+	themeColor : string,
+	/**
+	 * 头发颜色
+	 */
+	hairColor : string,
+	/**
+	 * 衣服颜色
+	 */
+	clothesColor : string,
+	/**
+	 * 裤子颜色
+	 */
+	trousersColor : string,
+	/**
+	 * 鞋子颜色
+	 */
+	shoesColor : string,
+	/**
+	 * 项目颜色
+	 */
+	itemColor : string,
+	/**
+	 * 皮肤颜色
+	 */
+	skinColor : string,
+	/**
+	 * 元素颜色
+	 */
+	elementColor : string
+};
+
+export type SnPointerEvent = {
+	/**
+	 * 点击事件类型，分为：click、dbclick、down
+	 */
+	type : string;
+	/**
+	 * 点击点的横坐标
+	 */
+	x : number;
+	/**
+	 * 点击点的纵坐标
+	 */
+	y : number;
+	/**
+	 * 点击事件的原事件，可通过操作此属性实现阻止默认行为、阻止冒泡。sn-e-gesture 事件返回的相同结构的 UTSJSONObject 对象无此属性。
+	 */
+	event : UniPointerEvent;
+}
+
+export type SnTouch = {
+	/**
+	 * 触摸点的横坐标
+	 */
+	x : number;
+	/**
+	 * 触摸点的纵坐标
+	 */
+	y : number;
+	/**
+	 * 相对于上一次触摸点的横坐标差值，为正数则是向右移动，为负数则是向左移动
+	 */
+	diffX : number;
+	/**
+	 * 相对于上一次触摸点的纵坐标差值，为正数则是向下移动，为负数则是向上移动
+	 */
+	diffY : number;
+	/**
+	 * 触摸方向
+	 */
+	direction : string;
+	/**
+	 * 触摸点的唯一标识符
+	 */
+	id : number;
+}
+
+export type SnTouchEvent = {
+	/**
+	 * 事件类型
+	 */
+	type : string;
+	/**
+	 * 触摸点数组
+	 */
+	touches : Array<SnTouch>;
+	/**
+	 * 触摸事件的原事件，可通过操作此属性实现阻止默认行为、阻止冒泡。sn-e-gesture 事件无此属性。
+	 */
+	event : UniEvent;
+}
+
+export type SnFlingEvent = {
+	/**
+	 * 事件类型
+	 */
+	type : string;
+	/**
+	 * 开始时的横坐标
+	 */
+	beginX : number;
+	/**
+	 * 开始时的纵坐标
+	 */
+	beginY : number;
+	/**
+	 * 结束时的横坐标
+	 */
+	endX : number;
+	/**
+	 * 结束时的纵坐标
+	 */
+	endY : number;
+	/**
+	 * 横向速度
+	 */
+	vX : number;
+	/**
+	 * 纵向速度
+	 */
+	vY : number;
+}
+
+export type SnScaleEvent = {
+	/**
+	 * 缩放的倍数（相对于上一次缩放事件）
+	 */
+	zoom : number
+}
+
+export type SnRotateEvent = {
+	/**
+	 * 旋转的角度（相对于上一次旋转事件）
+	 */
+	rotate : number
+}
+
+export type SnRequestSystemPermissionOptions = {
+	/**
+	 * 请求的系统权限列表
+	 */
+	permissions : string[];
+	/**
+	 * 请求成功的回调函数，参数分别为是否所有权限都授权成功和授权成功的权限列表
+	 */
+	success ?: ((allRight : boolean, grantedList : string[]) => void) | null;
+	/**
+	 * 请求失败的回调函数，参数分别为是否不再询问和被拒绝的权限列表
+	 */
+	fail ?: ((doNotAskAgain : boolean, deniedList : string[]) => void) | null;
+}
+
+export type SnRequestMediaPermissionOptionsType = 'image' | 'video' | 'audio';
+
+export type SnRequestMediaPermissionOptions = {
+	/**
+	 * 请求的媒体权限类型列表
+	 */
+	types : SnRequestMediaPermissionOptionsType[];
+	/**
+	 * 请求成功的回调函数，参数分别为是否所有权限都授权成功和授权成功的权限列表
+	 */
+	success ?: ((allRight : boolean, grantedList : string[]) => void) | null;
+	/**
+	 * 请求失败的回调函数，参数分别为是否不再询问和被拒绝的权限列表
+	 */
+	fail ?: ((doNotAskAgain : boolean, deniedList : string[]) => void) | null;
+}
+
+
+export type SnColorBase = {
+	/**
+	 * 透明颜色（非 CSS 的 transparent 颜色，此颜色变化时不会出现闪黑）
+	 */
+	transparent : string,
+	/**
+	 * 页面背景颜色
+	 */
+	page : string,
+	/**
+	 * 前景色，一般用作块状组件的背景色
+	 */
+	front : string,
+	/**
+	 * 在亮色模式呈现为黑色，在暗黑模式呈现为白色
+	 */
+	dark : string,
+	/**
+	 * 禁用状态的颜色
+	 */
+	disabled : string,
+	/**
+	 * 禁用状态的文字颜色
+	 */
+	disabledText : string,
+	/**
+	 * 更深的禁用状态的背景颜色
+	 */
+	disabledDark : string,
+	/**
+	 * 更深的禁用状态的文字颜色
+	 */
+	disabledDarkText : string,
+	/**
+	 * 线条颜色
+	 */
+	line : string,
+	/**
+	 * 更深的线条颜色
+	 */
+	lineDark : string,
+	/**
+	 * 线条文字颜色
+	 */
+	lineText : string,
+	/**
+	 * 标题颜色
+	 */
+	title : string,
+	/**
+	 * 文本颜色
+	 */
+	text : string,
+	/**
+	 * 更浅的文本颜色
+	 */
+	textLight : string,
+	/**
+	 * 信息颜色
+	 */
+	info : string,
+	/**
+	 * 激活状态信息
+	 */
+	infoActive : string,
+	/**
+	 * 信息文字颜色
+	 */
+	infoText : string,
+	/**
+	 * 更浅的信息颜色
+	 */
+	infoLight : string,
+	/**
+	 * 激活状态更浅的信息
+	 */
+	infoLightActive : string,
+	/**
+	 * 更浅的信息文字颜色
+	 */
+	infoLightText : string,
+	/**
+	 * 深色背景的信息颜色
+	 */
+	infoDark : string,
+	/**
+	 * 激活状态深色背景的信息
+	 */
+	infoDarkActive : string,
+	/**
+	 * 深色背景的信息文字颜色
+	 */
+	infoDarkText : string,
+	/**
+	 * 主题色
+	 */
+	primary : string,
+	/**
+	 * 激活状态的主题色
+	 */
+	primaryActive : string,
+	/**
+	 * 主题色背景上的文字颜色
+	 */
+	primaryText : string,
+	/**
+	 * 更浅的主题色
+	 */
+	primaryLight : string,
+	/**
+	 * 更浅的激活状态的主题色
+	 */
+	primaryLightActive : string,
+	/**
+	 * 更浅的主题色背景上的文字颜色
+	 */
+	primaryLightText : string,
+	/**
+	 * 更深的主题色
+	 */
+	primaryDark : string,
+	/**
+	 * 更深的激活状态的主题色
+	 */
+	primaryDarkActive : string,
+	/**
+	 * 更深的主题色背景上的文字颜色
+	 */
+	primaryDarkText : string,
+	/**
+	 * 成功色
+	 */
+	success : string,
+	/**
+	 * 激活状态的成功色
+	 */
+	successActive : string,
+	/**
+	 * 成功色背景上的文字颜色
+	 */
+	successText : string,
+	/**
+	 * 更浅的成功色
+	 */
+	successLight : string,
+	/**
+	 * 更浅的激活状态的成功色
+	 */
+	successLightActive : string,
+	/**
+	 * 更浅的成功色背景上的文字颜色
+	 */
+	successLightText : string,
+	/**
+	 * 更深的成功色
+	 */
+	successDark : string,
+	/**
+	 * 更深的激活状态的成功色
+	 */
+	successDarkActive : string,
+	/**
+	 * 更深的成功色背景上的文字颜色
+	 */
+	successDarkText : string,
+	/**
+	 * 错误色
+	 */
+	error : string,
+	/**
+	 * 激活状态的错误色
+	 */
+	errorActive : string,
+	/**
+	 * 错误色背景上的文字颜色
+	 */
+	errorText : string,
+	/**
+	 * 更浅的错误色
+	 */
+	errorLight : string,
+	/**
+	 * 更浅的激活状态的错误色
+	 */
+	errorLightActive : string,
+	/**
+	 * 更浅的错误色背景上的文字颜色
+	 */
+	errorLightText : string,
+	/**
+	 * 更深的错误色
+	 */
+	errorDark : string,
+	/**
+	 * 更深的激活状态的错误色
+	 */
+	errorDarkActive : string,
+	/**
+	 * 更深的错误色背景上的文字颜色
+	 */
+	errorDarkText : string,
+	/**
+	 * 警告色
+	 */
+	warning : string,
+	/**
+	 * 激活状态的警告色
+	 */
+	warningActive : string,
+	/**
+	 * 警告色背景上的文字颜色
+	 */
+	warningText : string,
+	/**
+	 * 更浅的警告色
+	 */
+	warningLight : string,
+	/**
+	 * 更浅的激活状态的警告色
+	 */
+	warningLightActive : string,
+	/**
+	 * 更浅的警告色背景上的文字颜色
+	 */
+	warningLightText : string,
+	/**
+	 * 更深的警告色
+	 */
+	warningDark : string,
+	/**
+	 * 更深的激活状态的警告色
+	 */
+	warningDarkActive : string,
+	/**
+	 * 更深的警告色背景上的文字颜色
+	 */
+	warningDarkText : string,
+	/**
+	 * sn-toast 背景色
+	 */
+	toast : string
+}
+
+export type SnDataItem = {
+	/**
+	 * 数据子项 ID
+	 */
+	id : string,
+	/**
+	 * 文本内容
+	 */
+	text ?: string | null,
+	/**
+	 * 图标名称
+	 */
+	icon ?: string | null,
+	/**
+	 * 是否禁用
+	 */
+	disabled ?: boolean | null
+}
+
+export type SnMedia = {
+	/**
+	 * 文件对象
+	 */
+	file ?: any | null,
+	/**
+	 * 文件路径
+	 */
+	src ?: string | null,
+	/**
+	 * 缩略图资源URL（仅视频文件有）
+	 */
+	thumb ?: string | null,
+	/**
+	 * 文件名称（随机生成）
+	 */
+	name : string,
+	/**
+	 * 文件状态
+	 * 可选值：'uploaded' | 'uploading' | 'unuploaded' | 'error'
+	 */
+	status : 'uploaded' | 'uploading' | 'unuploaded' | 'error',
+	/**
+	 * 文件类型
+	 * 可选值：'image' | 'video'
+	 */
+	type : 'image' | 'video'
+}
+
+/**
+ * 标签栏项目类型定义
+ */
+export type SnTabbarItem = {
+	/**
+	 * 未选中状态文本内容
+	 */
+	text ?: string | null,
+	/**
+	 * 未选中状态图标名称
+	 */
+	icon ?: string | null,
+	/**
+	 * 未选中状态图片资源路径
+	 */
+	image ?: string | null,
+	/**
+	 * 选中状态下的图标名称
+	 */
+	activeIcon ?: string | null,
+	/**
+	 * 选中状态下的文本内容
+	 */
+	activeText ?: string | null,
+	/**
+	 * 选中状态下的图片资源路径
+	 */
+	activeImage ?: string | null,
+	/**
+	 * 拦截器函数，用于判断是否可以切换到当前标签，返回true表示允许切换，返回false表示不允许切换
+	 */
+	interceptor ?: (() => boolean) | null,
+	/**
+	 * 徽标配置
+	 */
+	badge ?: SnBadgeParams | null
+}
+
+
+
+export type SnWaterfallItem = {
+	/**
+	 * 瀑布流子项的唯一标识符
+	 */
+	id : string,
+	/**
+	 * 瀑布流子项距离顶部的距离
+	 */
+	top : number,
+	/**
+	 * 瀑布流子项距离左侧的距离
+	 */
+	left : number,
+	/**
+	 * 瀑布流子项的宽度
+	 */
+	width : number,
+	/**
+	 * 瀑布流子项的高度
+	 */
+	height : number,
+	/**
+	 * 瀑布流子项对应的组件实例
+	 */
+	node : SnWaterfallItemComponentPublicInstance
+}
+
+
+
+export type SnActionsheetItem = {
+	/**
+	 * 操作项文本内容
+	 */
+	text : string,
+	/**
+	 * 操作项颜色
+	 */
+	color ?: string | null,
+	/**
+	 * 是否禁用操作项
+	 */
+	disabled ?: boolean | null,
+}
+
+export type SnAvatarGroupItem = {
+	/**
+	 * 显示模式
+	 * 可选值：image、text、icon
+	 */
+	mode ?: string | null,
+	/**
+	 * 图片显示模式
+	 */
+	imageMode ?: string | null,
+	/**
+	 * 图片源地址
+	 */
+	src ?: string | null,
+	/**
+	 * 文本内容
+	 */
+	text ?: string | null,
+	/**
+	 * 图标名称
+	 */
+	icon ?: string | null,
+}
+
+export type SnFile = {
+	/**
+	 * 文件名称
+	 */
+	filename : string,
+	/**
+	 * 文件路径
+	 */
+	path : string,
+	/**
+	 * 文件大小，单位为字节
+	 */
+	size ?: number | null,
+	/**
+	 * 文件扩展名
+	 */
+	ext : string,
+}
+
+export type SnChooseMediaOptions = {
+	/**
+	 * 选择的类型
+	*/
+	type : 'image' | 'video' | 'all',
+	/**
+	 * 是否多选
+	 */
+	multiple ?: boolean | null,
+	/**
+	 * 最大选择数量
+	 */
+	maxCount ?: number | null,
+	/**
+	 * 成功回调
+	 * 返回选择的文件数组
+	 */
+	success ?: ((files : SnFile[]) => void) | null,
+	/**
+	 * 失败回调
+	 * 返回错误信息
+	 */
+	fail ?: ((error : SnError) => void) | null
+}
+
+export type SnShowActionsheetConfig = {
+	/**
+	 * 标题，默认为空
+	 */
+	title ?: string | null,
+	/**
+	 * 操作项列表
+	 */
+	actions : SnActionsheetItem[],
+	/**
+	 * 是否显示取消按钮
+	 */
+	showCancel ?: boolean | null,
+	/**
+	 * 取消按钮文本内容
+	 */
+	cancelText ?: string | null,
+	/**
+	 * 标题颜色
+	 */
+	titleColor ?: string | null,
+	/**
+	 * 标题字体大小
+	 */
+	titleSize ?: string | null,
+	/**
+	 * 操作项文本字体大小
+	 */
+	bgColor ?: string | null,
+	/**
+	 * 操作项文本颜色
+	 */
+	itemTextSize ?: string | null,
+	/**
+	 * 操作项内边距
+	 */
+	itemPadding ?: string | null,
+	/**
+	 * 圆角大小
+	 */
+	borderRadius ?: string | null,
+	/**
+	 * 遮罩层透明度
+	 */
+	maskOpacity ?: number | null,
+	/**
+	 * 动画时长
+	 */
+	aniTime ?: string | null,
+	/**
+	 * 是否阻止返回事件
+	 */
+	preventBack ?: boolean | null,
+	/**
+	 * 是否禁用
+	 */
+	disabled ?: boolean | null,
+	/**
+	 * 是否允许点击遮罩层关闭
+	 */
+	maskClose ?: boolean | null,
+	/**
+	 * 自定义样式
+	 */
+	customStyle ?: UTSJSONObject | null,
+	/**
+	 * 成功回调。
+	 * 
+	 * - tapIndex (number) 用户点击的按钮，从上到下的顺序，从0开始
+	 */
+	success ?: ((tapIndex : number) => void) | null,
+	/**
+	 * 失败回调
+	 * 
+	 * - error (SnError) 错误信息
+	 */
+	fail ?: ((error : SnError) => void) | null,
+	/**
+	 * 完成回调
+	 * 
+	 * - res (any) 成功或失败回调的参数
+	 */
+	complete ?: ((res: any | null) => void) | null
+}
+
+export type SnPreviewImageLongPressActions = {
+	/**
+	 * 操作项列表
+	 */
+	actions: SnActionsheetItem[],
+	/**
+	 * 是否显示取消按钮
+	 */
+	showCancel ?: boolean | null,
+	/**
+	 * 成功回调。
+	 * 
+	 * - tapIndex (number) 用户点击的按钮，从上到下的顺序，从0开始
+	 */
+	success ?: ((tapIndex : number) => void) | null,
+	/**
+	 * 失败回调
+	 * 
+	 * - error (SnError) 错误信息
+	 */
+	fail ?: ((error : SnError) => void) | null,
+	/**
+	 * 完成回调
+	 * 
+	 * - res (any) 成功或失败回调的参数
+	 */
+	complete ?: ((res: any | null) => void) | null
+}
+
+export type SnPreviewImageConfig = {
+	/**
+	 *  图片地址数组
+	 */
+	urls : string[],
+	/**
+	 * 长按操作项配置
+	 */
+	longPressActions ?: SnPreviewImageLongPressActions | null
+}
+
+export type SnShowToastConfig = {
+	/**
+	 * 提示文本内容
+	 */
+	text?: string | null,
+	/**
+	 * 轻提示背景颜色
+	 */
+	bgColor?: string | null,
+	/**
+	 * 轻提示位置
+	 * 可选值：'top' | 'center' | 'bottom'
+	 */
+	position?: 'top' | 'center' | 'bottom' | null,
+	/**
+	 * 轻提示显示时间（单位：毫秒）
+	 */
+	duration?: number | null,
+	/**
+	 * 提示文本字体大小
+	 */
+	textSize?: string | null,
+	/**
+	 * 提示文本颜色
+	 */
+	textColor?: string | null,
+	/**
+	 * 轻提示圆角大小
+	 */
+	borderRadius?: string | null,
+	/**
+	 * 轻提示内边距
+	 */
+	padding?: string | null,
+	/**
+	 * 提示图标名称
+	 */
+	icon?: string | null,
+	/**
+	 * 图标大小
+	 */
+	iconSize?: string | null,
+	/**
+	 * 图标颜色
+	 */
+	iconColor?: string | null,
+	/**
+	 * 文本对齐方式
+	 */
+	textAlign?: string | null,
+	/**
+	 * 是否显示加载中的图标
+	 */
+	loading?: boolean | null,
+	/**
+	 * 文本最大行数
+	 */
+	textLines?: number | null,
+	/**
+	 * 自定义轻提示样式
+	 */
+	customStyle?: UTSJSONObject | null
+	/**
+	 * 成功回调。
+	 * 
+	 */
+	success ?: (() => void) | null,
+	/**
+	 * 失败回调
+	 * 
+	 * - error (SnError) 错误信息
+	 */
+	fail ?: ((error : SnError) => void) | null,
+	/**
+	 * 完成回调
+	 * 
+	 * - res (any) 成功或失败回调的参数
+	 */
+	complete ?: ((res: any | null) => void) | null
+}
+
+
+export type SnShowModalConfig = {
+	/**
+	 * 模态框标题
+	 */
+	title?: string | null,
+	/**
+	 * 标题对齐方式
+	 */
+	titleAlign?: string | null,
+	/**
+	 * 标题字体大小
+	 */
+	titleSize?: string | null,
+	/**
+	 * 标题字体
+	 */
+	titleFont?: string | null,
+	/**
+	 * 标题颜色
+	 */
+	titleColor?: string | null,
+	/**
+	 * 背景颜色
+	 */
+	bgColor?: string | null,
+	/**
+	 * 圆角大小
+	 */
+	borderRadius?: string | null,
+	/**
+	 * 内容
+	 */
+	content?: string | null,
+	/**
+	 * 内容对齐方式
+	 */
+	contentAlign?: string | null,
+	/**
+	 * 内容字体大小
+	 */
+	contentSize?: string | null,
+	/**
+	 * 内容颜色
+	 */
+	contentColor?: string | null,
+	/**
+	 * 内容字体
+	 */
+	contentFont?: string | null,
+	/**
+	 * 按钮类型	
+	 * 
+	 * - 分为 embed（嵌入式）和 float（浮动式）
+	 */
+	buttonType?: 'embed' | 'float' | null,
+	/**
+	 * 按钮边框样式
+	 */
+	buttonBorder?: string | null,
+	/**
+	 * 确定按钮文本
+	 */
+	confirmText?: string | null,
+	/**
+	 * 确定按钮文本颜色
+	 */
+	confirmTextColor?: string | null,
+	/**
+	 * 确定按钮文本大小
+	 */
+	confirmTextSize?: string | null,
+	/**
+	 * 是否显示取消按钮
+	 */
+	showCancel?: boolean | null,
+	/**
+	 * 是否显示确定按钮
+	 */
+	showConfirm?: boolean | null,
+	/**
+	 * 取消按钮文本
+	 */
+	cancelText?: string | null,
+	/**
+	 * 取消按钮文本颜色
+	 */
+	cancelTextColor?: string | null,
+	/**
+	 * 取消按钮文本大小
+	 */
+	cancelTextSize?: string | null,
+	/**
+	 * 弹出位置
+	 */
+	position?: string | null,
+	/**
+	 * 动画时长（单位：ms）
+	 */
+	aniTime?: string | null,
+	/**
+	 * 点击蒙层是否关闭
+	 */
+	maskClose?: boolean | null,
+	/**
+	 * 是否禁用
+	 */
+	disabled?: boolean | null,
+	/**
+	 * 是否阻止返回事件
+	 */
+	preventBack?: boolean | null,
+	/**
+	 * 遮罩层透明度
+	 */
+	maskOpacity?: number | null,
+	/**
+	 * 自定义模态框样式
+	 */
+	customStyle?: UTSJSONObject | null,
+	/**
+	 * 成功回调。
+	 * 
+	 */
+	success ?: ((confirm: boolean, cancel: boolean) => void) | null,
+	/**
+	 * 失败回调
+	 * 
+	 * - error (SnError) 错误信息
+	 */
+	fail ?: ((error : SnError) => void) | null,
+	/**
+	 * 完成回调
+	 * 
+	 * - res (any) 成功或失败回调的参数
+	 */
+	complete ?: ((res: any | null) => void) | null
+}

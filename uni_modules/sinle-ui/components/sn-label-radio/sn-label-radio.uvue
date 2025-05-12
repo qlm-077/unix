@@ -1,0 +1,192 @@
+<template>
+	<view class="sn-label-radio"
+	:style="[customStyle]">
+		<sn-menu-item v-for="(e,index) in data"
+		:icon="icon"
+		:padding="itemPadding"
+		:key="index"
+		:iconPosition="iconPosition"
+		:text="e.text"
+		:textColor="model==index?activeTextColorC:textColorC"
+		:textSize="textSizeC"
+		:iconColor="model==index?iconColorC:colors.transparent"
+		:disabledIconColor="model==index?disabledIconColor:colors.transparent"
+		:disabledTextColor="disabledTextColor"
+		:disabledBgColor="disabledItemBgColor"
+		:iconSize="iconSizeC"
+		:bgColor="itemBgColorC"
+		:disabled="disabled||(e.disabled??false)"
+		:activeBgColor="activeItemBgColorC"
+		@click="changeIndex(index)"
+		:style="[customItemStyle]">
+		</sn-menu-item>
+	</view>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-label-radio
+	 * @tutorial https://sinleui.pages.dev/components/sn-label-radio
+	 * @description  Label Radio 标签单选
+	 *
+	 *- 与 Radio 不同的是， 该组件只需提供数据
+	 *
+	 *- 用于创建一组单选按钮，以标签形式展示。
+	 * @property {Number} vModel    Number | 当前选中值
+	 * @property {Array<SnDataItem[]>} data    Array<SnDataItem[]> | 选项数据数组
+	 * @property {Boolean} disabled    Boolean | 是否禁用所有选项
+	 * @property {String} itemBgColor    String | 选项背景颜色
+	 * @property {String} disabledItemBgColor    String | 禁用选项的背景颜色
+	 * @property {String} disabledTextColor    String | 禁用选项文字颜色
+	 * @property {String} disabledIconColor    String | 禁用选项图标颜色
+	 * @property {String} itemPadding    String | 选项内边距
+	 * @property {String} activeItemBgColor    String | 激活时选项的背景颜色
+	 * @property {String} icon    String | 选项图标
+	 * @property {String} iconPosition=[left|right]    String | 图标位置
+	 * @value left
+	 * @value right
+	 * @property {String} iconColor    String | 图标颜色
+	 * @property {String} iconSize    String | 图标大小
+	 * @property {String} textColor    String | 选项文本颜色
+	 * @property {String} activeTextColor    String | 选中时选项文本颜色
+	 * @property {String} textSize    String | 选项文本大小
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义样式对象
+	 * @property {UTSJSONObject} customItemStyle    UTSJSONObject | 自定义每个选项的样式对象
+	 * @event {Function} change   (value:number)=>void | 选项改变时触发
+	 */
+
+	// 依赖
+	import { $snui, SnDataItem, useFormatProp } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-label-radio'
+	})
+	
+	// SinleUI 配置
+	const snu = $snui.utils;
+	const colors = $snui.colors
+	
+	// 事件注册
+	const emit = defineEmits(['change'])
+	
+	const model = defineModel({
+		type: Number,
+		default: 0,
+	})
+	
+	watch(model, (value : number) => {
+		emit('change', value)
+	})
+	
+	// 组件属性
+	const props = defineProps({
+		data: {
+			type: Array as PropType<SnDataItem[]>,
+			default: [] as SnDataItem[]
+		},
+		disabled: {
+			type: Boolean,
+			default: false,
+		},
+		itemBgColor: {
+			type: String,
+			default: '',
+		},
+		disabledItemBgColor: {
+			type: String,
+			default: '',
+		},
+		disabledTextColor: {
+			type: String,
+			default: '',
+		},
+		disabledIconColor: {
+			type: String,
+			default: '',
+		},
+		itemPadding: {
+			type: String,
+			default: '12px 20px',
+		},
+		activeItemBgColor: {
+			type: String,
+			default: '',
+		},
+		icon: {
+			type: String,
+			default: 'check-line',
+		},
+		iconPosition: {
+			type: String,
+			default: 'left',
+		},
+		iconColor: {
+			type: String,
+			default: '',
+		},
+		iconSize: {
+			type: String,
+			default: '',
+		},
+		textColor: {
+			type: String,
+			default: '',
+		},
+		activeTextColor: {
+			type: String,
+			default: '',
+		},
+		textSize: {
+			type: String,
+			default: '',
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customItemStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+	})
+	
+	// 计算属性
+	const iconColorC = computed((): string => {
+		return useFormatProp('color',props.iconColor, colors.value.primary)
+	})
+	
+	const iconSizeC = computed((): string => {
+		return useFormatProp('font',props.iconSize, $snui.configs.font.size(4))
+	})
+	
+	const textSizeC = computed((): string => {
+		return useFormatProp('font',props.textSize,$snui.configs.font.size(2))
+	})
+	
+	const itemBgColorC = computed((): string => {
+		return useFormatProp('color',props.itemBgColor, colors.value.front)
+	})
+	
+	const activeItemBgColorC = computed((): string => {
+		return useFormatProp('color',props.activeItemBgColor, colors.value.info)
+	})
+	
+	const textColorC = computed((): string => {
+		return useFormatProp('color',props.textColor, colors.value.text)
+	})
+	
+	const activeTextColorC = computed((): string => {
+		return useFormatProp('color',props.activeTextColor, colors.value.primary)
+	})
+	
+	// 方法
+	function changeIndex(index: number) {
+		if (props.disabled || (props.data[index].disabled??false)) return
+		model.value = index
+	}
+		
+</script>
+
+<style>
+		
+</style>

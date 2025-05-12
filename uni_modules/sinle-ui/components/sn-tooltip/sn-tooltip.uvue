@@ -1,0 +1,231 @@
+<template>
+	<view class="sn-tooltip-contain" ref="containEle" :style="[customStyle]">
+		<view class="sn-tooltip-trigger"
+		@click="onClick"
+		:style="[customTriggerStyle]">
+			<slot name="trigger"></slot>
+		</view>
+		<view class="sn-tooltip"
+		 ref="tooltipEle" 
+		:style="[tooltipStylesC, customTooltipStyle]">
+			<slot></slot>
+		</view>
+	</view>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-tooltip
+	 * @tutorial https://sinleui.pages.dev/components/sn-tooltip
+	 * @description  Tooltip 提示框
+	 *
+	 *- 也许当你想要动态介绍某个按钮的用途时会用到它
+	 *
+	 *- 可自定义宽度、高度、背景颜色等。
+	 * @property {String} width    String | 提示框宽度
+	 * @property {String} height    String | 提示框高度
+	 * @property {String} borderRadius    String | 提示框圆角大小
+	 * @property {String} position=[top-start|top|top-end|bottom-start|bottom|bottom-end|left-start|left|left-end|right-start|right|right-end]    String | 提示框位置
+	 * @value top-start 上方靠左
+	 * @value top 正上
+	 * @value top-end 上方靠右
+	 * @value bottom-start 下方靠右
+	 * @value bottom 正下
+	 * @value bottom-end 下方靠左
+	 * @value left-start 左侧靠上
+	 * @value left 正左
+	 * @value left-end 左侧靠下
+	 * @value right-start 右侧靠上
+	 * @value right 正右
+	 * @value right-end 右侧靠下
+	 * @property {String} padding    String | 提示框内边距
+	 * @property {String} bgColor    String | 提示框背景颜色
+	 * @property {String} boxShadow    String | 提示框阴影
+	 * @property {Object} customStyle    Object | 自定义提示框容器样式
+	 * @property {Object} customTooltipStyle    Object | 自定义提示框样式
+	 * @property {Object} customTriggerStyle    Object | 自定义触发器样式
+	 */
+
+	// 依赖
+	import { $snui, useFormatProp } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-tooltip'
+	})
+
+	// SinleUI 配置
+	const snu = $snui.utils;
+	const colors = $snui.colors
+	const instance = getCurrentInstance()!
+
+	// 组件属性
+	const props = defineProps({
+		width: {
+			type: String,
+			default: ''
+		},
+		height: {
+			type: String,
+			default: ''
+		},
+		borderRadius: {
+			type: String,
+			default: '12px'
+		},
+		position: {
+			type: String,
+			default: "top-start"
+		},
+		padding: {
+			type: String,
+			default: "10px 10px"
+		},
+		bgColor: {
+			type: String,
+			default: ""
+		},
+		boxShadow: {
+			type: String,
+			default: ""
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customTooltipStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customTriggerStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+	})
+
+	// 基本变量
+	const tooltipNode = ref({})
+	const triggerNode = ref({})
+	const containEle = ref(null as UniElement | null)
+	const tooltipEle = ref(null as UniElement | null)
+	const show = ref(false)
+	
+	
+	// 计算属性
+	
+	
+	const bgColorC = computed((): string => {
+		return useFormatProp('color', props.bgColor, colors.value.info)
+	})
+	
+	const boxShadowC = computed((): string => {
+		return useFormatProp('other', props.boxShadow, `0px 2px 10px 0px ${colors.value.infoDark}`)
+	})
+	
+	const widthC = computed((): string => {
+	  return props.width
+	})
+	
+	const heightC = computed((): string => {
+	  return props.height
+	})
+
+	const showCustomWidth = computed(() : boolean => {
+		return !snu.isEmpty(props.width)
+	})
+
+	const showCustomHeight = computed(() : boolean => {
+		return !snu.isEmpty(props.height)
+	})
+
+	const positionStyle = computed(() : string => {
+		let styles = {}
+		
+		const format = (n:number):number=>Math.max(0, n)
+		if (triggerNode.value['height'] != null && triggerNode.value['width'] != null) {
+			let triggerHeight = triggerNode.value['height'] as number
+			let triggerWidth = triggerNode.value['width'] as number
+			let tooltipHeight = tooltipNode.value['height'] as number
+			let tooltipWidth = tooltipNode.value['width'] as number
+			
+			let values = {
+				'bottom-top-start': -format(triggerWidth - tooltipWidth),
+				'bottom-top': format((triggerWidth - tooltipWidth) / 10),
+				'bottom-top-end': format(triggerWidth - tooltipWidth),
+				'left-x': -format(triggerWidth - tooltipWidth) - tooltipWidth,
+				'right-x': format(triggerWidth - tooltipWidth) + tooltipWidth
+			}
+			
+			styles['top-start'] = `translateX(${values['bottom-top-start'] as number}px) translateY(${-tooltipHeight-5}px)`
+			styles['top'] = `translateX(${values['bottom-top'] as number}px) translateY(${-tooltipHeight-5}px)`
+			styles['top-end'] = `translateX(${values['bottom-top-end'] as number}px) translateY(${-tooltipHeight-5}px)`
+			styles['bottom-start'] = `translateX(${values['bottom-top-start']}px) translateY(${triggerHeight+5}px)`
+			styles['bottom'] = `translateX(${values['bottom-top']}px) translateY(${triggerHeight+5}px)`
+			styles['bottom-end'] = `translateX(${values['bottom-top-end']}px) translateY(${triggerHeight+5}px)`
+			styles['left-start'] = `translateX(${values['left-x'] as number}px) translateY(${-tooltipHeight-5}px)`
+			styles['left'] = `translateX(${values['left-x']}px)  translateY(${(triggerHeight-tooltipHeight)/2}px)`
+			styles['left-end'] = `translateX(${values['left-x']}px) translateY(${triggerHeight}px)`
+			styles['right-start'] = `translateX(${values['right-x'] as number}px) translateY(${-tooltipHeight-5}px)`
+			styles['right'] = `translateX(${values['right-x']}px) translateY(${(triggerHeight-tooltipHeight)/2}px)`
+			styles['right-end'] = `translateX(${values['right-x']}px) translateY(${triggerHeight}px)`
+		}
+		return (styles[props.position] != null ? styles[props.position] : styles['top-start'] ?? '') as string
+	})
+	
+	const tooltipStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('width', widthC.value)
+		styles.set('height', heightC.value)
+		styles.set('background', bgColorC.value)
+		styles.set('border-radius', props.borderRadius)
+		styles.set('padding', props.padding)
+		styles.set('box-shadow', boxShadowC.value)
+		styles.set('zIndex', $snui.configs.zIndex.float)
+		styles.set('transform', `scale(${show.value?1:'0.000001'}) ${positionStyle.value}`)
+		styles.set('transition-duration',$snui.configs.aniTime.normal)
+		return styles
+	})
+
+	// 方法
+	function init(){
+		setTimeout(()=>{
+			uni.createSelectorQuery().in(instance!.proxy!).select('.sn-tooltip').boundingClientRect().exec((res)=>{
+				let obj = res[0] as NodeInfo
+				tooltipNode.value = { width: obj.width, height: obj.height, top: obj.top, left: obj.left, right: obj.right, bottom: obj.bottom }
+			})
+		}, 100)
+		nextTick(() => {
+		   let children = snu.reArray(containEle.value!.children as any[]) as UniElement[]
+		   children.forEach((e:UniElement)=>{
+			   let classList = snu.reArray(e.classList as any[]) as string[]
+			   if (classList.includes('sn-tooltip-trigger')){
+				   let obj2 = e.getBoundingClientRect()
+				   triggerNode.value = { width: obj2.width, height: obj2.height, top: obj2.top, left: obj2.left, right: obj2.right, bottom: obj2.bottom }
+			   }
+		   })
+		})
+	}
+	
+	function onClick() {
+		show.value = !show.value
+		if (show.value) {
+			init()
+		}
+	}
+
+	onMounted(() => {
+		init()
+	})
+</script>
+
+<style lang="scss">
+	.sn-tooltip-contain {
+		overflow: visible;
+		justify-content: center;
+		flex-direction: row;
+
+		.sn-tooltip {
+			position: absolute;
+			transition-property: transform;
+		}
+	}
+</style>

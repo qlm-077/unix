@@ -1,0 +1,7 @@
+// 系统主题监听函数
+import { themeListener } from './theme/listener.uts'
+
+// 初始化函数 在这里执行 SinleUI 框架载入后的初始化操作
+export function init(){
+	themeListener()
+}

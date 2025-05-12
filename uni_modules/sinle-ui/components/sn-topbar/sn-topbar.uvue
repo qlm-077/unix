@@ -1,0 +1,466 @@
+<template>
+	<view class="sn-topbar"
+	v-if="!blur"
+	:class="fixed==true?'sn-topbar-fixed':''" :style="[topbarStylesC,customStyle]">
+		<slot name="header">
+			<sn-button v-if="backButton" 
+			round 
+			:roundSize="buttonSize"
+			:bgColor="buttonBgColorC" 
+			:activeBgColor="buttonBgColorC" 
+			@click="back"
+			:style="[customButtonStyle]">
+				<sn-icon :name="backButtonIcon" 
+				:style="[customButtonIconStyle]"></sn-icon>
+			</sn-button>
+		</slot>
+		<slot>
+			<sn-text v-if="showTitleC"
+			overflow="ellipsis" 
+			:lines="1"
+			:text="title" 
+			:color="titleColorC" 
+			:align="titleAlign" 
+			:font="titleFont" 
+			:size="titleSizeC" 
+			:style="['flex: 1;margin: 0px 10px',customTitleStyle]"></sn-text>
+		</slot>
+		<slot name="footer">
+			<sn-row align="center">
+				<sn-button v-for="(e, index) in (features as SnDataItem[])" 
+				round
+				:key="index" 
+				:roundSize="buttonSize" 
+				:bgColor="buttonBgColorC" 
+				:activeBgColor="buttonBgColorC" 
+				@click="buttonClick(e)" 
+				:style="[customButtonStyle]">
+					<sn-icon :name="e.icon ?? ''"></sn-icon>
+				</sn-button>
+				<sn-button v-if="menuButton" 
+				round 
+				:roundSize="buttonSize"
+				:activeBgColor="buttonBgColorC" 
+				:bgColor="buttonBgColorC"
+				@click="buttonClick(menuDataItem)"
+				:style="[customButtonStyle]">
+					<sn-icon name="more-fill"></sn-icon>
+				</sn-button>
+			</sn-row>
+		</slot>
+	</view>
+	<sn-e-blurview class="sn-topbar"
+	v-else
+	:class="fixed==true?'sn-topbar-fixed':''" :style="[topbarStylesC,customStyle]">
+		<slot name="header">
+			<sn-button v-if="backButton" 
+			round 
+			:roundSize="buttonSize"
+			:bgColor="buttonBgColorC" 
+			:activeBgColor="buttonBgColorC" 
+			@click="back"
+			:style="[customButtonStyle]">
+				<sn-icon name="arrow-left-s-line" 
+				:style="[customButtonIconStyle]"></sn-icon>
+			</sn-button>
+		</slot>
+		<slot>
+			<sn-text v-if="showTitleC"
+			overflow="ellipsis" 
+			:lines="1"
+			:text="title" 
+			:color="titleColorC" 
+			:align="titleAlign" 
+			:font="titleFont" 
+			:size="titleSizeC" 
+			:style="['flex: 1;margin: 0px 10px',customTitleStyle]"></sn-text>
+		</slot>
+		<slot name="footer">
+			<sn-row align="center">
+				<sn-button v-for="(e, index) in (features as SnDataItem[])" 
+				round
+				:key="index" 
+				:roundSize="buttonSize" 
+				:bgColor="buttonBgColorC" 
+				:activeBgColor="buttonBgColorC" 
+				@click="buttonClick(e)" 
+				:style="[customButtonStyle]">
+					<sn-icon :name="e.icon ?? ''"></sn-icon>
+				</sn-button>
+				<sn-button v-if="menuButton" 
+				round 
+				:roundSize="buttonSize"
+				:activeBgColor="buttonBgColorC" 
+				:bgColor="buttonBgColorC"
+				@click="buttonClick(menuDataItem)"
+				:style="[customButtonStyle]">
+					<sn-icon name="more-fill"></sn-icon>
+				</sn-button>
+			</sn-row>
+		</slot>
+	</sn-e-blurview>
+	<sn-overlay ref="overlayEle"
+	:opacity="opacityC"
+	:maskClose="false"
+	@touchstart="onTouch()"
+	@mousedown="onTouch()">
+		<slot name="menu">
+			<view class="sn-topbar-menu"
+			:class="{'sn-topbar-menu-show':showMenu}"
+			@touchstart.stop 
+			@mousedown.stop 
+			:style="[menuStylesC,customMenuStyle]">
+				<sn-menu-item v-for="(e, index) in (menuData as SnDataItem[])" 
+				:key="index" 
+				:bgColor="menuBgColorC"
+				:activeBgColor="activeMenuBgColorC"
+				:icon="e.icon ?? ''"
+				:text="e.text ?? ''" 
+				@click="menuClick(e)"></sn-menu-item>
+			</view>
+		</slot>
+	</sn-overlay>
+	<view v-if="fixed" 
+	class="fixed-placeholder" 
+	:style="{height: heightC}"></view>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-topbar
+	 * @tutorial https://sinleui.pages.dev/components/sn-topbar
+	 * @description  Topbar 导航栏
+	 *
+	 *- 用于页面顶部导航，包含标题、返回按钮和功能按钮。
+	 *
+	 *- 可固定在顶部，自定义样式。
+	 * @property {String} height    String | 导航栏高度
+	 * @property {String} title    String | 标题文本
+	 * @property {String} titleColor    String | 标题颜色
+	 * @property {String} titleFont    String | 标题字体系列
+	 * @property {String} titleSize    String | 标题字体大小
+	 * @property {String} bgColor    String | 背景颜色
+	 * @property {String} menuBgColor    String | 菜单背景颜色
+	 * @property {String} menuBorderRadius    String | 菜单圆角大小
+	 * @property {String} activeMenuBgColor    String | 激活菜单项背景颜色
+	 * @property {Boolean} fixed    Boolean | 是否固定在顶部
+	 * @property {String} boxShadow    String | 导航栏阴影
+	 * @property {String} border    String | 导航栏边框
+	 * @property {String} borderRadius    String | 导航栏圆角大小
+	 * @property {Boolean} backButton    Boolean | 是否显示返回按钮
+	 * @property {String} backButtonIcon    String | 返回按钮图标
+	 * @property {Boolean} menuButton    Boolean | 是否显示菜单按钮
+	 * @property {String} buttonSize    String | 按钮大小
+	 * @property {String} buttonBgColor    String | 按钮背景颜色
+	 * @property {String} titleAlign=[left|center|right]    String | 标题对齐方式
+	 * @value left 左对齐
+	 * @value center 居中对齐
+	 * @value right 右对齐
+	 * @property {Array<[SnDataItem](https://sinleui.pages.dev/api/types/components#sndataitem)>} features    Array<[SnDataItem](https://sinleui.pages.dev/api/types/components#sndataitem)> | 功能按钮数据
+	 * @property {Array<[SnDataItem](https://sinleui.pages.dev/api/types/components#sndataitem)>} menuData    Array<[SnDataItem](https://sinleui.pages.dev/api/types/components#sndataitem)> | 菜单数据
+	 * @property {Object} customTitleStyle    Object | 自定义标题样式
+	 * @property {Object} customButtonStyle    Object | 自定义按钮样式
+	 * @property {Object} customButtonIconStyle    Object | 自定义按钮图标样式
+	 * @property {Object} customMenuStyle    Object | 自定义菜单样式
+	 * @property {Object} customStyle    Object | 自定义样式
+	 * @event {Function} buttonClick   (item:SnDataItem)=>void | 按钮点击事件
+	 * @event {Function} menuClick   (item:SnDataItem)=>void | 菜单点击事件
+	 */
+
+	// 依赖
+	import { $snui, SnDataItem, useFormatProp, SnError } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-topbar'
+	})
+	
+	// SinleUI 配置
+	const colors = $snui.colors
+	const snu = $snui.utils
+	// 事件注册
+	const emit = defineEmits(['button-click', 'menu-click'])
+
+	// 组件属性
+	const props = defineProps({
+		height: {
+			type: String,
+			default: ""
+		},
+		title: {
+			type: String,
+			default: ""
+		},
+		titleColor: {
+			type: String,
+			default: ''
+		},
+		titleFont: {
+			type: String,
+			default: 'alipuhuiheavy'
+		},
+		titleSize: {
+			type: String,
+			default: ''
+		},
+		blur: {
+			type: Boolean,
+			default: false,
+		},
+		bgColor: {
+			type: String,
+			default: ''
+		},
+		menuBgColor: {
+			type: String,
+			default: ''
+		},
+		activeMenuBgColor: {
+			type: String,
+			default: ''
+		},
+		fixed: {
+			type: Boolean,
+			default: true
+		},
+		boxShadow: {
+			type: String,
+			default: ""
+		},
+		border: {
+			type: String,
+			default: ""
+		},
+		borderRadius: {
+			type: String,
+			default: ""
+		},
+		backButton: {
+			type: Boolean,
+			default: true
+		},
+		backButtonIcon: {
+			type: String,
+			default: 'arrow-left-s-line'
+		},
+		menuButton: {
+			type: Boolean,
+			default: false
+		},
+		menuBorderRadius: {
+			type: String,
+			default: ""
+		},
+		buttonSize: {
+			type: String,
+			default: "35px"
+		},
+		buttonBgColor: {
+			type: String,
+			default: ''
+		},
+		titleAlign: {
+			type: String,
+			default: "left"
+		},
+		features: {
+			type: Array as PropType<SnDataItem[]>,
+			default: [] as SnDataItem[],
+			validator: (value : SnDataItem[]) : boolean => {
+				for (let i = 0; i < value.length; i++) {
+					let e = value[i]
+
+					if (e.id == 'menu' || e.icon == null) {
+						throw new SnError('components', 'snTopbar', 9010013)
+					}
+				}
+				return true
+			}
+		},
+		menuData: {
+			type: Array as PropType<SnDataItem[]>,
+			default: [] as SnDataItem[]
+		},
+		customTitleStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customButtonStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customButtonIconStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customMenuStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+	})
+
+	// 基本变量
+	const overlayEle = ref(null as SnOverlayComponentPublicInstance | null)
+	const showMenu = ref(false)
+	const id = ref(snu.randomComId())
+	const menuDataItem = {
+		id:'menu',
+		text:'',
+		icon:'more-fill'
+	} as SnDataItem
+	
+	//计算属性
+	const theme = computed(() : string => $snui.configs.app.theme)
+	
+	const showTitleC = computed(() : boolean => {
+		return !snu.isEmpty(props.title)
+	})
+	
+	const opacityC = computed(():number=>{
+		return $snui.configs.app.theme == 'light' ? 0.15 : 0.5
+	})
+	
+	const titleColorC = computed(():string=>{
+		return useFormatProp('color', props.titleColor, colors.value.title)
+	})
+	
+	const heightC = computed(():string=>{
+		return useFormatProp('other', props.height, $snui.configs.page.topbarHeight)
+	})
+	
+	const titleSizeC = computed((): string => {
+		return useFormatProp('font', props.titleSize, $snui.configs.font.size(4))
+	})
+	
+	const bgColorC = computed((): string => {
+		let color = useFormatProp('color', props.bgColor, colors.value.page)
+		if (props.blur) {
+			let blurcolor = $snui.libs.color.tinyColor(color).setAlpha(0.8).toRgbString()
+			return blurcolor
+		}
+		return color
+	})
+	
+	const menuBgColorC = computed((): string => {
+		return useFormatProp('color', props.menuBgColor, colors.value[`${theme.value == 'light'?'front':'info'}`] as string)
+	})
+	
+	const menuBorderRadiusC = computed((): string => {
+		return useFormatProp('radius', props.menuBorderRadius, $snui.configs.radius.normal)
+	})
+	
+	const activeMenuBgColorC = computed((): string => {
+		return useFormatProp('color', props.activeMenuBgColor, colors.value[`${theme.value == 'light'?'info':'infoLight'}`] as string)
+	})
+	
+	const buttonBgColorC = computed((): string => {
+		let color = $snui.configs.app.theme == 'light' ? 255 : 0
+		return useFormatProp('color', props.buttonBgColor, `rgba(${color},${color},${color},0)`)
+	})
+	
+	const topbarStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('height', heightC.value)
+		styles.set('box-shadow', props.boxShadow)
+		styles.set('border-radius', props.borderRadius)
+		styles.set('border', props.border)
+		styles.set('backgroundColor', bgColorC.value)
+		styles.set('zIndex', $snui.configs.zIndex.navTabBar)
+		styles.set('transition-duration',$snui.configs.aniTime.normal)
+		// @ts-ignore
+		styles.set('flex-direction', 'row')
+		// @ts-ignore
+		styles.set('align-items', 'center')
+		return styles
+	})
+	
+	const menuStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('top', heightC.value)
+		styles.set('border-radius', menuBorderRadiusC.value)
+		styles.set('background', menuBgColorC.value)
+		styles.set('zIndex', $snui.configs.zIndex.popup)
+		styles.set('transition-duration',$snui.configs.aniTime.normal)
+		return styles
+	})
+
+	// 方法
+	function setShowMenu(status : boolean) {
+		if (status) {
+			overlayEle.value?.open?.()
+			snu.throttle(()=>{
+				showMenu.value = true
+			}, 20, id.value)
+		} else {
+			showMenu.value = false
+			overlayEle.value?.close?.()
+		}
+	}
+	
+	function onTouch(){
+		if (showMenu.value) {
+			setShowMenu(false)
+		}
+	}
+
+	function menuClick(item: SnDataItem) {
+		emit('menu-click', item)
+		setShowMenu(false)
+	}
+	function buttonClick(item: SnDataItem) {
+		if (item.id == 'menu') {
+			setShowMenu(true)
+		}
+		emit('button-click', item)
+	}
+
+	function back() {
+		uni.navigateBack()
+	}
+</script>
+
+<style lang="scss">
+	.sn-topbar {
+		width: 100%;
+		display: flex;
+		// #ifndef WEB
+		padding: var(--status-bar-height) 10px 10px 20px;
+		// #endif
+		// #ifdef WEB
+		padding: 30px 10px 10px 20px;
+		// #endif
+		&-fixed {
+			position: fixed;
+			top: 0;
+			left: 0;
+			right: 0;
+		}
+	}
+
+	.sn-topbar-menu {
+		position: fixed;
+		display: flex;
+		flex-direction: column;
+		align-content: stretch;
+		min-width: 150px;
+		min-height: 20px;
+		margin: 10px;
+		overflow: hidden;
+		right: 5px;
+		opacity: 0;
+		transform: translate(50px, -100px) scale(0.5);
+
+		&-show {
+			transform: translate(0px, -20px) scale(1);
+			opacity: 1;
+		}
+	}
+
+	.fixed-placeholder {
+		width: 100%;
+		background-color: transparent;
+	}
+</style>

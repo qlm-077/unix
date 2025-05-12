@@ -1,0 +1,344 @@
+<template>
+	<!-- #ifdef WEB -->
+	<view class="sn-float-button"
+	ref="buttonEle"
+	:class="{'disabled': disabled}"
+	@click="onclick"
+	@touchmove="ontouchmove"
+	@touchend="ontouchend"
+	@touchcancel="ontouchend"
+	@mousedown="onmousedown"
+	:style="[buttonStylesC, customStyle]">
+		<slot>
+			<sn-icon :name="icon"
+			:color="disabled ? colors.disabledText : iconColorC"
+			:size="iconSizeC"></sn-icon>
+		</slot>
+	</view>
+	<!-- #endif -->
+	<!-- #ifndef WEB -->
+	<view class="sn-float-button"
+	ref="buttonEle"
+	@click="onclick"
+	@touchmove="ontouchmove"
+	@touchend="ontouchend"
+	@touchcancel="ontouchend"
+	:style="[buttonStylesC, customStyle]">
+		<slot>
+			<sn-icon :name="icon"
+			:color="disabled ? colors.disabledText : iconColorC"
+			:size="iconSizeC"></sn-icon>
+		</slot>
+	</view>
+	<!-- #endif -->
+</template>
+
+<script setup>
+	/**
+	 * @name sn-float-button
+	 * @tutorial https://sinleui.pages.dev/components/sn-float-button
+	 * @description Float Button 浮动按钮
+	 * 
+	 * - 通常用于悬浮按钮的场景。
+	 * 
+	 * - 支持自动吸附、预设八个位置
+	 * @property {Array\<Number\>} vModel    Array\<Number\> | 浮动按钮当前位置
+	 * @property {String} position=[top|right|bottom|left|top-start|top-end|bottom-start|bottom-end]    String | 浮动按钮预设位置
+	 * @property {Boolean} init    Boolean | 是否在初始化时设置浮动按钮至`position`预设位置
+	 * @property {Boolean} absorb    Boolean | 是否松手自动吸附至左右两侧
+	 * @property {String} bgColor    String | 浮动按钮的背景颜色
+	 * @property {String} size    String | 浮动按钮尺寸
+	 * @property {String} borderRadius    String | 浮动按钮圆角大小
+	 * @property {String} boxShadow    String | 浮动按钮阴影
+	 * @property {Number} margin    Number | 浮动按钮处于预设位置时与页面的边距
+	 * @property {String} icon    String | 浮动按钮内部图标
+	 * @property {String} iconColor    String | 浮动按钮内部图标颜色
+	 * @property {String} icon    String | 浮动按钮内部图标字体大小
+	 * @property {Number} aniTime    String | 浮动按钮吸附动画时长
+	 * @property {Boolean} disabled    Boolean | 是否禁止拖动
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义浮动按钮样式
+	 * @event {Function} change   ()=>void | 浮动按钮位置发生变化时触发
+	 * @event {Function} click   ()=>void | 浮动按钮被点击时触发
+	 */
+	
+	// 依赖
+	import { $snui, useResize, useFormatProp } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-float-button'
+	})
+	
+	// SinleUI 配置
+	const snu = $snui.utils;
+	const colors = $snui.colors
+	
+	// 事件注册
+	const emit = defineEmits(['update:modelValue','change','click'])
+	
+	// 组件属性
+	const props = defineProps({
+		modelValue: {
+			type: Array as PropType<number[]>,
+			default: [0,0]
+		},
+		position: {
+			type: String,
+			default: 'bottom-end'
+		},
+		init: {
+			type: Boolean,
+			default: true
+		},
+		absorb: {
+			type: Boolean,
+			default: true
+		},
+		disabled: {
+			type: Boolean,
+			default: false
+		},
+		bgColor: {
+			type: String,
+			default: ''
+		},
+		size: {
+			type: String,
+			default: '60px'
+		},
+		icon: {
+			type: String,
+			default: ''
+		},
+		iconColor: {
+			type: String,
+			default: ''
+		},
+		iconSize: {
+			type: String,
+			default: ''
+		},
+		margin: {
+			type: Number,
+			default: 20
+		},
+		borderRadius: {
+			type: String,
+			default: ''
+		},
+		boxShadow: {
+			type: String,
+			default: '0 0 15px -10px'
+		},
+		aniTime: {
+			type: String,
+			default: $snui.configs.aniTime.long
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject as UTSJSONObject
+		}
+	})
+	
+	// 基本变量
+	const buttonEle = ref(null as UniElement | null)
+	const animating = ref(false)
+	const position = ref([0,0] as number[])
+	const windowHeight = ref(0)
+	const windowWidth = ref(0)
+	// #ifdef WEB
+	const mousedown = ref(false)
+	// #endif
+	
+	// 计算属性
+	const model = computed<number[]>({
+		get: () : number[] => props.modelValue,
+		set: (value :number[] ) => {
+			emit('update:modelValue', value)
+			emit('change', value)
+			position.value = value as number[]
+		}
+	} as WritableComputedOptions<number[]>)
+	
+	const positionC = computed(():string=>{
+		const positions = ['top-start', 'top', 'top-end', 'right', 'bottom-end', 'bottom', 'bottom-start','left']
+		return positions.includes(props.position) ? props.position : 'bottom-end'
+	})
+	
+	const sizeNC = computed(():number=>{
+		return snu.getPx(props.size)
+	})
+	
+	const bgColorC = computed((): string => {
+		return useFormatProp('color', props.bgColor, colors.value.front)
+	})
+	
+	const iconColorC = computed((): string => {
+		return useFormatProp('color', props.iconColor, colors.value.text)
+	})
+	
+	const iconSizeC = computed((): string => {
+		return useFormatProp('font', props.iconSize, $snui.configs.font.size(6))
+	})
+	
+	const borderRadiusC = computed((): string => {
+		return useFormatProp('radius', props.borderRadius, $snui.configs.radius.circle)
+	})
+	
+	const aniTimeC = computed(() : string => {
+		return useFormatProp('aniTime', props.aniTime, $snui.configs.aniTime.long)
+	})
+
+	
+	const buttonStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('background', props.disabled?colors.value.disabled:bgColorC.value)
+		styles.set('box-shadow', props.boxShadow)
+		styles.set('border-radius', borderRadiusC.value)
+		styles.set('width', props.size)
+		styles.set('height', props.size)
+		styles.set('z-index', $snui.configs.zIndex.float)
+		styles.set('transform', `translate(${position.value[0]}px,${position.value[1]}px)`)
+		styles.set('transition-duration',`${animating.value ? parseInt(aniTimeC.value) : 0}ms`)
+		return styles
+	})
+	
+	// 方法
+	function init(){
+		let info = uni.getWindowInfo()
+		let margin = props.margin as number
+		windowHeight.value = info.windowHeight
+		windowWidth.value = info.windowWidth
+		let bottomY = windowHeight.value-sizeNC.value-margin
+		let rightX = windowWidth.value-sizeNC.value-margin
+		let centerY = (windowHeight.value-sizeNC.value)/2
+		let centerX = (windowWidth.value-sizeNC.value)/2
+		if (props.init) {
+			switch (positionC.value){
+				case 'top-start':
+					model.value = [margin,margin]
+					break;
+				case 'top':
+					model.value = [centerX,margin]
+					break;
+				case 'top-end':
+					model.value = [rightX,margin]
+					break;
+				case 'right':
+					model.value = [rightX,centerY]
+					break;
+				case 'bottom-end':
+					model.value = [rightX,bottomY]
+					break;
+				case 'bottom':
+					model.value = [centerX,bottomY]
+					break;
+				case 'bottom-start':
+					model.value = [margin,bottomY]
+					break;
+				case 'left':
+					model.value = [margin,centerY]
+					break;
+			}
+		}
+		nextTick(()=>{
+			animating.value = true
+		})
+	}
+	
+	function onclick(e: UniPointerEvent){
+		if (props.disabled) return
+		emit('click', e)
+	}
+	
+	function onmove(x: number, y: number){
+		animating.value = false
+		model.value = [Math.min(Math.max(x-sizeNC.value/2, 0), windowWidth.value-sizeNC.value), Math.min(Math.max(y-sizeNC.value/2, 0), windowHeight.value-sizeNC.value)]
+	}
+	
+	function ontouchmove(e: UniTouchEvent){
+		if (props.disabled) return
+		let touch = e.touches[0]
+		e.preventDefault()
+		e.stopPropagation();
+		onmove(touch.clientX, touch.clientY)
+	}
+	
+	function ontouchend(){
+		if (props.disabled) return
+		let margin = props.margin as number
+		animating.value = true
+		if (props.absorb) {
+			if (position.value[0] + sizeNC.value / 2 < windowWidth.value / 2) {
+				position.value[0] = margin
+			} else {
+				position.value[0] = windowWidth.value-sizeNC.value-margin
+			}
+			
+		}
+	}
+	// #ifdef WEB
+	function onmousedown(){
+		if (props.disabled) return
+		mousedown.value = true
+	}
+	
+	
+	function onmouseup(){
+		if (props.disabled) return
+		mousedown.value = false
+		ontouchend()
+	}
+	
+	function onmousemove(e: UniMouseEvent){
+		if (props.disabled) return
+		e.preventDefault();
+		e.stopPropagation();
+		if (mousedown.value) {
+			onmove(e.clientX, e.clientY)
+		}
+	}
+	// #endif
+	
+	watch(():string=>props.position,()=>{
+		init()
+	})
+	
+	watch(():boolean=>props.init,()=>{
+		init()
+	})
+	
+	watch(():number[]=>props.modelValue,(v:number[])=>{
+		position.value = v
+	})
+	
+	onMounted(()=>{
+		// #ifdef WEB
+		window.addEventListener('mouseup', onmouseup);
+		window.addEventListener('mousemove', onmousemove);
+		// #endif
+		init()
+		useResize(buttonEle.value, ()=>{
+			init()
+		})
+	})
+</script>
+
+<style lang="scss">
+	.sn-float-button {
+		position: absolute;
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		// #ifdef WEB
+		cursor: grab;
+		// #endif
+		top: 0;
+		left: 0;
+	}
+	
+	.disabled {
+		// #ifdef WEB
+		cursor: not-allowed;
+		// #endif
+	}
+</style>

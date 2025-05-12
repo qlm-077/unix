@@ -1,0 +1,165 @@
+<template>
+	<view class="sn-loadmore">
+		<sn-line :text="statusC=='loadmore'?loadmoreTextC:nomoreTextC" 
+		:textSize="textSizeC"
+		:height="lineHeight" 
+		:lineColor="lineColorC" 
+		:dashed="dashed" 
+		:textColor="textColorC"
+		@click="loadmore">
+			<sn-loading v-if="statusC=='loading'"
+			:text="loadingTextC" 
+			:textSize="textSizeC"
+			:iconColor="iconColorC"
+			:iconSize="iconSizeC" 
+			:textColor="textColorC"></sn-loading>
+		</sn-line>
+	</view>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-loadmore
+	 * @tutorial https://sinleui.pages.dev/components/sn-loadmore
+	 * @description  Loadmore 加载更多
+	 *
+	 *- 一般用于标识页面底部加载数据时的状态
+	 * @property {String} status=[loadmore|loading|nomore]    String | 加载状态
+	 * @value loadmore  加载更多
+	 * @value loading  加载中
+	 * @value nomore  没有更多
+	 * @property {String} loadmoreText    String | 加载更多文本
+	 * @property {String} nomoreText    String | 没有更多文本
+	 * @property {String} loadingText    String | 加载中文本
+	 * @property {String} textSize    String | 文本大小
+	 * @property {String} iconSize    String | 图标大小
+	 * @property {String} iconColor    String | 图标颜色
+	 * @property {String} textColor    String | 文本颜色
+	 * @property {String} lineColor    String | 线条颜色
+	 * @property {String} lineHeight    String | 线条高度
+	 * @property {Boolean} disabled    Boolean | 是否禁用加载更多功能
+	 * @property {Boolean} dashed    Boolean | 线条是否为虚线
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义加载更多样式
+	 */
+
+	// 依赖
+	import { $snui, useFormatProp } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-loadmore'
+	})
+	
+	// SinleUI 配置
+	const colors = $snui.colors
+	
+	// 事件注册
+	const emit = defineEmits(['loadmore'])
+	
+	// 组件属性
+	const props = defineProps({
+		status: {
+			type: String,
+			default: 'loadmore'
+		},
+		loadmoreText: {
+			type: String,
+			default: ''
+		},
+		nomoreText: {
+			type: String,
+			default: ''
+		},
+		loadingText: {
+			type: String,
+			default: ''
+		},
+		textSize: {
+			type: String,
+			default: ''
+		},
+		iconSize: {
+			type: String,
+			default: ''
+		},
+		iconColor: {
+			type: String,
+			default: ''
+		},
+		textColor: {
+			type: String,
+			default: ''
+		},
+		lineColor: {
+			type: String,
+			default: ''
+		},
+		lineHeight: {
+			type: String,
+			default: '0.5px'
+		},
+		disabled: {
+			type: Boolean,
+			default: false
+		},
+		dashed: {
+			type: Boolean,
+			default: false
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+	})
+	
+	// 计算属性
+	const textSizeC = computed((): string => {
+		return useFormatProp('font', props.textSize, `${$snui.utils.getPx($snui.configs.font.size(2)) + 1}`)
+	})
+	
+	const iconSizeC = computed((): string => {
+		return useFormatProp('font', props.iconSize, textSizeC.value)
+	})
+	
+	const iconColorC = computed((): string => {
+		return useFormatProp('color', props.iconColor, colors.value.lineText)
+	})
+	
+	const textColorC = computed((): string => {
+		return useFormatProp('color', props.textColor, colors.value.lineText)
+	})
+	
+	const lineColorC = computed((): string => {
+		return useFormatProp('color', props.lineColor, colors.value.line)
+	})
+	
+	const statusC = computed((): string => {
+		const statuses = ['loadmore', 'loading', 'nomore']
+	  return statuses.includes(props.status) ? props.status : 'loadmore'
+	})
+	
+	const loadmoreTextC = computed((): string => {
+		return useFormatProp('other', props.loadmoreText, '加载更多')
+	})
+	
+	const nomoreTextC = computed((): string => {
+		return useFormatProp('other', props.nomoreText, '没有更多了')
+	})
+	
+	const loadingTextC = computed((): string => {
+		return useFormatProp('other', props.loadingText, '加载中')
+	})
+	
+	// 方法
+	function loadmore() {
+		if (props.status == 'loadmore' && !props.disabled) {
+			emit('loadmore')
+		}
+	}
+</script>
+
+<style lang="scss">
+	.sn-loadmore {
+		width: 100%;
+	
+	}
+</style>

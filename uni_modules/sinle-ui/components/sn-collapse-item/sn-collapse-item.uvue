@@ -1,0 +1,265 @@
+<template>
+	<view class="sn-collapse-item"
+	ref="itemEle"
+	:class="{'disabled': disabled}"
+	@click="onClick"
+	:style="[itemStylesC ,customStyle]">
+		<view class="sn-collapse-item-all-wrap"
+		:style="[allWrapStylesC]">
+		<slot name="header">
+		<view class="sn-collapse-item-header">
+			<sn-icon class="sn-collapse-item-prefix"
+			:name="icon"
+			:size="titleSize"
+			:color="disabled?colors.disabledText:(opened?activeTitleColor:titleColor)"
+			:customStyle="customTitleStyle"
+			:style="[prefixStylesC]"></sn-icon>
+			<sn-text :text="title"
+			:lines="1"
+			:size="titleSize"
+			:color="disabled?colors.disabledText:(opened?activeTitleColor:titleColor)"
+			:customStyle="customTitleStyle"
+			:style="[titleStylesC]"></sn-text>
+			<sn-text :text="note"
+			:lines="1"
+			:size="noteSize"
+			:color="disabled?colors.disabledText:(opened?activeTitleColor:noteColor)"
+			:customStyle="customNoteStyle"
+			:style="[noteStylesC]"></sn-text>
+			<sn-icon class="sn-collapse-item-icon-suffix"
+			name="arrow-right-s-line"
+			:size="titleSize"
+			:color="disabled?colors.disabledText:(opened?activeTitleColor:noteColor)"
+			:customStyle="customTitleStyle"
+			:style="[suffixStylesC]"></sn-icon>
+		</view>
+		</slot>
+		<view class="sn-collapse-item-wrap"
+		@click.stop
+		:style="[wrapStylesC ,customHolderStyle]">
+			<view class="sn-collapse-item-holder"
+			ref="holderEle"
+			@click.stop
+			:style="[customHolderStyle]">
+				<slot></slot>
+			</view>
+		</view>
+		</view>
+		<sn-line v-if="showBorder"
+		style="margin: 0 10px;width: auto;"></sn-line>
+	</view>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-collapse-item
+	 * @tutorial https://sinleui.pages.dev/components/sn-collapse
+	 * @description Collapse 折叠面板
+	 * 
+	 * - 通过折叠面板收纳内容区域。
+	 * @property {String} title    String | 折叠面板子项标题
+	 * @property {String} note    String | 折叠面板子项说明文本
+	 * @property {String} icon    String | 折叠面板子项图标
+	 * @property {Boolean} open    Boolean | 初始状态是否展开
+	 * @property {Boolean} disabled    Boolean | 是否禁用
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义折叠面板子项样式
+	 */
+	
+	// 依赖
+	import { $snui } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-collapse-item'
+	})
+	
+	// SinleUI 配置
+	const colors = $snui.colors
+	const snu = $snui.utils
+	const instance = getCurrentInstance()!
+	
+	// 组件属性
+	const props = defineProps({
+		title: {
+			type: String,
+			default: ''
+		},
+		note: {
+			type: String,
+			default: '',
+		},
+		icon: {
+			type: String,
+			default: ''
+		},
+		open: {
+			type: Boolean,
+			default: false
+		},
+		disabled: {
+			type: Boolean,
+			default: false
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+	})
+	
+	// 继承属性
+	const aniTime= inject('aniTime', ref($snui.configs.aniTime.normal))
+	const bgColor = inject('bgColor', ref(colors.value.front))
+	const titleSize = inject('titleSize', ref($snui.configs.font.size(3)))
+	const titleColor = inject('titleColor', ref(colors.value.title))
+	const noteColor = inject('noteColor', ref(colors.value.lineText))
+	const noteSize = inject('noteSize', ref($snui.configs.font.size(2)))
+	const activeTitleColor = inject('activeTitleColor', ref(colors.value.primary))
+	const customTitleStyle = inject('customTitleStyle', ref({}))
+	const customHolderStyle = inject('customHolderStyle',ref({}))
+	const customNoteStyle = inject('customNoteStyle',ref({}))
+	// 基本变量
+	const id = snu.randomComId()
+	const opened = ref(false)
+	const itemEle = ref(null as UniElement | null)
+	const showBorder = ref(false)
+	const holderEle = ref(null as UniElement | null)
+	const height = ref(0)
+	const index = ref(0)
+	
+	// 计算属性
+	const group = computed(() : ComponentPublicInstance => {
+		return instance.proxy!.$parent as ComponentPublicInstance
+	})
+	
+	const itemStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('transitionProperty', `background-color, border`)
+		styles.set('background', props.disabled ? colors.value.disabled : bgColor.value) 
+		styles.set('transition-duration',aniTime.value)
+		// #ifdef APP
+		styles.set('padding', '0px 10px')
+		// #endif
+		return styles
+	})
+
+	const titleStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('padding', '0 10px')
+		styles.set('flex', '1')
+		styles.set('transition-duration',aniTime.value)
+		return styles
+	})
+	
+	const prefixStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('padding', '15px 0')
+		styles.set('transition-duration',aniTime.value)
+		return styles
+	})
+	
+	const suffixStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('padding', '15px 0')
+		styles.set('transform', `rotate(${opened.value?90:0}deg)`)
+		styles.set('transition-duration',aniTime.value)
+		return styles
+	})
+	
+	const wrapStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('height', opened.value? `${height.value}px` : '0px')
+		styles.set('transition-duration',aniTime.value)
+		return styles
+	})
+	
+	const allWrapStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('padding', '0 10px')
+		return styles
+	})
+	
+	const noteStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('padding-right', '5px')
+		return styles
+	})
+	
+	// 方法
+	function onClick() {
+		let open = opened.value
+		if (!props.disabled){
+			group.value?.$callMethod('closeAll')
+			opened.value = !open
+		}
+	}
+		
+	function close() {
+		opened.value = false
+	}
+	
+	function setOrder(_index: number, _showBorder:boolean) {
+		showBorder.value = _showBorder
+		index.value = _index
+	}
+	
+	function init(){
+		nextTick(()=>{
+			height.value = holderEle.value!.getBoundingClientRect()!.height
+		})
+	}
+	
+	
+	// 暴露方法
+	defineExpose({
+		close,
+		setOrder
+	})
+	
+	// 生命周期
+	onMounted(()=>{
+		opened.value = props.open
+		group.value?.$callMethod('register', instance.proxy!)
+		init()
+	})
+	
+	onUpdated(()=>{
+		init()
+	})
+</script>
+
+<style lang="scss">
+	.sn-collapse-item {
+		// #ifdef WEB
+		cursor: pointer;
+		// #endif
+		
+		&-all-wrap {
+			flex: 1;
+		}
+		
+		&-header {
+			flex-direction: row;
+			align-items: center;
+			
+			.sn-collapse-item-prefix {
+				margin-right: 5px;
+			}
+			
+			.sn-collapse-item-suffix {
+				margin-left: 5px;
+			}
+		}
+		
+		&-wrap {
+			transition-property: background-color, height;
+			.sn-collapse-item-holder {
+				padding: 5px 0;
+			}
+		}
+	}
+	
+	.disabled {
+		// #ifdef WEB
+		cursor: not-allowed;
+		// #endif
+	}
+</style>

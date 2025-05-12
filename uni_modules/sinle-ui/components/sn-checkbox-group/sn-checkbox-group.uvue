@@ -1,0 +1,438 @@
+<template>
+	<view class="sn-checkbox-group" 
+	ref="groupEle"
+	:class="groupClassesC"
+	:style="[customStyle]">
+		<slot></slot>
+	</view>
+
+</template>
+
+<script setup>
+	/**
+	 * @name sn-checkbox-group
+	 * @tutorial https://sinleui.pages.dev/components/sn-checkbox
+	 * @description Checkbox  复选
+	 * 
+	 * - 分为三个组件：`sn-checkbox-group` , `sn-chekbox` , `sn-checkbox-tag`。
+	 * 
+	 * - 每一个选项（`sn-checkbox`或`sn-checkbox-tag`）必须是`sn-checkbox-group`的子代。
+	 * @property {Array<Number>} vModel    Array<Number> | 当前选中项的索引数组
+	 * @property {Boolean} vertical    Boolean | 是否纵向排列
+	 * @property {String} boxSize    String | box复选组件左侧方框边长
+	 * @property {String} boxBorderRadius    String | box复选组件左侧方框的圆角大小
+	 * @property {String} boxBorderWidth    String | box复选组件左侧方框的边框宽度
+	 * @property {String} boxTextSize    String | box复选组件右侧文本大小
+	 * @property {String} boxTextColor    String | box复选组件右侧文本颜色
+	 * @property {String} disabledBoxTextColor    String | 禁用状态下box复选组件右侧文本颜色
+	 * @property {String} boxIcon    String | box复选组件左侧方框内的图标
+	 * @property {String} boxIconSize    String | box复选组件左侧方框内的图标大小
+	 * @property {String} boxIconColor    String | box复选组件左侧方框内的图标颜色
+	 * @property {String} disabledBoxIconColor    String | 禁用状态下box复选组件左侧方框内的图标颜色
+	 * @property {String} boxBorderColor    String | box复选组件左侧方框的边框颜色
+	 * @property {String} disabledBoxBorderColor    String | 禁用状态下box复选组件左侧方框的边框颜色
+	 * @property {String} boxActiveBorderColor    String | box复选组件选中时左侧方框的边框颜色
+	 * @property {String} disabledBoxActiveBorderColor    String | 禁用状态下box复选组件选中时左侧方框的边框颜色
+	 * @property {String} boxBgColor    String | box复选组件左侧方框的背景颜色
+	 * @property {String} disabledBoxBgColor    String | 禁用状态下box复选组件左侧方框的背景颜色
+	 * @property {String} boxActiveBgColor    String | box复选组件选中时左侧方框的背景颜色
+	 * @property {String} disabledBoxActiveBgColor    String | box复选组件选中时左侧方框的背景颜色
+	 * @property {String} tagType=[info|primary|success|error|warning]    String | tag复选组件的主题类型（下列自定义颜色默认为空，主题默认颜色与自定义颜色冲突时，以自定义颜色为主）
+	 * @value info 信息
+	 * @value primary 主要
+	 * @value success 成功
+	 * @value error 错误
+	 * @value warning 警告
+	 * @property {String} taglevel=[first|second|third|least]    String | tag复选组件的等级（下列自定义颜色默认为空，主题默认颜色与自定义颜色冲突时，以自定义颜色为主）
+	 * @value first 第一等级
+	 * @value second 第二等级
+	 * @value third 第三等级
+	 * @value least 最小等级
+	 * @property {String} tagBgColor    String | tag复选组件未选中时背景颜色
+	 * @property {String} disabledTagBgColor    String | 禁用状态下tag复选组件未选中时背景颜色
+	 * @property {String} tagActiveBgColor    String | tag复选组件选中时背景颜色
+	 * @property {String} disabledTagActiveBgColor    String | 禁用状态下tag复选组件选中时背景颜色
+	 * @property {String} tagTextColor    String | tag复选组件未选中时内部文本颜色
+	 * @property {String} disabledTagTextColor    String | 禁用状态下tag复选组件未选中时内部文本颜色
+	 * @property {String} tagActiveTextColor    String | tag复选组件选中时内部文本颜色
+	 * @property {String} disabledTagActiveTextColor    String | 禁用状态下tag复选组件选中时内部文本颜色
+	 * @property {String} tagTextSize    String | tag复选组件内部文本大小
+	 * @property {String} tagBorderRadius    String | tag复选组件圆角大小
+	 * @property {String} tagPadding=[]    String | tag复选组件内边距
+	 * @property {UTSJSONObject} customBoxContainStyle    UTSJSONObject | 自定义box复选组件容器样式
+	 * @property {UTSJSONObject} customBoxStyle    UTSJSONObject | 自定义box复选组件左侧方框样式
+	 * @property {UTSJSONObject} customBoxIconStyle    UTSJSONObject | 自定义box复选组件左侧方框内部图标样式
+	 * @property {UTSJSONObject} customTagStyle    UTSJSONObject | 自定义tag复选组件样式
+	 * @property {UTSJSONObject} customTextStyle    UTSJSONObject | 自定义复选组件文本样式
+	 * @event {Function} change   (value:number[])=>void | 当前选中项变化时触发
+	 */
+	// 依赖
+	import { $snui, useFormatProp } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-checkbox-group'
+	})
+	
+	// SinleUI 配置
+	const colors = $snui.colors
+	const snu = $snui.utils
+	
+	// 事件注册
+	const emit = defineEmits(['change', 'update:modelValue'])
+
+	// 组件属性
+	const props = defineProps({
+		modelValue: {
+			type: Array,
+			default: [] as number[]
+		},
+		vertical: {
+			type: Boolean,
+			default: false
+		},
+		boxSize: {
+			type: String,
+			default: ''
+		},
+		boxBorderRadius: {
+			type: String,
+			default: ''
+		},
+		boxBorderWidth: {
+			type: String,
+			default: '2px'
+		},
+		boxTextSize: {
+			type: String,
+			default: ''
+		},
+		boxTextColor: {
+			type: String,
+			default: ''
+		},
+		disabledBoxTextColor: {
+			type: String,
+			default: ''
+		},
+		boxIcon: {
+			type: String,
+			default: 'check-fill'
+		},
+		boxIconSize: {
+			type: String,
+			default: ''
+		},
+		boxIconColor: {
+			type: String,
+			default: '#fff'
+		},
+		disabledBoxIconColor: {
+			type: String,
+			default: '#fff'
+		},
+		boxBorderColor: {
+			type: String,
+			default: ''
+		},
+		disabledBoxBorderColor: {
+			type: String,
+			default: ''
+		},
+		boxActiveBorderColor: {
+			type: String,
+			default: ''
+		},
+		disabledBoxActiveBorderColor: {
+			type: String,
+			default: ''
+		},
+		boxBgColor: {
+			type: String,
+			default: ''
+		},
+		disabledBoxBgColor: {
+			type: String,
+			default: ''
+		},
+		boxActiveBgColor: {
+			type: String,
+			default: ''
+		},
+		disabledBoxActiveBgColor: {
+			type: String,
+			default: ''
+		},
+		tagType: {
+			type: String,
+			default: 'primary'
+		},
+		tagLevel: {
+			type: String,
+			default: 'second'
+		},
+		tagTextColor: {
+			type: String,
+			default: ''
+		},
+		disabledTagTextColor: {
+			type: String,
+			default: ''
+		},
+		tagActiveTextColor: {
+			type: String,
+			default: ''
+		},
+		disabledTagActiveTextColor: {
+			type: String,
+			default: ''
+		},
+		tagTextSize: {
+			type: String,
+			default: ''
+		},
+		tagBorderRadius: {
+			type: String,
+			default: '10px'
+		},
+		tagPadding: {
+			type: String,
+			default: "6px 10px"
+		},
+		tagBgColor: {
+			type: String,
+			default: ''
+		},
+		disabledTagBgColor: {
+			type: String,
+			default: ''
+		},
+		tagActiveBgColor: {
+			type: String,
+			default: ''
+		},
+		disabledTagActiveBgColor: {
+			type: String,
+			default: ''
+		},
+		customBoxContainStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customBoxStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customBoxIconStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customTagStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customTextStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+	})
+	
+	// 基本变量
+	const groupEle = ref(null as UniElement | null)
+	const childrenList = ref([] as ComponentPublicInstance[])
+	
+	// 计算属性
+	const boxTextColorC = computed((): string => {
+		return useFormatProp('color', props.boxTextColor, colors.value.text)
+	})
+	
+	const disabledBoxTextColorC = computed((): string => {
+	  return useFormatProp('color', props.disabledBoxTextColor, colors.value.disabledText)
+	})
+	
+	const boxBorderColorC = computed((): string => {
+	  return useFormatProp('color', props.boxBorderColor, colors.value.line)
+	})
+	
+	const disabledBoxBorderColorC = computed((): string => {
+	  return useFormatProp('color', props.disabledBoxBorderColor, colors.value.disabled)
+	})
+	
+	const boxActiveBorderColorC = computed((): string => {
+		return useFormatProp('color', props.boxActiveBorderColor, colors.value.primary)
+	})
+	
+	const disabledBoxActiveBorderColorC = computed((): string => {
+		return useFormatProp('color', props.disabledBoxActiveBorderColor, colors.value.disabledText)
+	})
+	
+	const boxBgColorC = computed((): string => {
+		return useFormatProp('color', props.boxBgColor, colors.value.transparent)
+	})
+	
+	const disabledBoxBgColorC = computed((): string => {
+		return useFormatProp('color', props.disabledBoxBgColor, colors.value.disabled)
+	})
+	
+	const boxActiveBgColorC = computed((): string => {
+		return useFormatProp('color', props.boxActiveBgColor, colors.value.primary)
+	})
+	
+	const disabledBoxActiveBgColorC = computed((): string => {
+		return useFormatProp('color', props.disabledBoxActiveBgColor, colors.value.disabledText)
+	})
+	
+	const boxBorderRadiusC = computed((): string => {
+		return useFormatProp('radius', props.boxBorderRadius, $snui.configs.radius.xsmall)
+	})
+	
+	const boxSizeC = computed((): string => {
+		return useFormatProp('font', props.boxSize, `${snu.getPx($snui.configs.font.size(3)) + 6}px`)
+	})
+	
+	const boxTextSizeC = computed((): string => {
+		return useFormatProp('font', props.boxTextSize, $snui.configs.font.size(3))
+	})
+	
+	const boxIconSizeC = computed((): string => {
+		return useFormatProp('font', props.boxIconSize, $snui.configs.font.size(3))
+	})
+	
+	const tagTextSizeC = computed((): string => {
+		return useFormatProp('font', props.tagTextSize, $snui.configs.font.size(2))
+	})
+	
+	const groupClassesC = computed((): Map<string, any>=>{
+		let classes = new Map<string, any>()
+		classes.set('sn-checkbox-group-vertical', props.vertical)
+		classes.set('sn-checkbox-group-horizontal', !props.vertical)
+		return classes
+	})
+	
+	const boxBorderWidthC = computed((): string => props.boxBorderWidth)	
+	const boxIconC = computed((): string => props.boxIcon)
+	const boxIconColorC = computed((): string => props.boxIconColor)
+	const disabledBoxIconColorC = computed((): string => props.disabledBoxIconColor)
+	const tagTypeC = computed((): string => props.tagType)
+	const tagLevelC = computed((): string => props.tagLevel)
+	const tagTextColorC = computed((): string => props.tagTextColor)
+	const disabledTagTextColorC = computed((): string => props.disabledTagTextColor)
+	const tagActiveTextColorC = computed((): string => props.tagActiveTextColor)
+	const disabledTagActiveTextColorC = computed((): string => props.disabledTagActiveTextColor)
+	const tagBorderRadiusC = computed((): string => props.tagBorderRadius)
+	const tagPaddingC = computed((): string => props.tagPadding)
+	const tagBgColorC = computed((): string => props.tagBgColor)
+	const disabledTagBgColorC = computed((): string => props.disabledTagBgColor)
+	const tagActiveBgColorC = computed((): string => props.tagActiveBgColor)
+	const disabledTagActiveBgColorC = computed((): string => props.disabledTagActiveBgColor)
+	const customBoxContainStyleC = computed((): UTSJSONObject => props.customBoxContainStyle)
+	const customBoxStyleC = computed((): UTSJSONObject => props.customBoxStyle)
+	const customTagStyleC = computed((): UTSJSONObject => props.customTagStyle)
+	const customTextStyleC = computed((): UTSJSONObject => props.customTextStyle)
+	const customBoxIconStyleC = computed((): UTSJSONObject => props.customBoxIconStyle)
+	
+	provide('boxSize', boxSizeC)
+	provide('boxBorderRadius', boxBorderRadiusC)
+	provide('boxBorderWidth', boxBorderWidthC)
+	provide('boxTextSize', boxTextSizeC)
+	provide('boxTextColor', boxTextColorC)
+	provide('disabledBoxTextColor', disabledBoxTextColorC)
+	provide('boxIcon', boxIconC)
+	provide('boxIconSize', boxIconSizeC)
+	provide('boxIconColor', boxIconColorC)
+	provide('disabledBoxIconColor', disabledBoxIconColorC)
+	provide('boxBorderColor', boxBorderColorC)
+	provide('disabledBoxBorderColor', disabledBoxBorderColorC)
+	provide('boxActiveBorderColor', boxActiveBorderColorC)
+	provide('disabledBoxActiveBorderColor', disabledBoxActiveBorderColorC)
+	provide('boxBgColor', boxBgColorC)
+	provide('disabledBoxBgColor', disabledBoxBgColorC)
+	provide('boxActiveBgColor', boxActiveBgColorC)
+	provide('disabledBoxActiveBgColor', disabledBoxActiveBgColorC)
+	provide('tagType', tagTypeC)
+	provide('tagLevel', tagLevelC)
+	provide('tagTextColor', tagTextColorC)
+	provide('disabledTagTextColor', disabledTagTextColorC)
+	provide('tagActiveTextColor', tagActiveTextColorC)
+	provide('disabledTagActiveTextColor', disabledTagActiveTextColorC)
+	provide('tagTextSize', tagTextSizeC)
+	provide('tagBorderRadius', tagBorderRadiusC)
+	provide('tagPadding', tagPaddingC)
+	provide('tagBgColor', tagBgColorC)
+	provide('disabledTagBgColor', disabledTagBgColorC)
+	provide('tagActiveBgColor', tagActiveBgColorC)
+	provide('disabledTagActiveBgColor', disabledTagActiveBgColorC)
+	provide('customBoxContainStyle', customBoxContainStyleC)
+	provide('customTextStyle', customTextStyleC)
+	provide('customBoxStyle', customBoxStyleC)
+	provide('customTagStyle', customTagStyleC)
+	provide('customBoxIconStyle', customBoxIconStyleC)
+	
+
+	// 计算属性
+	const model = computed<number[]>({
+		get: () : number[] => props.modelValue as number[],
+		set: (value : number[]) => {
+			emit('update:modelValue', value)
+			emit('change', value)
+		}
+	} as WritableComputedOptions<number[]>)
+	
+
+	// 方法
+	function register(ele : ComponentPublicInstance) {
+		childrenList.value.push(ele)
+	}
+
+	function setNodesValue() {
+		childrenList.value.forEach((child : ComponentPublicInstance, index : number) => {
+			child.$callMethod('updateValue', model.value.includes(index))
+		})
+	}
+
+	function syncData(ele : ComponentPublicInstance, value : boolean) {
+		let index = childrenList.value.indexOf(ele)
+		let tmpModel = model.value
+		if (tmpModel.includes(index) && !value) {
+			tmpModel.splice(tmpModel.indexOf(index), 1)
+		} else if (!tmpModel.includes(index) && value) {
+			tmpModel.push(index)
+			tmpModel = snu.quickSort(tmpModel)
+		}
+		model.value = tmpModel
+	}
+
+	defineExpose({
+		register,
+		syncData
+	})
+	
+	// 监听model值变化以动态更新子组件状态
+	watch(props.modelValue,()=>{
+		setNodesValue()
+	})
+	
+	onMounted(()=>{
+		nextTick(() => {
+			setNodesValue()
+		})
+	})
+</script>
+
+<style lang="scss">
+	.sn-checkbox-group {
+		display: flex;
+		flex-wrap: wrap;
+
+		&-horizontal {
+			flex-direction: row;
+		}
+
+		&-vertical {
+			flex-direction: column;
+		}
+	}
+</style>

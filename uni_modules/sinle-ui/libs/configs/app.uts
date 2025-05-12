@@ -1,0 +1,51 @@
+import { colorsLight, colorsDark } from '../theme/theme.uts'
+import { _colors } from './index.uts'
+import { utils } from './index.uts'
+import { setGrayMode } from '../private/index.uts'
+
+const themes = ['light', 'dark']
+const theme = ref('light')
+const autoTheme = ref(true)
+const grayMode = ref(false)
+
+function getTheme(t : string) : string {
+	return themes.includes(t) ? t : 'light'
+}
+
+export class AppConfig {
+	get theme() : string {
+		return theme.value
+	}
+
+	set theme(t : string) {
+		theme.value = getTheme(t)
+		// #ifndef WEB
+		uni.setAppTheme({
+			theme: theme.value
+		})
+		// #endif
+		_colors.value = theme.value == 'light' ? colorsLight.value : colorsDark.value
+		autoTheme.value = false
+	}
+
+	get autoTheme() : boolean {
+		return autoTheme.value
+	}
+
+	set autoTheme(value : boolean) {
+		autoTheme.value = value
+		if (autoTheme.value) {
+			this.theme = utils.getOsTheme()
+			autoTheme.value = true
+		}
+	}
+	
+	get grayMode() : boolean {
+		return grayMode.value
+	}
+	
+	set grayMode(value : boolean) {
+		setGrayMode(value)
+		grayMode.value = value
+	}
+}

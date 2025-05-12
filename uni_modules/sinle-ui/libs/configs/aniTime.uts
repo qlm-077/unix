@@ -1,0 +1,46 @@
+const baseTime = ref('100ms')
+const short = ref('100ms')
+const normal = ref('200ms')
+const long = ref('300ms')
+const xlong = ref('400ms')
+
+export class AniTimeConfig {
+
+	set baseTime(ms : string) {
+		let v = Math.max(parseInt(ms), 0)
+		short.value = `${v}ms`
+		normal.value = `${v * 2}ms`
+		long.value = `${v * 3}ms`
+		xlong.value = `${v * 4}ms`
+		baseTime.value = `${v}ms`
+	}
+
+	get baseTime() : string {
+		return baseTime.value
+	}
+	
+	get short() : string {
+		return short.value
+	}
+	set short(_){
+		
+	}
+	
+	get normal() : string {
+		return normal.value
+	}
+	set normal(_){
+	}
+	
+	get long() : string {
+		return long.value
+	}
+	set long(_){
+	}
+	
+	get xlong() : string {
+		return xlong.value
+	}
+	set xlong(_){
+	}
+}

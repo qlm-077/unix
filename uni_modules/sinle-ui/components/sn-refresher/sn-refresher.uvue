@@ -1,0 +1,137 @@
+<template>
+	<view class="sn-refresher"
+	@click="refresh">
+		<sn-loading v-show="statusC=='refreshing'"
+		:iconColor="iconColorC"
+		:iconSize="iconSizeC"></sn-loading>
+		<sn-icon v-show="statusC=='refresh'"
+		:name="icon"
+		:color="iconColorC"
+		:size="iconSizeC"></sn-icon>
+		<sn-text :text="statusC=='refresh'?refreshTextC:refreshingTextC"
+		:size="textSizeC"
+		:color="textColorC"
+		style="margin-left: 5px;"></sn-text>
+	</view>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-refresher
+	 * @tutorial https://sinleui.pages.dev/components/sn-refresher
+	 * @description  Refresher 下拉刷新
+	 *
+	 *- 自定义 `scroll-view` 和 `list-view` 下拉刷新样式
+	 * @property {String} status=[refresh|refreshing]    String | 当前状态（刷新或刷新中）
+	 * @value refresh 刷新
+	 * @value refreshing 刷新中
+	 * @property {String} icon    String | 刷新图标名称
+	 * @property {String} refreshText    String | 未刷新状态下的文本提示
+	 * @property {String} refreshingText    String | 正在刷新状态下的文本提示
+	 * @property {String} textSize    String | 文本大小
+	 * @property {String} iconSize    String | 图标大小
+	 * @property {String} iconColor    String | 图标颜色
+	 * @property {String} textColor    String | 文本颜色
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义样式
+	 * @event {Function} refresh   ()=>void | `status`切换为`refresh`时触发
+	 */
+	// 依赖
+	import { $snui, useFormatProp } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-refresher'
+	})
+	
+	// SinleUI 配置
+	const colors = $snui.colors
+	
+	// 事件注册
+	const emit = defineEmits(['refresh'])
+	
+	// 组件属性
+	const props = defineProps({
+		status: {
+			type: String,
+			default: 'refresh'
+		},
+		icon: {
+			type: String,
+			default: 'refresh-line'
+		},
+		refreshText: {
+			type: String,
+			default: ''
+		},
+		refreshingText: {
+			type: String,
+			default: ''
+		},
+		textSize: {
+			type: String,
+			default: ''
+		},
+		iconSize: {
+			type: String,
+			default: ''
+		},
+		iconColor: {
+			type: String,
+			default: ''
+		},
+		textColor: {
+			type: String,
+			default: ''
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+	})
+	
+	// 计算属性
+	const textSizeC = computed((): string => {
+		return useFormatProp('font', props.textSize, `${$snui.utils.getPx($snui.configs.font.size(2)) + 1}`)
+	})
+	
+	const iconSizeC = computed((): string => {
+		return useFormatProp('font', props.iconSize, textSizeC.value)
+	})
+	
+	const iconColorC = computed((): string => {
+		return useFormatProp('color', props.iconColor, colors.value.lineText)
+	})
+	
+	const textColorC = computed((): string => {
+		return useFormatProp('color', props.textColor, colors.value.lineText)
+	})
+	
+	const statusC = computed((): string => {
+		const statuses = ['refresh', 'refreshing']
+	  return statuses.includes(props.status) ? props.status : 'refresh'
+	})
+	
+	const refreshTextC = computed((): string => {
+		return useFormatProp('other', props.refreshText, '松开刷新')
+	})
+	
+	const refreshingTextC = computed((): string => {
+		return useFormatProp('other', props.refreshingText, '刷新中')
+	})
+
+	// 方法
+	function refresh() {
+		if (props.status == 'refresh') {
+			emit('refresh')
+		}
+	}
+</script>
+
+<style lang="scss">
+	.sn-refresher {
+		flex-direction: row;
+		align-items: center;
+		justify-content: center;
+		width: 100%;
+		padding: 10px ;;
+	}
+</style>

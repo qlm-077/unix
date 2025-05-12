@@ -1,0 +1,60 @@
+<template>
+	<sn-page :scroll-on="false" bgColor="#f7f7f7">
+		<sn-tabbar :data="data" ref="tabbar" padding="5px" margin="20px" borderRadius="30px" bgColor="#cae4ff40"
+			:index="tabIndex" @change="switchTabbar">
+			<template #1>
+				<index ref="indexPage" @tabUser="setTabIndex"></index>
+			</template>
+			<template #2>
+				<user ref="userPage"></user>
+			</template>
+		</sn-tabbar>
+	</sn-page>
+</template>
+
+<script setup>
+	import { $snui, SnTabbarItem } from '@/uni_modules/sinle-ui'
+	import { token, getUserInfo, info } from '@/store';
+	import index from './tabPages/index/index.uvue';
+	import user from './tabPages/user/index.uvue'
+	const instance = getCurrentInstance()!.proxy!
+	const data = [
+		{
+			icon: 'home-3-line',
+			text: '首页',
+			activeIcon: 'home-3-fill'
+		}, {
+			icon: 'user-6-line',
+			text: '我的',
+			activeIcon: 'user-6-fill',
+		},
+	] as SnTabbarItem[]
+	const tabbar = ref<SnTabbarComponentPublicInstance | null>(null)
+	let tabIndex = 1
+
+	const setTabIndex = (index : number) => {
+		tabbar.value?.changeToIndex?.(index)
+		tabIndex = index
+	}
+	const switchTabbar = (e : number) => {
+		tabIndex = e
+		const comMethods = ['indexPage', 'userPage'];
+		instance.$nextTick(() => {
+			const pageComponent = instance.$refs[comMethods[e - 1]] as ComponentPublicInstance
+			pageComponent.$callMethod('show')
+		})
+	}
+
+	onPageShow(() => {
+		if (token !== null && typeof token === 'string' && info != null) {
+			getUserInfo(info.value?.id ?? '')
+		}
+	})
+
+	onBackPress((options : OnBackPressOptions) : boolean | null => {
+		console.log(tabIndex);
+		if (tabIndex == 1) return null
+		tabbar.value?.changeToIndex?.(1)
+		return true
+	})
+</script>

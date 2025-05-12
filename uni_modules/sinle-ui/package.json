@@ -1,0 +1,96 @@
+{
+	"id": "sinle-ui",
+	"displayName": "SinleUI - uni-app x UI 框架【如购买请务必点源码授权版】",
+	"version": "1.1.6",
+	"description": "一个简洁、轻巧的现代移动应用UI框架。目前已有70+组件，支持暗黑模式、全局配置等功能，并提供一系列实用 API。已适配 Android 及 Web，由于成本、精力原因，iOS 暂无计划适配 ",
+	"keywords": [
+        "sn",
+        "uniappx",
+        "ui",
+        "snui",
+        "sinle"
+    ],
+	"repository": "https://gitee.com/singmywp/SinleUI-Demo",
+	"engines": {
+		"HBuilderX": "^4.33"
+	},
+	"dcloudext": {
+		"type": "component-vue",
+		"sale": {
+			"regular": {
+				"price": "1.98"
+			},
+			"sourcecode": {
+				"price": "2.00"
+			}
+		},
+		"contact": {
+			"qq": "2444290609"
+		},
+		"declaration": {
+			"ads": "无",
+			"data": "插件不采集任何数据",
+			"permissions": "android.permission.VIBRATE（振动API需要） \n\nandroid.permission.CALL_PHONE（拨号API）\n\nandroid.permission.CAMERA（相机/扫码相关组件需要）\n\nandroid.permission.READ_EXTERNAL_STORAGE（文件选择/上传组件需要） \n\nandroid.permission.READ_MEDIA_IMAGES（图片选择/上传组件需要） \n\nandroid.permission.READ_MEDIA_VIDEO（视频选择/上传组件需要） \n\nandroid.permission.READ_MEDIA_VISUAL_USER_SELECTED（图片选择/上传组件需要） \n\nandroid.permission.FLASHLIGHT（相机/扫码相关组件需要） \n\nandroid.permission.ACCESS_WIFI_STATE（网络状态展示组件需要） \n\nandroid.permission.ACCESS_NETWORK_STATE（网络状态展示组件需要）"
+		},
+		"npmurl": ""
+	},
+	"uni_modules": {
+		"dependencies": [
+			"sn-e-svg",
+			"sn-e-scan-provider",
+			"sn-e-blurview",
+			"sn-native"
+		],
+		"encrypt": [],
+		"platforms": {
+			"cloud": {
+				"tcb": "y",
+				"aliyun": "y",
+				"alipay": "y"
+			},
+			"client": {
+				"Vue": {
+					"vue2": "n",
+					"vue3": "y"
+				},
+				"App": {
+                    "app-android": {
+                        "minVersion": "23"
+                    },
+                    "app-harmony": "u",
+                    "app-nvue": "u",
+                    "app-uvue": "y",
+                    "app-vue": "u"
+                },
+				"H5-mobile": {
+					"Safari": "y",
+					"Android Browser": "y",
+					"微信浏览器(Android)": "y",
+					"QQ浏览器(Android)": "y"
+				},
+				"H5-pc": {
+					"Chrome": "y",
+					"IE": "y",
+					"Edge": "y",
+					"Firefox": "y",
+					"Safari": "y"
+				},
+				"小程序": {
+					"微信": "n",
+					"阿里": "n",
+					"百度": "n",
+					"字节跳动": "n",
+					"QQ": "n",
+					"钉钉": "n",
+					"快手": "n",
+					"飞书": "n",
+					"京东": "n"
+				},
+				"快应用": {
+					"华为": "n",
+					"联盟": "n"
+				}
+			}
+		}
+	}
+}

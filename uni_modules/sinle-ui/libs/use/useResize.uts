@@ -1,0 +1,46 @@
+export function useResize(ele : UniElement | null, callback : () => void) {
+	// #ifdef APP
+	let observer = null as UniResizeObserver | null
+
+	onPageShow(() => {
+		if (ele != null) {
+			if (observer == null) {
+				observer = new UniResizeObserver((entries : UniResizeObserverEntry[]) => {
+					entries.forEach(entry => {
+						if (entry.target == ele) {
+							callback()
+						}
+					})
+				})
+			}
+			observer?.observe(ele)
+		}
+	})
+	
+	onPageHide(() => {
+		if (ele != null) {
+			observer?.unobserve(ele)
+		}
+	})
+	// #endif
+
+	// #ifdef WEB
+	let timer: number | null = 0
+	let handleResizeThrottled = () => {
+		if (timer != null) {
+			clearTimeout(timer);
+			timer = null
+		}
+
+		timer = setTimeout(() => {
+			callback()
+		}, 100);
+	}
+
+	window.addEventListener('resize', handleResizeThrottled);
+	
+	onUnmounted(() => {
+		window.removeEventListener('resize', handleResizeThrottled);
+	})
+	// #endif
+}

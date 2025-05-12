@@ -1,0 +1,18 @@
+
+import { iconConfig } from './config.uts'
+
+/**
+ * 生成icons Map集合
+ * @param name {String} 图标名
+ * @returns 通过输入的图标名获取对应的图标代码
+ */
+export function useIcons(name : string) : string | null {
+	const icons = new Map<string, string>()
+
+	iconConfig.forEach(v => {
+		icons.set(v.name, v.unicode)
+	})
+
+	// 其他图标
+	return icons.get(name)
+}

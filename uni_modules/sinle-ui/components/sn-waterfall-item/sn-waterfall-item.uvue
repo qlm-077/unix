@@ -1,0 +1,211 @@
+<template>
+	<view class="sn-waterfall-item" 
+	ref="itemEle"
+	:style="[itemStylesC, customStyle]">
+		<image v-if="showImg" 
+		mode="widthFix"
+		:src="imgSrc" 
+		:style="[imgStylesC, customImageStyle]"
+		@load="onImageLoad"></image>
+		<slot></slot>
+	</view>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-waterfall-item
+	 * @tutorial https://sinleui.pages.dev/components/sn-waterfall
+	 * @description  Waterfall 瀑布流
+	 * 
+	 * - 用于实现瀑布流布局。
+	 * @property {Number} index    Number | 子项索引（填v-for的索引就可以，不要有重复）
+	 * @property {String} height    String | 子项高度（为空则自动计算）
+	 * @property {String} imgSrc    String | 子项图片路径
+	 * @property {String} bgColor    String | 子项背景颜色
+	 * @property {String} padding    String | 子项内边距
+	 * @property {String} borderRadius    String | 子项圆角大小
+	 * @property {String} imgBorderRadius    String | 子项图片圆角大小
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义样式
+	 * @property {UTSJSONObject} customImageStyle    UTSJSONObject | 自定义图片样式
+	 */
+	
+	import { $snui, SnWaterfallItem, useFormatProp } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-waterfall-item'
+	})
+	
+	
+	// SinleUI 配置
+	const snu = $snui.utils;
+	const colors = $snui.colors
+	const instance = getCurrentInstance()!
+	
+	// 组件属性
+	const props = defineProps({
+		index: {
+			type: Number,
+			default: 0
+		},
+		height: {
+			type: String,
+			default: ''
+		},
+		imgSrc: {
+			type: String,
+			default: ''
+		},
+		bgColor: {
+			type: String,
+			default: ''
+		},
+		padding: {
+			type: String,
+			default: '0px'
+		},
+		borderRadius: {
+			type: String,
+			default: ''
+		},
+		imgBorderRadius: {
+			type: String,
+			default: '0px',
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject as UTSJSONObject
+		},
+		customImageStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject as UTSJSONObject
+		}
+	})
+	
+	// 基本变量
+	const id = snu.randomComId()
+	const itemEle = ref(null as UniElement | null)
+	const left = ref(0)
+	const top = ref(0)
+	const width = ref(0)
+	const height = ref(0)
+	const imgHeight = ref(0)
+	const opacity = ref(0)
+	const row = ref(0)
+	const waterfallWidth = inject('width', ref(0))
+	const col = inject('col', ref(2))
+	const spacing = inject('spacing', ref(10))
+	const itemList = inject('itemList', ref([] as SnWaterfallItem[]))
+	const parent = ref(null as SnWaterfallComponentPublicInstance | null)
+	
+	// 计算属性
+	const showImg = computed(():boolean => {
+		return !snu.isEmpty(props.imgSrc)
+	})
+	
+	const bgColorC = computed(():string => {
+		return useFormatProp('color', props.bgColor, colors.value.front)
+	})
+	
+	const borderRadiusC = computed(():string => {
+		return useFormatProp('radius', props.borderRadius, $snui.configs.radius.normal)
+	})
+	
+	const itemStylesC = computed(():Map<string, any> => {
+		const styles = new Map<string, any>()
+		styles.set('opacity', opacity.value)
+		styles.set('background', bgColorC.value)
+		styles.set('borderRadius', borderRadiusC.value)
+		styles.set('padding', props.padding)
+		styles.set('top', snu.addPx(top.value))
+		styles.set('left', snu.addPx(left.value))
+		styles.set('width', width.value > 0 ? snu.addPx(width.value) : '')
+		styles.set('transition-duration', '100ms')
+		return styles
+	})
+		
+	const imgStylesC = computed(():Map<string, any> => {
+		const styles = new Map<string, any>()
+		styles.set('borderRadius', props.imgBorderRadius)
+		styles.set('width', width.value > 0 ? snu.addPx(width.value) : '')
+		return styles
+	})
+	
+	// 方法
+	function register() {
+		let _top = 0
+		
+		let lastEleRow = Math.floor(props.index / col.value) 
+		let lastEleCol = props.index % col.value
+		let lastEleIndex = col.value * (lastEleRow - 1) + lastEleCol
+		if (itemList.value.length > lastEleIndex&&lastEleIndex >= 0) {
+			let lastEle = itemList.value[lastEleIndex]
+			_top = lastEle.top + lastEle.height + spacing.value
+		}
+		
+		top.value = _top
+		
+		width.value = (waterfallWidth.value - spacing.value * col.value) / col.value
+		
+		let itemCol = props.index % col.value
+		let itemRow = Math.floor(props.index / col.value)
+		row.value = itemRow
+		left.value = (width.value + spacing.value) * itemCol
+		
+		if (!snu.isEmpty(props.height)) {
+			height.value = snu.getPx(props.height)
+		} else {
+			height.value = itemEle.value?.getBoundingClientRect()?.height ?? 0
+		}
+		
+		let item = {
+			id: id,
+			top: top.value,
+			left: left.value,
+			width: width.value,
+			height: height.value,
+			node: instance.proxy! as SnWaterfallItemComponentPublicInstance
+		} as SnWaterfallItem
+		parent.value?.$callMethod('register', item)
+	}
+	
+	function unregister() {
+		parent.value?.$callMethod('unregister', id)
+	}
+	
+	function refresh(){
+		opacity.value = 0
+		register()
+		setTimeout(()=>{
+			register()
+			opacity.value = 1
+		}, 200)
+	}
+	
+	function onImageLoad(e: UniImageLoadEvent) {
+		refresh()
+	}
+	
+	watch(waterfallWidth, ()=>{
+		refresh()
+	})
+	
+	onMounted(()=>{
+		nextTick(()=>{
+			parent.value = snu.findParent(instance.proxy!, ['sn-waterfall']) as SnWaterfallComponentPublicInstance | null
+			refresh()
+		})
+	})
+	
+	onBeforeUnmount(() => {
+		unregister();
+	})
+</script>
+
+
+<style lang="scss">
+	.sn-waterfall-item {
+		opacity: 0;
+		position: absolute;
+		transition-property: opacity, width;
+	}
+</style>

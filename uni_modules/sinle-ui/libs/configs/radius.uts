@@ -1,0 +1,83 @@
+import { utils } from './index.uts'
+
+const circle = ref('12000px')
+const baseSize = ref('12px')
+const normal = ref('12px')
+const small = ref('8px')
+const large = ref('16px')
+const xsmall = ref('6px')
+const xlarge = ref('20px')
+const xxlarge = ref('24px')
+const xxsmall = ref('4px')
+
+function fn(n: number):number{
+	return n > 0 ? n : 0
+}
+
+export class RadiusConfig {
+	
+	get baseSize() : string {
+		return baseSize.value
+	}
+	
+	set baseSize(size : string) {
+		let v = fn(utils.getPx(size))
+		baseSize.value = `${v}px`
+		normal.value = `${v}px`
+		small.value = `${fn(v - 4)}px`
+		large.value = `${fn(v + 4)}px`
+		xsmall.value = `${fn(v - 6)}px`
+		xlarge.value = `${fn(v + 8)}px`
+		xxsmall.value = `${fn(v - 8)}px`
+		xxlarge.value = `${fn(v + 12)}px`
+		circle.value = `${fn(v)*1000}px`
+	}
+	
+	get normal(): string {
+		return normal.value
+	}
+	set normal(_) {
+	}
+	
+	get small(): string {
+		return small.value
+	}
+	set small(_) {
+	}
+	
+	get large(): string {
+		return large.value
+	}
+	set large(_) {
+	}
+	
+	get xlarge(): string {
+		return xlarge.value
+	}
+	set xlarge(_) {
+	}
+	
+	get xxlarge(): string {
+		return xxlarge.value
+	}
+	set xxlarge(_) {
+	}
+	
+	get xsmall(): string {
+		return xsmall.value
+	}
+	set xsmall(_) {
+	}
+	
+	get xxsmall(): string {
+		return xxsmall.value
+	}
+	set xxsmall(_) {
+	}
+	
+	get circle(): string {
+		return circle.value
+	}
+	set circle(_) {
+	}
+}

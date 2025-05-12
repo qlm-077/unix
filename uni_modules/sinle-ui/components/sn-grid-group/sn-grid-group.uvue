@@ -1,0 +1,117 @@
+<template>
+	<view class="sn-grid-group"
+	ref="groupEle"
+	:style="[groupStylesC, customStyle]">
+		<slot></slot>
+	</view>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-grid-group
+	 * @tutorial https://sinleui.pages.dev/components/sn-grid
+	 * @description Grid 宫格布局
+	 * 
+	 * - 一般用于同时展示多个同类项目
+	 * @property {Number} col    Number | 宫格布局列数
+	 * @property {String} align=[left|center|right]    String | 宫格布局子项不完全时的对齐方式
+	 * @property {String} gutter   String | 宫格布局子项的间距
+	 * @value left 左对齐
+	 * @value center 居中对齐
+	 * @value right 右对齐
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义宫格布局样式
+	 */
+	// 依赖
+	import { $snui, useResize, useFormatProp } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-grid-group'
+	})
+	
+	const snu = $snui.utils
+	
+	// 组件属性
+	const props = defineProps({
+		col: {
+			type: Number,
+			default: 4
+		},
+		gutter: {
+			type: String,
+			default: '0px',
+		},
+		align: {
+			type: String,
+			default: 'left'
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+	})
+	
+	const colC = computed(() : number => props.col)
+	provide('col', colC)
+	const gutterC = computed(() : string => {
+		return useFormatProp('other', props.gutter, '0px')
+	})
+	provide('gutter', gutterC)
+	const groupEle = ref(null as UniElement | null)
+	const itemWidth = ref(0)
+	provide('width', itemWidth)
+	
+	// 计算属性
+	const justifyC = computed(() : string => {
+		let align = props.align
+		if (align == 'left' || align == 'start') {
+			return 'flex-start'
+		} else if (align == 'right' || align == 'end') {
+			return 'flex-end'
+		} else if (align == 'around' || align == 'between') {
+			return `space-${align}`
+		}
+	
+		return align
+	})
+	
+	const groupStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('justify-content', justifyC.value)
+		styles.set('transition-duration',$snui.configs.aniTime.normal)
+		return styles
+	})
+	
+	function updateWidth(){
+		if (groupEle.value == null) return
+		itemWidth.value = groupEle.value!.getBoundingClientRect().width / colC.value - snu.getPx(gutterC.value)
+		
+	}
+	
+	onMounted(()=>{
+		nextTick(()=>{
+			if (snu.getPx(gutterC.value) != 0) {
+				updateWidth()
+			}
+		})
+		useResize(groupEle.value, ()=>{
+			if (snu.getPx(gutterC.value) != 0) {
+				updateWidth()
+			}
+		})
+	})
+	
+	onUpdated(()=>{
+		useResize(groupEle.value, ()=>{
+			if (snu.getPx(gutterC.value) != 0) {
+				updateWidth()
+			}
+		})
+	})
+</script>
+
+<style lang="scss">
+	.sn-grid-group {
+		flex-direction: row;
+		flex-wrap: wrap;
+	}
+</style>

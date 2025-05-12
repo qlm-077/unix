@@ -1,0 +1,250 @@
+<template>
+	<view class="sn-progress-contain">
+		<view class="sn-progress"
+		ref="progressEle"
+		:style="[progressStylesC,customStyle]">
+			<view class="sn-progress-active"
+			:style="[activeStylesC,customStyle]">
+				<sn-text class="sn-progress-inside-text"
+				v-if="showValueText&&valueTextPositionC=='inside'"
+				:text="`${model}%`"
+				:lineHeight="height"
+				:color="textColorC"
+				:size="insideTextSizeC"
+				:style="[insideTextStylesC,customTextStyle]"></sn-text>
+			</view>
+		</view>
+		<sn-text class="sn-progress-outside-text"
+		v-if="showValueText&&valueTextPositionC=='outside'"
+		align="right"
+		:text="`${model}%`"
+		:color="textColorC"
+		:size="outsideTextSizeC"
+		:style="[outsideTextStylesC, customTextStyle]"></sn-text>
+	</view>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-progress
+	 * @tutorial https://sinleui.pages.dev/components/sn-progress
+	 * @description  Progress 进度条
+	 *
+	 *- 用于显示一个任务或过程的进度。
+	 *
+	 *- 支持自定义颜色、高度、动画时间等属性。
+	 * @property {Number} vModel    Number | 进度值，范围0~100
+	 * @property {Boolean} showValueText    Boolean | 是否显示进度值文本
+	 * @property {String} valueTextPosition=[inside|outside]    String | 进度值文本位置，可选内部或外部
+	 * @value inside 内部
+	 * @value outside 外部
+	 * @property {String} valueTextSize    String | 进度值文本大小
+	 * @property {String} valueTextWidth    String | 进度值文本宽度
+	 * @property {String} height    String | 进度条高度
+	 * @property {String} bgColor    String | 进度条未激活部分颜色
+	 * @property {String} activeColor    String | 进度条激活部分颜色
+	 * @property {String} textColor    String | 进度值文本颜色
+	 * @property {String} borderRadius    String | 进度条圆角大小
+	 * @property {Number} aniTime    String | 进度条动画时间
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义进度条样式
+	 * @property {UTSJSONObject} customTextStyle    UTSJSONObject | 自定义进度值文本样式
+	 * @property {UTSJSONObject} customActiveStyle    UTSJSONObject | 自定义激活部分样式
+	 * @event {Function} change   (value:number)=>void | 进度变化时触发的事件
+	 */
+
+	// 依赖
+	import { $snui, useResize, useFormatProp } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-progress'
+	})
+	
+	// SinleUI 配置
+	const snu = $snui.utils;
+	const colors = $snui.colors
+	
+	// 事件注册
+	const emit = defineEmits(['update:modelValue', 'change'])
+	
+	// 组件属性
+	const props = defineProps({
+		modelValue: {
+			type: Number,
+			default: 0
+		},
+		showValueText: {
+			type: Boolean,
+			default: false,
+		},
+		valueTextPosition: {
+			type: String,
+			default: 'outside',
+		},
+		valueTextSize: {
+			type: String,
+			default: '',
+		},
+		valueTextWidth: {
+			type: String,
+			default: '40px',
+		},
+		height: {
+			type: String,
+			default: '6px'
+		},
+		bgColor: {
+			type: String,
+			default: ''
+		},
+		activeColor: {
+			type: String,
+			default: ''
+		},
+		textColor: {
+			type: String,
+			default: ''
+		},
+		borderRadius: {
+			type: String,
+			default: ''
+		},
+		aniTime: {
+			type: String,
+			default: $snui.configs.aniTime.normal
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject as UTSJSONObject
+		},
+		customTextStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject as UTSJSONObject
+		},
+		customActiveStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject as UTSJSONObject
+		}
+	})
+	
+	// 基本变量
+	const progressWidth = ref(0)
+	const progressEle = ref(null as UniElement | null)
+	
+	// 计算属性
+	const model = computed<number>({
+		get: () : number => props.modelValue,
+		set: (value : number) => {
+			let v = Math.min(100, Math.max(0, value))
+			emit('update:modelValue', v)
+			emit('change', v)
+		}
+	} as WritableComputedOptions<number>)
+	
+	watch(():number=>props.modelValue, (value: number) => {
+		model.value = value
+	}, {immediate: true})
+	
+	const bgColorC = computed((): string => {
+		return useFormatProp('color', props.bgColor, colors.value.line)
+	})
+	
+	const activeColorC = computed((): string => {
+		return useFormatProp('color', props.activeColor, colors.value.primary)
+	})
+	
+	const valueTextPositionC = computed((): string=>{
+		let positions = ['inside', 'outside']
+		return positions.includes(props.valueTextPosition) ? props.valueTextPosition : 'outside'
+	})
+	
+	const textColorC = computed((): string => {
+		return useFormatProp('color', props.textColor, valueTextPositionC.value == 'inside' ? '#fff': colors.value.text)
+	})
+	
+	const borderRadiusC = computed((): string => {
+		return useFormatProp('radius', props.borderRadius, $snui.configs.radius.circle)
+	})
+	
+	const aniTimeC = computed((): string => {
+		return useFormatProp('aniTime', props.aniTime, $snui.configs.aniTime.normal)
+	})
+	
+	const heightC = computed((): number => {
+		return snu.getPx(props.height)
+	})
+	
+	const insideTextSizeC = computed((): string =>{
+		return useFormatProp('other',props.valueTextSize ,snu.addPx(heightC.value * 0.6))
+	})
+	
+	const outsideTextSizeC = computed((): string =>{
+		return useFormatProp('other',props.valueTextSize , $snui.configs.font.size(2))
+	})
+	
+	const activeLengthC = computed((): number =>{
+		return model.value/100 * progressWidth.value
+	})
+	
+	const progressStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('height', props.height)
+		styles.set('background', bgColorC.value)
+		styles.set('border-radius', borderRadiusC.value)
+		styles.set('transition-duration', $snui.configs.aniTime.normal)
+		return styles
+	})
+	
+	const activeStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('width', snu.addPx(activeLengthC.value))
+		styles.set('height', props.height)
+		styles.set('border-radius', borderRadiusC.value)
+		styles.set('background', activeColorC.value)
+		styles.set('transition-property', `width,height,background-color,border-radius`)
+		styles.set('transition-duration', aniTimeC.value)
+		return styles
+	})
+	
+	const insideTextStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('right', '6px')
+		return styles
+	})
+	
+	const outsideTextStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('width', props.valueTextWidth)
+		return styles
+	})
+	
+	// 方法
+	function init(){
+		progressWidth.value = progressEle.value?.getBoundingClientRect()?.width ?? 0
+	}
+	
+	onMounted(()=>{
+		nextTick(()=>{
+			init()
+		})
+		useResize(progressEle.value, ()=>{
+			init()
+		})
+	})
+
+</script>
+
+<style lang="scss">
+	.sn-progress {
+		width: 100%;
+		flex: 1;
+		
+		&-contain {
+			flex-direction: row;
+			align-items: center;
+		}
+		
+		&-inside-text {
+			position: absolute;
+		}
+	}
+</style>

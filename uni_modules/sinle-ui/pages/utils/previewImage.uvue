@@ -1,0 +1,310 @@
+<template>
+	<sn-view class="sn-image-previewer"
+	bgColor="#000"
+	aniTime="300ms"
+	ref="previewerEle"
+	@dbclick="onDbClick"
+	@longpress="onLongpress"
+	@scale="onScale"
+	@touchstart="onTouchstart"
+	@touchmove="onTouchmove"
+	@touchend="onTouchend"
+	@touchcancel="onTouchend">
+		<image class="sn-image-previewer-image"
+		mode="aspectFit"
+		ref="imageEle"
+		:src="(srcs.length >= 1 ? srcs[curIndex] : '')">
+		</image>
+	</sn-view>
+</template>
+
+<script setup>
+	// 依赖
+	import { $snui, SnShowActionsheetConfig, SnScaleEvent, SnTouchEvent, SnPreviewImageConfig, SnActionsheetItem } from '../../index.uts'
+	import { frameStore } from '../../libs/core/store/index.uts'
+	import { SnToastyConfig } from '@/uni_modules/sn-native/utssdk/interface.uts'
+	// #ifdef APP-ANDROID
+	import { __setGrayMode } from '../../libs/private/index.uts'
+	// #endif
+	
+	const snu = $snui.utils
+	const config = reactive({
+		urls: [''] as string[]
+	} as SnPreviewImageConfig)
+	const id = ref('')
+	const curIndex = ref(0)
+	const srcs = ref([] as string[])
+	const downloadedSrcs = ref([] as string[])
+	const previewerEle = ref(null as SnViewComponentPublicInstance | null)
+	const instance = getCurrentInstance()!
+	const dbSign = ref(false)
+	const imageEle = ref(null as UniElement | null)
+	const zoom = ref(1)
+	const translateX = ref(0)
+	const translateY = ref(0)
+	const fingersCount = ref(0)
+	const completedTranslateX = ref(0)
+	const completedTranslateY = ref(0)
+	const startTouchX = ref(0)
+	const startTouchY = ref(0)
+	const touchStartTime = ref(0)
+	const touchEndTime = ref(0)
+	const menuPopuped = ref(false)
+	
+	onLoad((options)=>{
+		if (options['id'] != null) {
+			id.value = options['id'] as string
+			let __config = frameStore.get(`DIALOGPAGE_PREVIEWIMAGE_${options['id']}`)
+			if (__config != null) {
+				let all = __config as SnPreviewImageConfig
+				config.urls = all.urls
+				srcs.value = all.urls
+				for (let i = 0; i < srcs.value.length; i++) {
+					downloadedSrcs.value.push('')
+				}
+				config.longPressActions = all.longPressActions
+			}
+		}
+	})
+	
+	onReady(()=>{
+		/**
+		 * 针对 DialogPage 专门适配哀悼模式
+		 */
+		let enabled = $snui.configs.app.grayMode
+		// #ifdef APP-ANDROID
+		__setGrayMode(enabled, instance.proxy!.$page.getAndroidView());
+		// #endif
+		// #ifdef WEB
+		window.document.body.style.filter = enabled ? 'grayscale(100%)' : ''
+		// #endif
+	})
+	
+	function setProperty(key: string, value: string){
+		if (previewerEle.value == null) return
+		previewerEle.value!.$el!.style.setProperty(key, value)
+	}
+	
+	function setImageStyle(key: string, value: string){
+		if (imageEle.value == null) return;
+		(imageEle.value as UniElement).style.setProperty(key, value)
+	}
+	
+	function updateImageStyle(){
+		setImageStyle('transform', `scale(${zoom.value}) translate(${translateX.value}px, ${translateY.value}px)`)
+	}
+	
+	function onDbClick(){
+		dbSign.value = true
+		setTimeout(()=>{
+			dbSign.value = false
+		}, 200)
+	}
+	
+	function onScale(event: SnScaleEvent){
+		zoom.value = Math.max(zoom.value*event.zoom, 1)
+		updateImageStyle()
+	}
+	
+	
+	function saveImage(){
+		function __save(url: string){
+			// #ifdef APP-ANDROID
+			url = UTSAndroid.convert2AbsFullPath(url)
+			// #endif
+			// #ifndef WEB
+			uni.saveImageToPhotosAlbum({
+				filePath: url,
+				success: ()=>{
+					snu.showToasty({
+						text: '保存成功',
+						type: 'success',
+					} as SnToastyConfig)
+				},
+				fail: (err)=>{
+					console.log(err)
+					snu.showToasty({
+						text: '保存失败',
+						type: 'error',
+					} as SnToastyConfig)
+				},
+			})
+			// #endif
+		}
+		let curSrc = srcs.value[curIndex.value]
+		// #ifndef WEB
+		if (snu.isURL(curSrc)) {
+			if (snu.isEmpty(downloadedSrcs.value[curIndex.value])) {
+				uni.downloadFile({
+					url: curSrc,
+					success: (res)=>{
+						if (res.statusCode == 200) {
+							downloadedSrcs.value[curIndex.value] = res.tempFilePath
+							__save(res.tempFilePath)
+						}
+					}
+				})
+			} else {
+				__save(downloadedSrcs.value[curIndex.value])
+			}
+		} else {
+			__save(curSrc)
+		}
+		// #endif
+	}
+	
+	function shareImage(){
+		function __share(url: string){
+			// #ifndef WEB
+			uni.shareWithSystem({
+				type: 'image',
+				imagePaths: [url],
+			})
+			// #endif
+		}
+		let curSrc = srcs.value[curIndex.value]
+		if (snu.isURL(curSrc)) {
+			if (snu.isEmpty(downloadedSrcs.value[curIndex.value])) {
+				uni.downloadFile({
+					url: curSrc,
+					success: (res)=>{
+						if (res.statusCode == 200) {
+							downloadedSrcs.value[curIndex.value] = res.tempFilePath
+							__share(res.tempFilePath)
+						}
+					}
+				})
+			} else {
+				__share(downloadedSrcs.value[curIndex.value])
+			}
+		} else {
+			__share(curSrc)
+		}
+	}
+	
+	function onLongpress(){
+		if (fingersCount.value != 1 || menuPopuped.value) return
+		menuPopuped.value = true
+		
+		let actions = [
+			// #ifndef WEB
+			{
+				text: '保存'
+			},
+			{
+				text: '分享',
+			},
+			// #endif
+		] as SnActionsheetItem[]
+		
+		if (config.longPressActions?.actions != null) {
+			actions = config.longPressActions!.actions
+		}
+		
+		
+		if (actions.length == 0) return
+		snu.showActionsheet({
+			actions,
+			success: (res)=>{
+				if (config.longPressActions?.success != null) {
+					config.longPressActions!.success?.(res)
+				} else if (config.longPressActions?.actions == null) {
+					// 默认行为
+					if (res == 0) {
+						saveImage()
+					} else if (res == 1) {
+						shareImage()
+					}
+				}
+				
+			},
+			fail: (err)=>{
+				if (config.longPressActions?.fail != null) {
+					config.longPressActions!.fail?.(err)
+				}
+			},
+			complete: (res)=>{
+				menuPopuped.value = false
+				if (config.longPressActions?.complete != null) {
+					config.longPressActions!.complete?.(res)
+				}
+			}
+		} as SnShowActionsheetConfig)
+	}
+	
+	function onTouchstart(event: SnTouchEvent){
+		event.event.preventDefault();
+		touchStartTime.value = event.event.timeStamp
+		fingersCount.value = event.touches.length
+		if (fingersCount.value == 1) {
+			startTouchX.value = event.touches[0].x
+			startTouchY.value = event.touches[0].y
+		}
+	}
+	
+	function onTouchend(event: SnTouchEvent){
+		event.event.preventDefault();
+		touchEndTime.value = event.event.timeStamp
+		if (fingersCount.value == 1 && event.touches[0].diffX == 0 && event.touches[0].diffY == 0){
+			if (touchEndTime.value - touchStartTime.value < 400) {
+				snu.debounce(()=>{
+					if (dbSign.value) return
+					setProperty('opacity','0')
+					setTimeout(()=>{
+						uni.closeDialogPage({
+							dialogPage: instance.proxy!.$page,
+						})
+					}, 300)
+				}, 200, 'previewImage')
+			 } else {
+				 // 长按事件
+				 onLongpress()
+			 }
+		}
+		fingersCount.value = 0
+		completedTranslateX.value = translateX.value
+		completedTranslateY.value = translateY.value
+	}
+	
+	function onTouchmove(event: SnTouchEvent){
+		event.event.preventDefault();
+		fingersCount.value = event.touches.length
+		const diffXMean = event.touches.map(touch=>touch.diffX).reduce((a,b)=>a+b, 0) / event.touches.length
+		const diffYMean = event.touches.map(touch=>touch.diffY).reduce((a,b)=>a+b, 0) / event.touches.length
+		translateX.value = diffXMean + completedTranslateX.value
+		translateY.value = diffYMean + completedTranslateY.value
+		updateImageStyle()
+	}
+	
+	onMounted(() => {
+		nextTick(()=>{
+			setProperty('opacity','1')
+		})
+		// #ifdef WEB
+		document.addEventListener('contextmenu', function(event) {
+		  event.preventDefault();
+		});
+		// #endif
+
+	})
+	
+	
+</script>
+
+<style lang="scss">
+	.sn-image-previewer {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		opacity: 0;
+		user-select: none;
+		.sn-image-previewer-image {
+			margin: auto;
+			width: 100%;
+			pointer-events: none;
+			user-select: none;
+		}
+	}
+</style>

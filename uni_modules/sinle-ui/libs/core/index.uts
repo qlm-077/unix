@@ -1,0 +1,7 @@
+import { ColorLib } from './color/index.uts'
+import { DateLib } from './date/index.uts'
+
+export class Core {
+	color = new ColorLib()
+	date = new DateLib()
+}

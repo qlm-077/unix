@@ -1,0 +1,321 @@
+<template>
+	<sn-overlay class="sn-actionsheet-overlay"
+	ref="overlayEle"
+	:aniTime="`${aniTimeC}ms`"
+	:maskClose="maskClose"
+	:opacity="maskOpacity"
+	@clickMask="clickMask" 
+	:customStyle="overlayStylesC">
+		<view class="sn-actionsheet-contain"
+		:class="sheetClassesC"
+		:style="sheetContainStylesC"
+		@click.stop>
+			<view class="sn-actionsheet"
+			:style="[sheetStylesC, customStyle]">
+				<sn-text v-if="showTitle"
+				align="center"
+				:text="title"
+				:color="titleColorC"
+				:size="titleSizeC"
+				style="padding: 15px;">
+				</sn-text>
+				<sn-menu-item v-for="(e, index) in (actions as SnActionsheetItem[])"
+				textAlign="center"
+				:padding="itemPadding"
+				:key="index"
+				:text="e.text"
+				:bgColor="bgColorC"
+				:disabled="(e.disabled ?? false) || disabled"
+				:activeBgColor="activeBgColorC"
+				:textColor="e.color ?? colors.primary"
+				:textSize="itemTextSizeC"
+				:style="[{
+					borderTop: (showTitle||index!=0)? `0.5px solid ${lineColorC}`:''
+				} as Map<string, any>]"
+				@click="clickItem(index)">
+				</sn-menu-item>
+			</view>
+			<view class="sn-actionsheet"
+			v-if="showCancel"
+			:style="[sheetStylesC, 'margin-top:6px;', customStyle]">
+				<sn-menu-item
+				textAlign="center"
+				:padding="itemPadding"
+				:bgColor="bgColorC"
+				:activeBgColor="activeBgColorC"
+				:borderRadius="borderRadiusC"
+				:text="cancelText"
+				:disabled="disabled"
+				:textColor="colors.error"
+				:textSize="itemTextSizeC"
+				@click="cancel">
+				</sn-menu-item>
+			</view>
+		</view>
+	</sn-overlay>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-actionsheet
+	 * @tutorial https://sinleui.pages.dev/components/sn-actionsheet
+	 * @description  Actionsheet 操作菜单
+	 *
+	 *- 从底部弹出一个操作菜单，供用户选择。
+	 *
+	 *- 本组件类似于 uni.showActionSheet API，不同的是样式更倾向于 iOS 而非微信，且样式配置更加自由
+	 * @property {String} title    String | 操作菜单标题，为空则不显示
+	 * @property {Array<SnActionsheetItem>} actions    Array<SnActionsheetItem> | 操作菜单项数组
+	 * @property {Boolean} showCancel    Boolean | 是否显示取消按钮
+	 * @property {String} titleColor    String | 标题颜色
+	 * @property {String} titleSize    String | 标题大小
+	 * @property {String} bgColor    String | 背景颜色
+	 * @property {String} itemTextSize    String | 选项文字大小
+	 * @property {String} itemPadding    String | 选项内边距
+	 * @property {String} cancelText    String | 取消按钮文字
+	 * @property {String} borderRadius    String | 圆角大小
+	 * @property {Number} maskOpacity    Number | 遮罩透明度
+	 * @property {String} aniTime    String | 动画时长（单位：ms）
+	 * @property {Boolean} preventBack    Boolean | 是否阻止返回事件
+	 * @property {Boolean} disabled    Boolean | 是否禁用操作菜单
+	 * @property {Boolean} maskClose    Boolean | 点击遮罩是否关闭操作菜单
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义操作菜单样式
+	 * @event {Function} clickMask   ()=>void | 点击遮罩时触发
+	 * @event {Function} clickItem   (e:SnActionsheetItem)=>void | 点击选项时触发
+	 * @event {Function} cancel   ()=>void | 取消操作时触发
+	 * @event {Function} close   ()=>void | 操作菜单关闭时触发
+	 * @event {Function} open   ()=>void | 操作菜单打开时触发
+	 */
+
+	// 依赖
+	import { $snui, useFormatProp, SnActionsheetItem } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-actionsheet'
+	})
+	
+	// SinleUI 配置
+	const snu = $snui.utils;
+	const colors = $snui.colors
+	
+	// 事件注册
+	const emit = defineEmits(['clickMask', 'clickItem', 'cancel', 'open', 'close'])
+	
+	// 组件属性
+	const props = defineProps({
+		// 标题
+		title: {
+			type: String,
+			default: '',
+		},
+		actions: {
+			type: Array as PropType<SnActionsheetItem[]>,
+			default: [] as SnActionsheetItem[]
+		},
+		showCancel: {
+			type: Boolean,
+			default: true,
+		},
+		titleColor: {
+			type: String,
+			default: ''
+		},
+		titleSize: {
+			type: String,
+			default: '',
+		},
+		bgColor: {
+			type: String,
+			default: '',
+		},
+		itemTextSize: {
+			type: String,
+			default: '',
+		},
+		itemPadding: {
+			type: String,
+			default: '14px 10px',
+		},
+		cancelText: {
+			type: String,
+			default: '取消',
+		},
+		borderRadius: {
+			type: String,
+			default: '',
+		},
+		maskOpacity: {
+			type: Number,
+			default: 0.4,
+		},
+		aniTime: {
+			type: String,
+			default: '',
+		},
+		preventBack: {
+			type: Boolean,
+			default: false
+		},
+		disabled: {
+			type: Boolean,
+			default: false
+		},
+		maskClose: {
+			type: Boolean,
+			default: true,
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+	})
+	
+	//基本变量
+	const id = snu.randomComId()
+	const showSheet = ref(false)
+	const overlayEle = ref(null as SnOverlayComponentPublicInstance | null)
+	
+	// 计算属性
+	const aniOriginTime = computed(() : string => {
+		return useFormatProp('aniTime',props.aniTime, $snui.configs.aniTime.long)
+	})	
+	
+	const aniTimeC = computed(() : number => {
+		let aniTime = parseInt(aniOriginTime.value)
+		return aniTime > 100 ? aniTime- 100 : aniTime
+	})
+	const theme = computed((): string => $snui.configs.app.theme)
+	
+	const showTitle = computed((): boolean => {
+		return !snu.isEmpty(props.title)
+	})
+	
+	const titleSizeC = computed((): string => {
+		return useFormatProp('font', props.titleSize, $snui.configs.font.size(2))
+	})
+		
+	const titleColorC = computed((): string => {
+		return useFormatProp('color', props.titleColor, colors.value.title)
+	})
+	
+	const bgColorC = computed((): string => {
+		return useFormatProp('color', props.bgColor, colors.value.info)
+	})
+	
+	const lineColorC = computed((): string => {
+		return colors.value[theme.value=='light'?'lineDark':'line'] as string
+	})
+	
+	const activeBgColorC = computed((): string => {
+		return colors.value[theme.value=='light'?'infoActive':'infoActive'] as string
+	})
+	
+	const itemTextSizeC = computed((): string => {
+		return useFormatProp('font', props.itemTextSize, $snui.configs.font.size(3))
+	})
+	
+	const borderRadiusC = computed(():string=>{
+		return useFormatProp('radius', props.borderRadius, $snui.configs.radius.normal)
+	})
+	
+	const sheetContainStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('transition-duration',aniOriginTime.value)
+		return styles
+	}) 
+	
+	const sheetStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('background', bgColorC.value)
+		styles.set('border-radius', borderRadiusC.value)
+		return styles
+	})
+	
+	const overlayStylesC = computed((): UTSJSONObject=>{
+		return {
+			justifyContent: 'flex-end'
+		}
+	})
+	
+	const sheetClassesC = computed((): Map<string, any>=>{
+		let classes = new Map<string, any>()
+		classes.set('animation', parseInt(aniOriginTime.value)> 0)
+		classes.set('hover', showSheet.value)
+		return classes
+	})
+	
+	// 方法
+	function open() {
+		overlayEle.value?.open?.()
+		emit('open')
+		snu.throttle(()=>{
+			showSheet.value = true
+		}, 20, id)
+	}
+	
+	function close() {
+		overlayEle.value?.close?.()
+		showSheet.value = false;
+		emit('close')
+	}
+	
+	function clickMask() {
+		showSheet.value = false;
+		emit('clickMask')
+	}
+	
+	function clickItem(index: number){
+		if (index >= props.actions.length || props.disabled) return
+		let e = props.actions[index] as SnActionsheetItem
+		if (e.disabled ?? false) return
+		emit('clickItem', e)
+		close()
+	}
+	
+	function cancel() {
+		if (!(props.disabled)) {
+			emit('cancel')
+			close()
+		}
+	}
+	
+	defineExpose({
+		open,
+		close,
+		cancel
+	})
+	
+	onBackPress((_):boolean=>{
+		if (showSheet.value) {
+			if (!props.preventBack){
+				close()
+			}
+			return true
+		} else {
+			return false
+		}
+	})
+</script>
+
+<style lang="scss">
+	.sn-actionsheet {
+		margin: 0 auto;
+		max-width: 350px;
+		width: 85%;
+		min-height: 20px;
+		transition-property: transform, background-color, opacity, border-radius;
+	
+		&-overlay {
+			align-items: center;
+		}
+		
+		&-contain.animation {
+			transform: translateY(100%);
+			opacity: 0;
+			&.hover {
+				transform: translateY(-25px);
+				opacity: 1;
+			}
+		}
+	}
+</style>

@@ -1,0 +1,207 @@
+<template>
+	<view class="sn-collapse-group" 
+	ref="groupEle"
+	:style="[groupStylesC, customStyle]">
+		<slot></slot>
+	</view>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-collapse-group
+	 * @tutorial https://sinleui.pages.dev/components/sn-collapse
+	 * @description Collapse 折叠面板
+	 * 
+	 * - 通过折叠面板收纳内容区域。
+	 * @property {Boolean} accordion    Boolean | 是否开启手风琴模式
+	 * @property {Number} aniTime    String | 动画时长（单位`ms`）
+	 * @property {String} bgColor    String | 折叠面板背景颜色
+	 * @property {String} borderRadius    String | 折叠面板圆角大小
+	 * @property {String} titleSize    String | 折叠面板子项标题字体大小
+	 * @property {String} titleColor    String | 折叠面板子项标题颜色
+	 * @property {String} noteSize    String | 折叠面板子项说明文本字体大小
+	 * @property {String} noteColor    String | 折叠面板子项说明文本颜色
+	 * @property {String} activeTitleColor    String | 折叠面板已打开的子项标题颜色
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义折叠面板样式
+	 * @property {UTSJSONObject} customTitleStyle    UTSJSONObject | 自定义折叠面板子项标题样式
+	 * @property {UTSJSONObject} customHolderStyle    UTSJSONObject | 自定义折叠面板子项内部容器样式
+	 * @property {UTSJSONObject} customNoteStyle    UTSJSONObject | 自定义折叠面板子项说明文本样式	
+	 */
+	
+	// 依赖
+	import { $snui, useFormatProp } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-collapse-group'
+	})
+	
+	// SinleUI 配置
+	const colors = $snui.colors
+	const snu = $snui.utils
+
+	// 组件属性
+	const props = defineProps({
+		accordion: {
+			type: Boolean,
+			default: false
+		},
+		aniTime: {
+			type: String,
+			default: ''
+		},
+		bgColor: {
+			type: String,
+			default: ''
+		},
+		titleSize: {
+			type: String,
+			default: ''
+		},
+		titleColor: {
+			type: String,
+			default: ''
+		},
+		noteSize: {
+			type: String,
+			default: ''
+		},
+		noteColor: {
+			type: String,
+			default: ''
+		},
+		activeTitleColor: {
+			type: String,
+			default: ''
+		},
+		borderRadius: {
+			type: String,
+			default: ''
+		},
+		showBorder: {
+			type: Boolean,
+			default: true
+		},
+		customTitleStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customHolderStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customNoteStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+	})
+
+	// 基本变量
+	const childrenList = ref([] as ComponentPublicInstance[])
+	const groupEle = ref(null as UniElement | null)
+	
+	// 计算属性
+	const aniTimeC = computed((): string => {
+		return useFormatProp('aniTime', props.aniTime, $snui.configs.aniTime.normal)
+	})
+	
+	const bgColorC = computed((): string => {
+		return useFormatProp('color', props.bgColor, colors.value.front)
+	})
+	
+	const titleSizeC = computed((): string => {
+	  return useFormatProp('font', props.titleSize, $snui.configs.font.size(3))
+	})
+	
+	const titleColorC = computed((): string => {
+		return useFormatProp('color', props.titleColor, colors.value.title)
+	})
+	
+	const activeTitleColorC = computed((): string => {
+		return useFormatProp('color', props.activeTitleColor, colors.value.primary)
+	})
+	
+	const borderRadiusC = computed((): string => {
+		return useFormatProp('radius', props.borderRadius, $snui.configs.radius.normal)
+	})
+	
+	const noteSizeC = computed((): string => {
+		return useFormatProp('font', props.noteSize, $snui.configs.font.size(2))
+	})
+	
+	const noteColorC = computed((): string => {
+		return useFormatProp('color', props.noteColor, colors.value.lineText)
+	})
+	
+	const groupStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('border-radius', borderRadiusC.value)
+		styles.set('background', bgColorC.value)
+		styles.set('transition-duration', aniTimeC.value)
+		return styles
+	})
+	
+	const customTitleStyleC = computed((): UTSJSONObject => props.customTitleStyle)
+	const customHolderStyleC = computed((): UTSJSONObject => props.customHolderStyle)
+	const customNoteStyleC = computed((): UTSJSONObject => props.customNoteStyle)
+	provide('aniTime', aniTimeC)
+	provide('bgColor', bgColorC)
+	provide('titleSize', titleSizeC)
+	provide('titleColor', titleColorC)
+	provide('noteSize', noteSizeC)
+	provide('noteColor', noteColorC)
+	provide('activeTitleColor', activeTitleColorC)
+	provide('customTitleStyle', customTitleStyleC)
+	provide('customHolderStyle', customHolderStyleC)
+	provide('customNoteStyle', customNoteStyleC)
+
+	// 方法
+	function register(node : ComponentPublicInstance) {
+		childrenList.value.push(node)
+	}
+	
+	function closeAll() {
+		if (props.accordion && childrenList.value.length > 0){
+			childrenList.value.forEach((e:ComponentPublicInstance)=>{
+				e.$callMethod('close')
+			})
+		}
+	}
+	
+	function provideChildren() {
+		if (!props.showBorder) return
+		childrenList.value.forEach((child : ComponentPublicInstance, index: number) => {
+			child.$callMethod('setOrder', index, index != childrenList.value.length - 1)
+		})
+	}
+
+	defineExpose({
+		register,
+		closeAll
+	})
+	
+	// 生命周期
+	onMounted(() => {
+		nextTick(()=>{
+			nextTick(()=>{
+				provideChildren()
+			})
+		})
+	})
+	
+	onUpdated(() => {
+		nextTick(()=>{
+			provideChildren()
+		})
+	})
+</script>
+
+<style lang="scss">
+	.sn-collapse-group {
+		display: flex;
+		flex-direction: column;
+	}
+</style>

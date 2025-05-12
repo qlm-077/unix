@@ -1,0 +1,7 @@
+import BeeTheme from '@/uni_modules/bee-theme/bee-theme-sdk/bee-theme.uts';
+
+const theme = BeeTheme.getInstance();
+
+theme.init()
+
+export default theme

@@ -1,0 +1,2788 @@
+import { SnRequestSystemPermissionOptions, SnRequestMediaPermissionOptions, SnRequestMediaPermissionOptionsType, SnChooseMediaOptions, SnError, SnFile, SnShowActionsheetConfig, SnPreviewImageConfig, SnShowToastConfig, SnPreviewImageLongPressActions, SnShowModalConfig } from '../../types/index.uts'
+import { emojiRegex } from './emoji-regex.uts'
+import { frameStore } from '../store/index.uts'
+// #ifdef APP-ANDROID
+import Vibrator from 'android.os.Vibrator';
+import Context from "android.content.Context";
+import Intent from "android.content.Intent";
+import Uri from "android.net.Uri";
+import ClipboardManager from "android.content.ClipboardManager";
+import ContentResolver from "android.content.ContentResolver";
+import { Configuration } from 'android.content.res';
+import WebView from 'android.webkit.WebView'
+import Toast from 'android.widget.Toast'
+import Gravity from 'android.view.Gravity'
+import Build from "android.os.Build"
+import File from "java.io.File"
+import MimeTypeMap from "android.webkit.MimeTypeMap"
+import FileOutputStream from "java.io.FileOutputStream"
+
+// #endif
+
+import { toast } from '@/uni_modules/sn-native'
+import { SnToastyConfig } from '@/uni_modules/sn-native/utssdk/interface.uts'
+
+export class UtilsLib {
+	/**
+	 * UI 界面类
+	 */
+	/**
+	 * @name 获取像素值
+	 * @description 将长度字符串中的单位转换为以像素（px）为单位的值。不支持百分比。
+	 * @param {string} str - 待转换的字符串。
+	 * @returns {number} 返回转换后的像素值。
+	 * @example
+	 * getPx('100rpx');
+	 * getPx('100px');
+	 */
+
+	getPx(value : string) : number {
+		let valueTmp = value.toString().toLowerCase()
+		if (valueTmp.indexOf('%') != -1) {
+			try {
+				return uni.getSystemInfoSync().windowWidth * (parseFloat(valueTmp.replace('%', '')) / 100)
+			} catch (e) { }
+		}
+
+		if (this.isNumberString(valueTmp)) {
+			return parseFloat(valueTmp)
+		}
+
+		if (/(rpx|upx)$/.test(valueTmp)) {
+			try {
+				let n = parseInt(valueTmp.replace(/rpx/g, '').replace(/upx/g, ''))
+				return uni.rpx2px(n)
+			} catch (e) { }
+		}
+
+		return parseFloat(valueTmp)
+	}
+
+	/**
+	 * @name 添加像素单位
+	 * @description 将数字值转换为带有 'px' 单位的字符串。
+	 * @param {number} value - 需要转换的数字值。
+	 * @returns {string} 返回带有 'px' 单位的字符串。
+	 * @example
+	 * // 示例用法
+	 * const width = addPx(100); // 返回 '100px'
+	 */
+	addPx(value : number) : string {
+		return `${value}px`
+	}
+
+	/**
+	 * @name 添加单位
+	 * @description 将一个长度值添加单位。如果值为数值，则加上unit参数的单位。如果值已有单位或为百分比数据，则直接原样返回。
+
+
+	 * @param {string|number} value - 待添加单位的值。
+	 * @param {string} [unit='px'] - 单位字符串，默认值为 px。
+	 * @returns {string} - 返回添加单位后的字符串。
+	 */
+	addUnit(value : any, unit : string = 'px') : string {
+		let valueTmp = `${value}`
+
+		if (valueTmp.indexOf('%') != -1) {
+			return valueTmp
+		}
+
+		if (this.isNumberString(valueTmp)) {
+			return `${valueTmp}${unit}`
+		}
+
+		if (/(rpx|upx)$/i.test(valueTmp)) {
+			try {
+				let n = parseInt(valueTmp)
+				return `${n}${unit}`
+			} catch (e) { }
+		}
+
+		return valueTmp
+	}
+	
+	/**
+	 * @name 计算两点距离。
+	 * @description 计算第一个触点（touch1）到第二个触点（touch2）的距离。
+	 * @param {number} touch1X - 第一个触摸点的X坐标。
+	 * @param {number} touch1Y - 第一个触摸点的Y坐标。
+	 * @param {number} touch2X - 第二个触摸点的X坐标。
+	 * @param {number} touch2Y - 第二个触摸点的Y坐标。
+	 * @returns {number} 两点之间的距离。
+	 */
+	getDistance(touch1X: number, touch1Y: number, touch2X: number, touch2Y: number) {
+	    const diffX = touch2X - touch1X
+		const diffY = touch2Y - touch1Y
+	    return Math.sqrt(diffX * diffX + diffY * diffY);
+	}
+	
+	/**
+	 * @name 计算旋转角度
+	 * @description 计算从第一个触点（touch1）到第二个触点（touch2）的连线与水平轴（X轴）之间的夹角，可用于计算手势旋转角度。
+	 * @param {number} touch1X - 第一个触摸点的X坐标。
+	 * @param {number} touch1Y - 第一个触摸点的Y坐标。
+	 * @param {number} touch2X - 第二个触摸点的X坐标。
+	 * @param {number} touch2Y - 第二个触摸点的Y坐标。
+	 * @returns {number} 两点之间的角度，以度为单位。
+	 */
+	getRotateAngle(touch1X: number, touch1Y: number, touch2X: number, touch2Y: number) {
+	    const diffX = touch2X - touch1X
+	    const diffY = touch2Y - touch1Y
+	    return Math.atan2(diffY, diffX) * 180 / Math.PI;
+	}
+
+	/**
+	 * @name 获取内圆角半径
+	 * @description 根据父组件（矩形）宽度、父组件圆角半径、子组件（矩形）宽度计算子组件的圆角半径。方法来源：https://www.zcool.com.cn/article/ZMzk2NDUy.html
+	 * @param {number} outwidth - 父组件（矩形）宽度
+	 * @param {number} outradius - 父组件圆角半径
+	 * @param {number} innerwidth - 子组件（矩形）宽度
+	 * @returns {number} 返回子组件圆角半径。
+	 * @example
+	 * // 示例用法
+	 * const innerRadius = getInnerRadius(100, 12, 60);
+	 */
+
+	getInnerRadius(outwidth : number, outradius : number, innerwidth : number) : number {
+		return (outwidth - innerwidth) / 2 * (outwidth - 2 * outradius) / outwidth - (outwidth - innerwidth - 2 * outradius) / 2
+	}
+
+	/**
+	 * @name 查找父系组件
+	 * @description 在组件树中层层向上查找指定名称的父组件。
+	 * @param {ComponentPublicInstance} instance - 当前组件实例。
+	 * @param {string[]} parentNames - 需要查找的父系组件的名称。
+	 * @returns {ComponentPublicInstance | null} 如果找到对应的父系组件，则返回该组件的实例；如果没有找到，则返回 null。
+	 * @example
+	 * // 示例用法
+	 * const instance = getCurrentInstance()!
+	 * const parentComponent = findParent(instance.proxy!, ['sn-page']);
+	 * if (parentComponent) {
+	 *   console.log('找到父组件:', parentComponent);
+	 * } else {
+	 *   console.log('没有找到父组件');
+	 * }
+	 */
+
+	findParent(instance : ComponentPublicInstance, parentNames : string[]) : ComponentPublicInstance | null {
+		for (let i = 0; i < parentNames.length; i++) {
+			let parent = instance.$parent
+			let name = parent?.$options?.name
+			while (parent != null && (name == null || parentNames[i] != name)) {
+				parent = parent.$parent
+				if (parent != null) {
+					name = parent.$options.name
+				}
+			}
+			if (parent != null) {
+				return parent as ComponentPublicInstance
+			}
+		}
+
+		return null
+	}
+
+	/**
+	 * @name 查找兄弟组件
+	 * @description 在组件树中查找指定名称的兄弟组件。
+	 * @param {ComponentPublicInstance} instance - 当前组件实例。
+	 * @param {string[]} brotherNames - 需要查找的兄弟组件名称数组。
+	 * @returns {ComponentPublicInstance | null} 如果找到对应的兄弟组件，则返回该组件的实例；如果没有找到，则返回 null。
+	 * @example
+	 * // 示例用法
+	 * const brotherComponent = findBrother(this, ['BrotherComponent1', 'BrotherComponent2']);
+	 */
+	findBrother(instance : ComponentPublicInstance, brotherNames : string[]) : ComponentPublicInstance | null {
+		let parent = instance.$parent
+		let brothers = parent?.$children
+		if (brothers == null) return null
+		for (let i = 0; i < brothers.length; i++) {
+			let bro = brothers[i]
+			let name = bro?.$options?.name ?? ''
+			if (bro != instance && brotherNames.includes(name)) {
+				return bro as ComponentPublicInstance
+			}
+		}
+
+		return null
+	}
+	
+	/**
+	 * @name 预览图片
+	 * @description 全局 API 预览图片，多端样式统一。支持手势缩放、拖拽，支持长按唤出自定义菜单。
+	 * 
+	 * 可以在任意位置调用，无需放置组件。
+	 * @param {SnPreviewImageConfig} config - 预览图片的配置对象。
+	 * @example
+	 * // 示例用法
+	 * previewImage({
+	 *   urls: ['https://example.com/image1.jpg', 'https://example.com/image2.jpg'],
+	 * }); // 打开预览图片页面
+	 */
+	
+	previewImage(config: SnPreviewImageConfig){
+		let id = this.uuid()
+		frameStore.set(`DIALOGPAGE_PREVIEWIMAGE_${id}`, config)
+		uni.openDialogPage({
+			url: `/uni_modules/sinle-ui/pages/utils/previewImage?id=${id}`
+		})
+	}
+	
+	/**
+	 * @name 打开操作菜单
+	 * @description 根据配置信息显示全局操作菜单。
+	 * 
+	 * 与 sn-actionsheet 不同的是，它可以在任意位置调用，无需放置组件。
+	 * @param {SnShowActionsheetConfig} config - 操作菜单的配置对象。
+	 * @example
+	 * // 示例用法
+	 * snu.showActionsheet({
+	 * 		actions: [{
+	 * 			text: '选项1'
+	 * 		},
+	 * 		{
+	 * 			text: '选项2',
+	 * 		},
+	 * 		{
+	 * 			text: '选项3',
+	 * 		},	
+	 * 		{
+	 * 			text: '选项4',
+	 * 		}]
+	 * 	} as SnShowActionsheetConfig)
+	 */
+	
+	showActionsheet(config: SnShowActionsheetConfig) {
+		let id = this.uuid()
+		frameStore.set(`DIALOGPAGE_ACTIONSHEET_${id}`, config)
+		uni.openDialogPage({
+			url: `/uni_modules/sinle-ui/pages/popups/showActionsheet?id=${id}`,
+			fail: (err)=>{
+				let res = new SnError('utils', 'showActionsheet', 9010054, new Error(err.errMsg))
+				config.fail?.(res)
+				config.complete?.(res)
+			}
+		})
+	}
+	
+	
+	/**
+	 * @name 显示轻提示
+	 * @description 根据配置信息显示全局轻提示
+	 * 
+	 * 与 sn-toast 不同的是，它可以在任意位置调用，无需放置组件。
+	 * @param {SnShowToastConfig} config - 轻提示的配置对象。
+	 * @example
+	 * snu.showToast({
+	 * 		text: '轻提示',
+	 * 		loading: true
+	 * })
+	 */
+	
+	showToast(config: SnShowToastConfig) {
+		let id = this.uuid()
+		frameStore.set(`DIALOGPAGE_TOAST_${id}`, config)
+		uni.openDialogPage({
+			url: `/uni_modules/sinle-ui/pages/popups/showToast?id=${id}`,
+			fail: (err)=>{
+				let res = new SnError('utils', 'showToast', 9010054, new Error(err.errMsg))
+				config.fail?.(res)
+				config.complete?.(res)
+			}
+		})
+	}
+	
+	/**
+	 * @name 显示模态框
+	 * @description 根据配置信息显示全局模态框
+	 * 
+	 * 与 sn-modal 不同的是，它可以在任意位置调用，无需放置组件。
+	 * @param {SnShowModalConfig} config - 模态框的配置对象。
+	 * @example
+	 * snu.showModal({
+	 * 	   title: 'Modal',
+	 * 	   content: 'Hello World',
+	 * 	   buttonType: 'float',
+	 * })
+	 */
+	
+	showModal(config: SnShowModalConfig) {
+		let id = this.uuid()
+		frameStore.set(`DIALOGPAGE_MODAL_${id}`, config)
+		uni.openDialogPage({
+			url: `/uni_modules/sinle-ui/pages/popups/showModal?id=${id}`,
+			fail: (err)=>{
+				let res = new SnError('utils', 'showModal', 9010054, new Error(err.errMsg))
+				config.fail?.(res)
+				config.complete?.(res)
+			}
+		})
+	}
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	/**
+	 * OS 系统类
+	 */
+
+	/**
+	 * @name 振动设备
+	 * @description 使振动器产生振动。
+	 * @param {number} [time=200] - 振动持续时间（毫秒），默认为 200 毫秒。
+	 * @example
+	 * // 示例用法
+	 * vibrate(); // 振动设备 200 毫秒
+	 * vibrate(500); // 振动设备 500 毫秒
+	 */
+	vibrate(time : number = 200) : void {
+		// #ifdef APP-ANDROID
+		let _this = UTSAndroid.getUniActivity()!
+		let vibrator = _this.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator;
+		vibrator.vibrate(time.toLong());
+		// #endif
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	/**
+	 * Easing 缓动类
+	 * 源码及 API 设计源自：https://easings.net/
+	 */
+
+	/**
+	 * @name 缓动动画 - 正弦曲线入
+	 * @description 使用正弦曲线作为缓动动画的入（开始）效果。
+	 * @param {number} t - 当前时间（0 到 1 之间）。
+	 * @returns {number} 返回当前时间对应的动画值。
+	 * @example
+	 * // 示例用法
+	 * const value = easeInSine(0.5); // 返回当前时间对应的动画值
+	 */
+	easeInSine = (t : number) : number => {
+		return 1 - Math.cos((t * Math.PI) / 2);
+	}
+
+	/**
+	 * @name 缓动动画 - 正弦曲线出
+	 * @description 使用正弦曲线作为缓动动画的出（结束）效果。
+	 * @param {number} t - 当前时间（0 到 1 之间）。
+	 * @returns {number} 返回当前时间对应的动画值。
+	 * @example
+	 * // 示例用法
+	 * const value = easeOutSine(0.5); // 返回当前时间对应的动画值
+	 */
+	easeOutSine = (t : number) : number => {
+		return Math.sin((t * Math.PI) / 2);
+	}
+
+	/**
+	 * @name 缓动动画 - 正弦曲线入出
+	 * @description 使用正弦曲线作为缓动动画的入出（开始和结束）效果。
+	 * @param {number} t - 当前时间（0 到 1 之间）。
+	 * @returns {number} 返回当前时间对应的动画值。
+	 * @example
+	 * // 示例用法
+	 * const value = easeInOutSine(0.5); // 返回当前时间对应的动画值
+	 */
+	easeInOutSine = (t : number) : number => {
+		return -(Math.cos(Math.PI * t) - 1) / 2;
+	}
+
+	/**
+	 * @name 缓动动画 - 二次函数图象入
+	 * @description 创建一个二次函数图象缓动动画效果的入（开始）函数。
+	 * @param {number} t - 当前时间（0 到 1 之间）。
+	 * @returns {number} 返回当前时间对应的动画值。
+	 * @example
+	 * // 示例用法
+	 * const value = easeInQuad(0.5); // 返回当前时间对应的动画值
+	 */
+	easeInQuad = (t : number) : number => {
+		return t * t;
+	}
+
+	/**
+	 * @name 缓动动画 - 二次函数图象出
+	 * @description 创建一个二次函数图象缓动动画效果的出（结束）函数。
+	 * @param {number} t - 当前时间（0 到 1 之间）。
+	 * @returns {number} 返回当前时间对应的动画值。
+	 * @example
+	 * // 示例用法
+	 * const value = easeOutQuad(0.5); // 返回当前时间对应的动画值
+	 */
+	easeOutQuad = (t : number) : number => {
+		return 1 - (1 - t) * (1 - t);
+	}
+
+	/**
+	 * @name 缓动动画 - 二次函数图象入出
+	 * @description 创建一个二次函数图象缓动动画效果的入出（开始和结束）函数。
+	 * @param {number} t - 当前时间（0 到 1 之间）。
+	 * @returns {number} 返回当前时间对应的动画值。
+	 * @example
+	 * // 示例用法
+	 * const value = easeInOutQuad(0.5); // 返回当前时间对应的动画值
+	 */
+	easeInOutQuad = (t : number) : number => {
+		return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+	}
+
+	/**
+	 * @name 缓动动画 - 三次函数图象入
+	 * @description 创建一个三次函数图象缓动动画效果的入（开始）函数。
+	 * @param {number} t - 当前时间（0 到 1 之间）。
+	 * @returns {number} 返回当前时间对应的动画值。
+	 * @example
+	 * // 示例用法
+	 * const value = easeInCubic(0.5); // 返回当前时间对应的动画值
+	 */
+	easeInCubic = (t : number) : number => {
+		return t * t * t;
+	}
+
+	/**
+	 * @name 缓动动画 - 三次函数图象出
+	 * @description 创建一个三次函数图象缓动动画效果的出（结束）函数。
+	 * @param {number} t - 当前时间（0 到 1 之间）。
+	 * @returns {number} 返回当前时间对应的动画值。
+	 * @example
+	 * // 示例用法
+	 * const value = easeOutCubic(0.5); // 返回当前时间对应的动画值
+	 */
+	easeOutCubic = (t : number) : number => {
+		return 1 - Math.pow(1 - t, 3);
+	}
+
+	/**
+	 * @name 缓动动画 - 三次函数图象入出
+	 * @description 创建一个三次函数图象缓动动画效果的入出（开始和结束）函数。
+	 * @param {number} t - 当前时间（0 到 1 之间）。
+	 * @returns {number} 返回当前时间对应的动画值。
+	 * @example
+	 * // 示例用法
+	 * const value = easeInOutCubic(0.5); // 返回当前时间对应的动画值
+	 */
+	easeInOutCubic = (t : number) : number => {
+		return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+	}
+
+	/**
+	 * @name 缓动动画 - 四次函数图象入
+	 * @description 创建一个四次函数图象缓动动画效果的入（开始）函数。
+	 * @param {number} t - 当前时间（0 到 1 之间）。
+	 * @returns {number} 返回当前时间对应的动画值。
+	 * @example
+	 * // 示例用法
+	 * const value = easeInQuart(0.5); // 返回当前时间对应的动画值
+	 */
+	easeInQuart = (t : number) : number => {
+		return t * t * t * t;
+	}
+
+	/**
+	 * @name 缓动动画 - 四次函数图象出
+	 * @description 创建一个四次函数图象缓动动画效果的出（结束）函数。
+	 * @param {number} t - 当前时间（0 到 1 之间）。
+	 * @returns {number} 返回当前时间对应的动画值。
+	 * @example
+	 * // 示例用法
+	 * const value = easeOutQuart(0.5); // 返回当前时间对应的动画值
+	 */
+	easeOutQuart = (t : number) : number => {
+		return 1 - Math.pow(1 - t, 4);
+	}
+
+	/**
+	 * @name 缓动动画 - 四次函数图象入出
+	 * @description 创建一个四次函数图象缓动动画效果的入出（开始和结束）函数。
+	 * @param {number} t - 当前时间（0 到 1 之间）。
+	 * @returns {number} 返回当前时间对应的动画值。
+	 * @example
+	 * // 示例用法
+	 * const value = easeInOutQuart(0.5); // 返回当前时间对应的动画值
+	 */
+	easeInOutQuart = (t : number) : number => {
+		return t < 0.5 ? 8 * t * t * t * t : 1 - Math.pow(-2 * t + 2, 4) / 2;
+	}
+
+	/**
+	 * @name 缓动动画 - 五次函数图象入
+	 * @description 创建一个五次函数图象缓动动画效果的入（开始）函数。
+	 * @param {number} t - 当前时间（0 到 1 之间）。
+	 * @returns {number} 返回当前时间对应的动画值。
+	 * @example
+	 * // 示例用法
+	 * const value = easeInQuint(0.5); // 返回当前时间对应的动画值
+	 */
+	easeInQuint = (t : number) : number => {
+		return t * t * t * t * t;
+	}
+
+	/**
+	 * @name 缓动动画 - 五次函数图象出
+	 * @description 创建一个五次函数图象缓动动画效果的出（结束）函数。
+	 * @param {number} t - 当前时间（0 到 1 之间）。
+	 * @returns {number} 返回当前时间对应的动画值。
+	 * @example
+	 * // 示例用法
+	 * const value = easeOutQuint(0.5); // 返回当前时间对应的动画值
+	 */
+	easeOutQuint = (t : number) : number => {
+		return 1 - Math.pow(1 - t, 5);
+	}
+
+	/**
+	 * @name 缓动动画 - 五次函数图象入出
+	 * @description 创建一个五次函数图象缓动动画效果的入出（开始和结束）函数。
+	 * @param {number} t - 当前时间（0 到 1 之间）。
+	 * @returns {number} 返回当前时间对应的动画值。
+	 * @example
+	 * // 示例用法
+	 * const value = easeInOutQuint(0.5); // 返回当前时间对应的动画值
+	 */
+	easeInOutQuint = (t : number) : number => {
+		return t < 0.5 ? 16 * t * t * t * t * t : 1 - Math.pow(-2 * t + 2, 5) / 2;
+	}
+
+	/**
+	 * @name 缓动动画 - 指数入
+	 * @description 创建一个指数缓动动画效果的入（开始）函数。
+	 * @param {number} t - 当前时间（0 到 1 之间）。
+	 * @returns {number} 返回当前时间对应的动画值。
+	 * @example
+	 * // 示例用法
+	 * const value = easeInExpo(0.5); // 返回当前时间对应的动画值
+	 */
+	easeInExpo = (t : number) : number => {
+		return t == 0 ? 0 : Math.pow(2, 10 * t - 10);
+	}
+
+	/**
+	 * @name 缓动动画 - 指数出
+	 * @description 创建一个指数缓动动画效果的出（结束）函数。
+	 * @param {number} t - 当前时间（0 到 1 之间）。
+	 * @returns {number} 返回当前时间对应的动画值。
+	 * @example
+	 * // 示例用法
+	 * const value = easeOutExpo(0.5); // 返回当前时间对应的动画值
+	 */
+	easeOutExpo = (t : number) : number => {
+		return t == 1 ? 1 : 1 - Math.pow(2, -10 * t);
+	}
+
+	/**
+	 * @name 缓动动画 - 指数入出
+	 * @description 创建一个指数缓动动画效果的入出（开始和结束）函数。
+	 * @param {number} t - 当前时间（0 到 1 之间）。
+	 * @returns {number} 返回当前时间对应的动画值。
+	 * @example
+	 * // 示例用法
+	 * const value = easeInOutExpo(0.5); // 返回当前时间对应的动画值
+	 */
+	easeInOutExpo = (t : number) : number => {
+		return t == 0
+			? 0
+			: t == 1
+				? 1
+				: t < 0.5 ? Math.pow(2, 20 * t - 10) / 2
+					: (2 - Math.pow(2, -20 * t + 10)) / 2;
+	}
+
+	/**
+	 * @name 缓动动画 - 椭圆入
+	 * @description 创建一个椭圆缓动动画效果的入（开始）函数。
+	 * @param {number} t - 当前时间（0 到 1 之间）。
+	 * @returns {number} 返回当前时间对应的动画值。
+	 * @example
+	 * // 示例用法
+	 * const value = easeInCirc(0.5); // 返回当前时间对应的动画值
+	 */
+	easeInCirc = (t : number) : number => {
+		return 1 - Math.sqrt(1 - Math.pow(t, 2));
+	}
+
+	/**
+	 * @name 缓动动画 - 椭圆出
+	 * @description 创建一个椭圆缓动动画效果的出（结束）函数。
+	 * @param {number} t - 当前时间（0 到 1 之间）。
+	 * @returns {number} 返回当前时间对应的动画值。
+	 * @example
+	 * // 示例用法
+	 * const value = easeOutCirc(0.5); // 返回当前时间对应的动画值
+	 */
+	easeOutCirc = (t : number) : number => {
+		return Math.sqrt(1 - Math.pow(t - 1, 2));
+	}
+
+	/**
+	 * @name 缓动动画 - 椭圆入出
+	 * @description 创建一个椭圆缓动动画效果的入出（开始和结束）函数。
+	 * @param {number} t - 当前时间（0 到 1 之间）。
+	 * @returns {number} 返回当前时间对应的动画值。
+	 * @example
+	 * // 示例用法
+	 * const value = easeInOutCirc(0.5); // 返回当前时间对应的动画值
+	 */
+	easeInOutCirc = (t : number) : number => {
+		return t < 0.5
+			? (1 - Math.sqrt(1 - Math.pow(2 * t, 2))) / 2
+			: (Math.sqrt(1 - Math.pow(-2 * t + 2, 2)) + 1) / 2;
+	}
+
+	/**
+	 * @name 缓动动画 - 回退入
+	 * @description 创建一个回退缓动动画效果的入（开始）函数。
+	 * @param {number} t - 当前时间（0 到 1 之间）。
+	 * @returns {number} 返回当前时间对应的动画值。
+	 * @example
+	 * // 示例用法
+	 * const value = easeInBack(0.5); // 返回当前时间对应的动画值
+	 */
+	easeInBack = (t : number) : number => {
+		const c1 = 1.70158;
+		const c3 = c1 + 1;
+
+		return c3 * t * t * t - c1 * t * t;
+	}
+
+	/**
+	 * @name 缓动动画 - 回退出
+	 * @description 创建一个回退缓动动画效果的出（结束）函数。
+	 * @param {number} t - 当前时间（0 到 1 之间）。
+	 * @returns {number} 返回当前时间对应的动画值。
+	 * @example
+	 * // 示例用法
+	 * const value = easeOutBack(0.5); // 返回当前时间对应的动画值
+	 */
+	easeOutBack = (t : number) : number => {
+		const c1 = 1.70158;
+		const c3 = c1 + 1;
+
+		return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+	}
+
+	/**
+	 * @name 缓动动画 - 回退入出
+	 * @description 创建一个回退缓动动画效果的入出（开始和结束）函数。
+	 * @param {number} t - 当前时间（0 到 1 之间）。
+	 * @returns {number} 返回当前时间对应的动画值。
+	 * @example
+	 * // 示例用法
+	 * const value = easeInOutBack(0.5); // 返回当前时间对应的动画值
+	 */
+	easeInOutBack = (t : number) : number => {
+		const c1 = 1.70158;
+		const c2 = c1 * 1.525;
+
+		return t < 0.5
+			? (Math.pow(2 * t, 2) * ((c2 + 1) * 2 * t - c2)) / 2
+			: (Math.pow(2 * t - 2, 2) * ((c2 + 1) * (t * 2 - 2) + c2) + 2) / 2;
+	}
+
+	/**
+	 * @name 缓动动画 - 弹性入
+	 * @description 创建一个弹性缓动动画效果的入（开始）函数。
+	 * @param {number} t - 当前时间（0 到 1 之间）。
+	 * @returns {number} 返回当前时间对应的动画值。
+	 * @example
+	 * // 示例用法
+	 * const value = easeInElastic(0.5); // 返回当前时间对应的动画值
+	 */
+	easeInElastic = (t : number) : number => {
+		const c4 = (2 * Math.PI) / 3;
+
+		return t == 0
+			? 0
+			: t == 1
+				? 1
+				: -Math.pow(2, 10 * t - 10) * Math.sin((t * 10 - 10.75) * c4);
+	}
+
+	/**
+	 * @name 缓动动画 - 弹性出
+	 * @description 创建一个弹性缓动动画效果的出（结束）函数。
+	 * @param {number} t - 当前时间（0 到 1 之间）。
+	 * @returns {number} 返回当前时间对应的动画值。
+	 * @example
+	 * // 示例用法
+	 * const value = easeOutElastic(0.5); // 返回当前时间对应的动画值
+	 */
+	easeOutElastic = (t : number) : number => {
+		const c4 = (2 * Math.PI) / 3;
+
+		return t == 0
+			? 0
+			: t == 1
+				? 1
+				: Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * c4) + 1;
+	}
+
+	/**
+	 * @name 缓动动画 - 弹性入出
+	 * @description 创建一个弹性缓动动画效果的入出（开始和结束）函数。
+	 * @param {number} t - 当前时间（0 到 1 之间）。
+	 * @returns {number} 返回当前时间对应的动画值。
+	 * @example
+	 * // 示例用法
+	 * const value = easeInOutElastic(0.5); // 返回当前时间对应的动画值
+	 */
+	easeInOutElastic = (t : number) : number => {
+		const c5 = (2 * Math.PI) / 4.5;
+
+		return t == 0
+			? 0
+			: t == 1
+				? 1
+				: t < 0.5
+					? -(Math.pow(2, 20 * t - 10) * Math.sin((20 * t - 11.125) * c5)) / 2
+					: (Math.pow(2, -20 * t + 10) * Math.sin((20 * t - 11.125) * c5)) / 2 + 1;
+	}
+
+	/**
+	 * @name 缓动动画 - 弹跳入
+	 * @description 创建一个弹跳缓动动画效果的入（开始）函数。
+	 * @param {number} t - 当前时间（0 到 1 之间）。
+	 * @returns {number} 返回当前时间对应的动画值。
+	 * @example
+	 * // 示例用法
+	 * const value = easeInBounce(0.5); // 返回当前时间对应的动画值
+	 */
+	easeInBounce = (t : number) : number => {
+		return 1 - this.easeOutBounce(1 - t);
+	}
+
+	/**
+	 * @name 缓动动画 - 弹跳出
+	 * @description 创建一个弹跳缓动动画效果的出（结束）函数。
+	 * @param {number} t - 当前时间（0 到 1 之间）。
+	 * @returns {number} 返回当前时间对应的动画值。
+	 * @example
+	 * // 示例用法
+	 * const value = easeOutBounce(0.5); // 返回当前时间对应的动画值
+	 */
+	easeOutBounce = (t : number) : number => {
+		const n1 = 7.5625;
+		const d1 = 2.75;
+
+		if (t < 1 / d1) {
+			return n1 * t * t;
+		} else if (t < 2 / d1) {
+			return n1 * (t - 1.5 / d1) * t + 0.75;
+		} else if (t < 2.5 / d1) {
+			return n1 * (t - 2.25 / d1) * t + 0.9375;
+		} else {
+			return n1 * (t - 2.625 / d1) * t + 0.984375;
+		}
+	}
+
+
+	/**
+	 * @name 缓动动画 - 弹跳入出
+	 * @description 创建一个弹跳缓动动画效果的入出（开始和结束）函数。
+	 * @param {number} t - 当前时间（0 到 1 之间）。
+	 * @returns {number} 返回当前时间对应的动画值。
+	 * @example
+	 * // 示例用法
+	 * const value = easeInOutBounce(0.5); // 返回当前时间对应的动画值
+	 */
+	easeInOutBounce = (t : number) : number => {
+		return t < 0.5
+			? (1 - this.easeOutBounce(1 - 2 * t)) / 2
+			: (1 + this.easeOutBounce(2 * t - 1)) / 2;
+	}
+
+	/**
+	 * @name 缓动动画 - 线性
+	 * @description 创建一个线性缓动动画效果的函数。
+	 * @param {number} t - 当前时间（0 到 1 之间）。
+	 * @returns {number} 返回当前时间对应的动画值。
+	 * @example
+	 * // 示例用法
+	 * const value = linear(0.5); // 返回当前时间对应的动画值
+	 */
+
+	linear = (t : number) : number => {
+		return t
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	/**
+	 * Basic 基础类
+	 */
+	/**
+	 * @name 生成随机组件ID
+	 * @description 生成一个指定长度的随机字符串，用于唯一标识生成，防止多个组件出现数据错乱。
+	 * @returns {string} 返回生成的随机ID。
+	 * 
+	 * @example
+	 * // 示例用法
+	 * const randomId = randomId();
+	 */
+
+	randomComId() : string {
+		let letters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+		return `${letters[this.randint(0, letters.length - 1)]}` + this.uuid()
+	}
+
+	// 节流及防抖函数
+	private timers = new Map<string, number>()
+	private flags = new Map<string, boolean>()
+	/**
+	 * @name 节流
+	 * @description 创建一个节流函数，指定的时间内多次执行，只执行第一次调用。
+	 * @param {Function} fun - 需要节流的函数。
+	 * @param {number} wait - 需要等待的时间（毫秒）。
+	 * @param {string} [id='default'] - 节流函数的唯一标识符，用于多组件区分不同的节流实例。
+	 * @returns {void}
+	 * @example
+	 * // 示例用法
+	 * const myThrottledFunction = () => {
+	 *   console.log('在指定时间内至多执行一次');
+	 * };
+	 * throttle(myThrottledFunction, 1000, 'uniqueId');
+	 */
+
+	throttle(fun : () => void, wait : number, id : string = 'default') : void {
+		if (wait <= 0) {
+			fun()
+		} else if (!this.flags.has(id) || !this.flags.get(id)!) {
+			this.flags.set(id, true)
+			this.timers.set(id, setTimeout(() => {
+				this.flags.set(id, false)
+				fun()
+			}, wait))
+		}
+	}
+
+
+	/**
+	 * @name 防抖
+	 * @description 创建一个防抖函数，指定的时间运行多次，将重新计时，并只执行最后一次调用。
+	 * @param {Function} fun - 需要防抖的函数。
+	 * @param {number} wait - 需要等待的时间（毫秒）。
+	 * @param {string} [id='default'] - 防抖函数的唯一标识符，用于多组件区分不同的防抖实例。
+	 * @returns {void}
+	 * @example
+	 * // 示例用法
+	 * const myDebouncedFunction = () => {
+	 *   console.log('只会在停止触发后执行一次');
+	 * };
+	 * debounce(myDebouncedFunction, 300, 'uniqueId');
+	 */
+	debounce(fun : () => void, wait : number, id : string = 'default') : void {
+		clearTimeout(this.timers.get(id) ?? -1)
+		if (wait <= 0) {
+			fun()
+		} else {
+			this.timers.set(id, setTimeout(() => {
+				fun()
+			}, wait))
+		}
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	/**
+	 * Object 对象类
+	 */
+
+	/**
+	 * @name 格式化数字
+	 * @description 返回给定数字的格式化结果，如果数字为整数，则返回整数部分；如果数字为小数，则返回原数字。
+	 * @param {number} num - 输入的数字。
+	 * @returns {number} 返回格式化后的数字。
+	 * @example
+	 * // 示例用法
+	 * formatNumber(3.00); // 返回 3
+	 * formatNumber(3.14); // 返回 3.14
+	 */
+
+	formatNumber(num : number) : number {
+		let int = Math.trunc(num)
+		return num - int == 0 ? int : num
+	}
+
+	/**
+	 * @name 深拷贝
+	 * @description 使用 UTS 实现的深拷贝方法，支持 UTS 的标准内置类型（[详见](https://doc.dcloud.net.cn/uni-app-x/uts/buildin-object-api/number.html)，不包括 Element、Math、Promise、Console 等非数据对象）和自定义类型复制，在 Web 端还支持一些 JS 内置对象，如 Blob、File、URL。对于不支持的对象，将返回源数据。复制大量数据时性能高于 JSON 序列化。
+	 * @param {any} obj - 需要深拷贝的对象。
+	 * @returns {T} - 返回深拷贝后的对象。
+	 * @example
+	 * // 假设有一个对象
+	 * let obj = ref({ a: 1, b: 2 });
+	 * let clonedObj = deepClone(obj.value);
+	*/
+	deepClone<T>(s : T) : T {
+		let source = toRaw(s) as T
+		if (typeof source == 'string') return source
+		if (typeof source == 'number') return source
+		if (typeof source == 'boolean') return source
+		if (source instanceof Date) {
+			return new Date(source.getTime()) as T
+		}
+		if (source instanceof Array) {
+			let arr = [] as any[]
+			for (let i = 0; i < source.length; i++) {
+				arr.push(this.deepClone(source[i]) as any)
+			}
+			return arr as T
+		}
+
+		// #ifndef APP
+		// @ts-ignore
+		if (source instanceof Object && source?.__proto__?.constructor == Object) {
+			let obj = {}
+			Object.keys(source).forEach((v : any) => {
+				obj[v] = this.deepClone(source[v]) as any
+			})
+			return obj as T
+		}
+
+		// #endif
+
+		if (source instanceof UTSJSONObject) {
+			let obj = {}
+			// #ifdef APP
+			let map = source.toMap() as Map<any, any>
+			map.forEach((v : any, k : any) => {
+				obj[k] = this.deepClone(v)
+			})
+			// #endif
+			// #ifndef APP
+			// @ts-ignore
+			UTSJSONObject.keys(source).forEach((v : any) => {
+				obj[v] = this.deepClone(source[v]) as any
+			})
+			// #endif
+			return obj as T
+		}
+
+		if (source instanceof Set) {
+			let set = new Set<any>()
+			source.forEach((v : any | null) => {
+				if (v != null) set.add(this.deepClone(v))
+			})
+			return set as T
+		}
+
+		if (source instanceof Map) {
+			let map = new Map<any, any>();
+			(source as Map<any, any>).forEach((v : any, k : any) => {
+				map.set(k, this.deepClone(v))
+			})
+			return map as T
+		}
+
+		if (source instanceof RegExp) {
+			let res = new RegExp(source.source, source.flags)
+			res.lastIndex = source.lastIndex
+			return res as T
+		}
+
+		if (source instanceof ArrayBuffer) {
+			// #ifdef APP
+			return new ArrayBuffer(source.byteLength as Int) as T
+			// #endif
+			// #ifdef WEB
+			return new ArrayBuffer(source.byteLength) as T
+			// #endif
+		}
+
+		if (source instanceof DataView) {
+			return new DataView(source.buffer.slice(0)) as T
+		}
+
+		if (source instanceof Float32Array) {
+			return new Float32Array(source) as T
+		}
+
+		if (source instanceof Float64Array) {
+			return new Float64Array(source) as T
+		}
+
+		if (source instanceof Int8Array) {
+			return new Int8Array(source) as T
+		}
+
+		if (source instanceof Int16Array) {
+			return new Int16Array(source) as T
+		}
+
+		if (source instanceof Int32Array) {
+			return new Int32Array(source) as T
+		}
+
+		if (source instanceof Uint8Array) {
+			return new Uint8Array(source) as T
+		}
+
+		if (source instanceof Uint8ClampedArray) {
+			return new Uint8ClampedArray(source) as T
+		}
+
+		if (source instanceof Uint16Array) {
+			return new Uint16Array(source) as T
+		}
+
+		if (source instanceof Uint32Array) {
+			return new Uint32Array(source) as T
+		}
+
+		// #ifdef WEB
+		if (source instanceof Blob) {
+			// @ts-ignore
+			return source.slice(0) as T
+		}
+
+		if (source instanceof File) {
+			// @ts-ignore
+			return source.slice(0) as T
+		}
+
+		if (source instanceof URL) {
+			// @ts-ignore
+			return new URL(source.href) as T
+		}
+		// #endif
+		return source as T
+	}
+
+	/**
+	 * @name 数组重装（数组浅拷贝）
+	 * @description 将一个数组浅拷贝为一个新的数组，主要用于解决 uni-app x 在 WEB 端自动将一些特殊数组转为特殊类型，导致无法使用例如 forEach, includes 等数组方法的问题。
+	 * @param {any} oldArray - 需要拷贝的数组。
+	 * @returns {any} 返回一个新的数组，该数组是 oldArray 的浅拷贝。
+	 * @example
+	 * // 示例用法
+	 * const newArray = reArray([1, 2, 3, 4, 5]);
+	 */
+	reArray<T>(oldArray : T[]) : T[] {
+		let newArray = [] as T[]
+		for (let i = 0; i < oldArray.length; i++) {
+			newArray.push(oldArray[i] as T)
+		}
+		return newArray as T[]
+	}
+
+	/**
+	 * @name 数组洗牌
+	 * @description 使用 Fisher–Yates 算法对数组进行洗牌，打乱数组的顺序。
+	 * @param {Array} arr - 需要洗牌的数组。
+	 * @returns {Array} 返回一个洗牌后的数组。
+	 * @example
+	 * let shuffledArray = shuffle([0,1,2,3,4,5,6,7,8,9]);
+	*/
+
+	shuffle(arr : any[]) : any[] {
+		let i = arr.length;
+		while (i != 0) {
+			let j = Math.floor(Math.random() * i--);
+			let t_j = arr[j]
+			let t_i = arr[i]
+			arr[j] = t_i
+			arr[i] = t_j
+		}
+		return arr
+	}
+
+	/**
+	 * @name 是否为Number类型
+	 * @description 检查输入的值是否为 Number 类型。
+	 * @param {any|null} value - 输入的值。
+	 * @returns {boolean} 如果输入的值是Number类型，返回 true，否则返回 false。
+	 * @example
+	 * // 示例用法
+	 * const n1 = isNumber(42); // 返回 true
+	 * const n2 = isNumber(485.toInt()); // 返回 true
+	 * const n3 = isNumber('eee'); // 返回 true
+	 */
+	isNumber(value : any | null) : boolean {
+		// #ifdef APP-ANDROID
+		return ['Byte', 'UByte', 'Short', 'UShort', 'Int', 'UInt', 'Long', 'ULong', 'Float', 'Double', 'number'].includes(typeof value)
+		// #endif
+		// #ifdef APP-IOS
+		return ['Int8', 'UInt8', 'Int16', 'UInt16', 'Int32', 'UInt32', 'Int64', 'UInt64', 'Int', 'UInt', 'Float', 'Float16', 'Float32', 'Float64', 'Double', 'number'].includes(typeof value)
+		// #endif
+		// #ifndef APP
+		return typeof value == 'number' && !isNaN(value);
+		// #endif
+	}
+
+	/**
+	 * @name 设置元素Dataset
+	 * @description 设置UniElement的Dataset，主要用于解决 uni-app x 在 WEB 端自动将 Dataset 转为特殊类型，导致无法使用例如 set, get 等方法的问题。
+	 * @param {UniElement} el - 元素
+	 * @param {string} key - 键
+	 * @param {any} value - 值
+	 * @example
+	 * // 示例用法
+	 * setDataset(el, 'my-data', 'someValue');
+	 */
+	setDataset(el : UniElement, key : string, value : any) {
+		// #ifdef APP
+		el.dataset.set(key, value)
+		// #endif
+		// #ifdef WEB
+		el.dataset[this.kebabCaseToCamelCase(key)] = value
+		// #endif
+
+	}
+
+	/**
+	 * @name 获取元素Dataset
+	 * @description 获取UniElement的Dataset，主要用于解决 uni-app x 在 WEB 端自动将 Dataset 转为特殊类型，导致无法使用例如 set, get 等方法的问题。
+	 * @param {UniElement} el - 元素
+	 * @param {string} key - 键
+	 * @returns {any} 返回元素Dataset的值
+	 * @example
+	 * // 示例用法
+	 * const value = getDataset(el, 'my-data');
+	 */
+	getDataset(el : UniElement, key : string) : any {
+		// #ifdef APP
+		return (el.dataset.get(key) ?? '') as any
+		// #endif
+		// #ifdef WEB
+		return (el.dataset[this.kebabCaseToCamelCase(key)] ?? '') as any
+		// #endif
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	/**
+	 * this 校验类
+	 */
+	/**
+	 * @name 是否为日期
+	 * @description 验证输入的值是否为有效的日期。如果传入Date构造器的参数字符串不合法，在web平台会抛出 Invalid Date 异常；在Android/IOS平台，会转换为程序执行时的时间
+	 * @param {any} date - 输入的值。
+	 * @returns {boolean} 如果输入的值是一个有效的日期，返回 true，否则返回 false。
+	 * @example
+	 * // 示例用法
+	 * const isValidDate = isDate('2023-01-01'); // 返回 true
+	 * const isNotValidDate = isDate('not a date'); // 返回 false
+	 */
+	isDate(date : any) : boolean {
+		if (date == '' || date == 0) {
+			return false
+		}
+		return !/Invalid|NaN/.test(new Date(date.toString()).toString())
+	}
+
+	/**
+	 * @name 是否为URL
+	 * @description 验证输入的字符串是否为有效的URL。
+	 * @param {string} url - 输入的字符串。
+	 * @returns {boolean} 如果输入的字符串是一个有效的URL，返回 true，否则返回 false。
+	 * @example
+	 * // 示例用法
+	 * const isValidURL = isURL('https://example.com'); // 返回 true
+	 * const isNotValidURL = isURL('not a valid URL'); // 返回 false
+	 */
+	isURL(url : string) : boolean {
+		let reg = /^((https|http|ftp|rtsp|mms|ws):\/\/)(([0-9a-zA-Z_!~*'().&=+$%-]+: )?[0-9a-zA-Z_!~*'().&=+$%-]+@)?(([0-9]{1,3}.){3}[0-9]{1,3}|([0-9a-zA-Z_!~*'()-]+.)*([0-9a-zA-Z][0-9a-zA-Z-]{0,61})?[0-9a-zA-Z].[a-zA-Z]{2,6})(:[0-9]{1,4})?((\/?)|(\/[0-9a-zA-Z_!~*'().;?:@&=+$,%#-]+)+\/?)$/
+		return reg.test(url)
+	}
+
+	/**
+	 * @name 是否为数字
+	 * @description 验证输入的字符串是否为有效的数字。
+	 * @param {string} num - 输入的字符串。
+	 * @returns {boolean} 如果输入的字符串是一个有效的数字，返回 true，否则返回 false。
+	 * @example
+	 * // 示例用法
+	 * const isValidNumber = isNumberString('12345'); // 返回 true
+	 * const isNotValidNumber = isNumberString('not a number'); // 返回 false
+	 */
+	isNumberString(num : string) : boolean {
+		const reg = /^[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?$/
+		return reg.test(num)
+	}
+
+	/**
+	 * @name 是否为字母
+	 * @description 验证输入的字符串是否为有效的字母。
+	 * @param {string} str - 输入的字符串。
+	 * @returns {boolean} 如果输入的字符串是由字母组成的，返回 true，否则返回 false。
+	 * @example
+	 * // 示例用法
+	 * const isValidLetter = isAbc('abc'); // 返回 true
+	 * const isNotValidLetter = isAbc('123'); // 返回 false
+	 */
+	isAbc(str : string) : boolean {
+		const reg = /^[A-Za-z]+$/
+		return reg.test(str)
+	}
+
+	/**
+	 * @name 是否为中文
+	 * @description 验证输入的字符串是否为有效的中文。
+	 * @param {string} str - 输入的字符串。
+	 * @returns {boolean} 如果输入的字符串是由中文组成的，返回 true，否则返回 false。
+	 * @example
+	 * // 示例用法
+	 * const isValidChinese = isChinese('你好'); // 返回 true
+	 * const isNotValidChinese = isChinese('hello'); // 返回 false
+	 */
+	isChinese(str : string) : boolean {
+		let reg = /^[\u4e00-\u9fa5]{0,}$/g
+		return reg.test(str)
+	}
+
+	/**
+	 * @name 是否为邮箱
+	 * @description 验证输入的字符串是否为有效的邮箱地址。
+	 * @param {string} email - 输入的字符串。
+	 * @returns {boolean} 如果输入的字符串是一个有效的邮箱地址，返回 true，否则返回 false。
+	 * @example
+	 * // 示例用法
+	 * const isValidEmail = isEmail('example@example.com'); // 返回 true
+	 * const isNotValidEmail = isEmail('not a valid email'); // 返回 false
+	 */
+	isEmail(email : string) : boolean {
+		const reg = /^\w+([-+.]\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*$/g
+		return reg.test(email)
+	}
+
+	/**
+	 * @name 是否为手机号
+	 * @description 验证输入的字符串是否为有效的手机号。
+	 * @param {string} phone - 输入的字符串。
+	 * @returns {boolean} 如果输入的字符串是一个有效的手机号，返回 true，否则返回 false。
+	 * @example
+	 * // 示例用法
+	 * const isValidPhone = isPhone('13800138000'); // 返回 true
+	 * const isNotValidPhone = isPhone('not a valid phone'); // 返回 false
+	 */
+	isPhone(phone : string) : boolean {
+		const reg = /^[1][3,4,5,6,7,8,9][0-9]{9}$/g
+		return reg.test(phone)
+	}
+
+	/**
+	 * @name 是否为座机号
+	 * @description 验证输入的字符串是否为有效的座机号。
+	 * @param {string} phone - 输入的字符串。
+	 * @returns {boolean} 如果输入的字符串是一个有效的座机号，返回 true，否则返回 false。
+	 * @example
+	 * // 示例用法
+	 * const isValidLandline = isLandline('010-12345678'); // 返回 true
+	 * const isNotValidLandline = isLandline('not a valid landline'); // 返回 false
+	 */
+	isLandline(phone : string) : boolean {
+		const reg = /^\d{3,4}-\d{7,8}(-\d{3,4})?$/
+		return reg.test(phone)
+	}
+
+	/**
+	 * @name 是否为QQ号
+	 * @description 验证输入的字符串是否为有效的QQ号。
+	 * @param {string} str - 输入的字符串。
+	 * @returns {boolean} 如果输入的字符串是一个有效的QQ号，返回 true，否则返回 false。
+	 * @example
+	 * // 示例用法
+	 * const isValidQQNumber = isQQNumber('12345678'); // 返回 true
+	 * const isNotValidQQNumber = isQQNumber('not a valid QQ number'); // 返回 false
+	 */
+	isQQNumber(str : string) : boolean {
+		let reg = /[1-9][0-9]{4,}/g
+		return reg.test(str)
+	}
+
+	/**
+	 * @name 是否为IPv6地址
+	 * @description 验证输入的字符串是否为有效的IPv6地址。
+	 * @param {string} str - 输入的字符串。
+	 * @returns {boolean} 如果输入的字符串是一个有效的IPv6地址，返回 true，否则返回 false。
+	 * @example
+	 * // 示例用法
+	 * const isValidIPv6 = isIPv6('2001:0db8:85a3:0000:0000:8a2e:0370:7334'); // 返回 true
+	 * const isNotValidIPv6 = isIPv6('not a valid IPv6 address'); // 返回 false
+	 */
+	isIPv6(str : string) : boolean {
+		let reg = /^\s*((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:)))(%.+)?\s*$/g
+		return reg.test(str)
+	}
+
+	/**
+	 * @name 是否为IPv4地址
+	 * @description 验证输入的字符串是否为有效的IPv4地址。
+	 * @param {string} str - 输入的字符串。
+	 * @returns {boolean} 如果输入的字符串是一个有效的IPv4地址，返回 true，否则返回 false。
+	 * @example
+	 * // 示例用法
+	 * const isValidIPv4 = isIPv4('192.168.1.1'); // 返回 true
+	 * const isNotValidIPv4 = isIPv4('not a valid IPv4 address'); // 返回 false
+	 */
+	isIPv4(str : string) : boolean {
+		let reg = /((2(5[0-5]|[0-4]\d))|[0-1]?\d{1,2})(\.((2(5[0-5]|[0-4]\d))|[0-1]?\d{1,2})){3}/g
+		return reg.test(str)
+	}
+
+	/**
+	 * @name 是否为第二代公民身份号码
+	 * @description 验证输入的字符串是否为有效的中华人民共和国居民身份证（第二代）号码。自动计算身份证校验码是否正确。
+	 * @param {string} code - 输入的字符串，代表身份证号码。
+	 * @returns {boolean} 如果输入的字符串是一个有效的身份证号码，返回 true，否则返回 false。
+	 * @example
+	 * // 示例用法
+	 * const isValidIDCard = isIDCard('320381198812252138'); // 返回 true
+	 * const isNotValidIDCard = isIDCard('32038119881225213X'); // 返回 false
+	 */
+	isIDCard(code : string) : boolean {
+		let cities = ['11', '12', '13', '14', '15', '21', '22', '23', '31', '32', '33', '34', '35', '36', '37', '41', '42', '43', '44', '45', '46', '50', '51', '52', '53', '54', '61', '62', '63', '64', '65', '71', '81', '82', '91']
+		let case1 = code.length != 18
+		let case2 = code.trim() == '' || !/^\d{6}(18|19|20)?\d{2}(0[1-9]|1[012])(0[1-9]|[12]\d|3[01])\d{3}(\d|X)$/i.test(code)
+		let case3 = !cities.includes(code.slice(0, 2))
+		if (case1 || case2 || case3) return false
+
+		//验证最后一位校验位
+		if (code.length == 18) {
+			let _code = code.split('');
+			//∑(ai×Wi)(mod 11)
+			//加权因子
+			let factor = [7, 9, 10, 5, 8, 4, 2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2];
+			//校验位
+			let parity = ['1', '0', 'X', '9', '8,', '7', '6', '5', '4', '3', '2'];
+			let sum = 0;
+			let ai = 0;
+			let wi = 0;
+			for (let i = 0; i < 17; i++) {
+				ai = parseInt(_code[i]);
+				wi = factor[i];
+				sum += ai * wi;
+			}
+
+			if (parity[sum % 11] != _code[17]) {
+				return false
+			}
+		}
+		return true
+	}
+
+	/**
+	 * @name 是否为图片文件
+	 * @description 验证输入的字符串是否为有效的图片文件名。
+	 * @param {string} filename - 输入的字符串，代表文件名。
+	 * @returns {boolean} 如果输入的字符串是一个有效的图片文件名，返回 true，否则返回 false。
+	 * @example
+	 * // 示例用法
+	 * const isValidImage = isImage('example.png'); // 返回 true
+	 * const isNotValidImage = isImage('example.txt'); // 返回 false
+	 */
+	isImage(filename : string) : boolean {
+		const reg = /^(?:[^\s]+\/)*[^\s]+\.(bmp|jpg|jpeg|ico|jfif|dpg|png|tif|gif|pcx|tga|exif|fpx|svg|psd|cdr|pcd|dxf|ufo|eps|ai|raw|wmf|webp|avif|apng)$/i
+		return reg.test(filename)
+	}
+
+	/**
+	 * @name 是否为视频文件
+	 * @description 验证输入的字符串是否为有效的视频文件名。
+	 * @param {string} filename - 输入的字符串，代表文件名。
+	 * @returns {boolean} 如果输入的字符串是一个有效的视频文件名，返回 true，否则返回 false。
+	 * @example
+	 * // 示例用法
+	 * const isValidVideo = isVideo('example.mp4'); // 返回 true
+	 * const isNotValidVideo = isVideo('example.pdf'); // 返回 false
+	 */
+	isVideo(filename : string) : boolean {
+		const reg = /^(?:[^\s]+\/)*[^\s]+\.(mp4|mpg|mpeg|dat|asf|avi|rm|rmvb|mov|wmv|flv|mkv|m3u8)$/i
+		return reg.test(filename)
+	}
+
+	/**
+	 * @name 是否为车牌号码
+	 * @description 验证输入的字符串是否为有效的中华人民共和国车辆牌照号码。
+	 * @param {string} no - 输入的字符串，代表车辆牌照号码。
+	 * @returns {boolean} 如果输入的字符串是一个有效的车辆牌照号码，返回 true，否则返回 false。
+	 * @example
+	 * // 示例用法
+	 * const isValidCarNumber = isCarNumber('京A12345'); // 返回 true
+	 * const isNotValidCarNumber = isCarNumber('not a valid car number'); // 返回 false
+	 */
+	isCarNumber(no : string) : boolean {
+		no = no.replace('警', '')
+		let c_reg = /^[京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤青藏川宁琼使领A-Z]{1}[A-Z]{1}[A-HJ-NP-Z0-9]{4}[A-HJ-NP-Z0-9港澳]{1}$/,
+			x_reg = /^[京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤青藏川宁琼使领A-Z]{1}[A-Z]{1}[A-HJ-NP-Z0-9]{6}$/, // (([0-9]{5}[DF]$)|([DF][A-HJ-NP-Z0-9][0-9]{4}$))
+			l_reg = /^[京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤青藏川宁琼]{1}[1-3]{1}[0-9]{2}[0-9A-Z]{2}领$/u,
+			sg_reg = /^[1-3]{1}[0-9]{2}[0-9A-Z]{3}使$/u
+		if (no == '') return false
+		if (no.length == 7) {
+			if (!c_reg.test(no) && !sg_reg.test(no) && !l_reg.test(no)) {
+				return false
+			}
+		} else if (no.length == 8) {
+			if (!x_reg.test(no)) {
+				return false
+			}
+		} else {
+			return false
+		}
+		return true
+	}
+
+	/**
+	 * @name 是否为整数
+	 * @description 验证输入的数字是否为整数。
+	 * @param {number} num - 输入的数字。
+	 * @returns {boolean} 如果输入的数字是一个整数，返回 true，否则返回 false。
+	 * @example
+	 * // 示例用法
+	 * const isValidInteger = isInteger(123); // 返回 true
+	 * const isNotValidInteger = isInteger(123.45); // 返回 false
+	
+	 */
+	isInteger(num : number) : boolean {
+		return !isNaN(num) && isFinite(num) && Math.trunc(num) == num
+	}
+
+	/**
+	 * @name 是否为小数
+	 * @description 验证输入的数字是否为小数。
+	 * @param {number} num - 输入的数字。
+	 * @returns {boolean} 如果输入的数字是一个小数，返回 true，否则返回 false。
+	 * @example
+	 * // 示例用法
+	 * const isNotValidFloat = isFloat(123); // 返回 false
+	 * const isValidFloat = isFloat(123.45); // 返回 true
+	
+	 */
+	isFloat(num : number) : boolean {
+		return !isNaN(num) && isFinite(num) && Math.trunc(num) != num
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	/**
+	 * Text 文本类
+	 */
+	/**
+	 * @name 是否为空文本
+	 * @description 判断字符串是否为空（自动去除空格）
+	 * @example 
+		 isEmpty("   ")
+	 * @param { string } str 检测的字符串
+	*/
+
+	isEmpty(str : string) : boolean {
+		return str.trim() == ''
+	}
+
+	/**
+	 * @name 计算文本字数
+	 * @description 计算文本字数。使用 emoji-regex 库，能够正确计算表情符号的数量。
+	 * @param {string} str - 待计算字数的文本。
+	 * @returns {number} - 返回文本的字数。
+	 * @example
+	 * let totalLength = len("Hello, world!??你好，世界！");
+	 * console.log(totalLength); // 输出 20
+	 */
+	len(str : string) : number {
+		// 参考文档：https://juejin.cn/post/7018880163257712677
+		// android 端和 web 端统计字数有差异。对于含有复杂 emoji 的文本， android 统计的字数可能会较 web 统计的更多。主要是因为 android 不支持 emoji-regex 正则表达式，因此只能使用 Unicode Property 匹配方案。
+		let emojiMatches = str.match(emojiRegex);
+		let emojiCount = emojiMatches != null ? emojiMatches.length : 0;
+		let nonEmojiCount = str.replace(emojiRegex, '').length;
+		return nonEmojiCount + emojiCount;
+	}
+
+	/**
+	 * Kebab命名法转小驼峰命名法
+	 * @description 将Kebab命名法的文本转为小驼峰命名法
+	 * @example 
+	   kebabCaseToCamelCase("vue-component")
+	 * @param { string } str 待转换的字符串
+	*/
+
+	kebabCaseToCamelCase(str : string) : string {
+		if (!str.includes('-')) return str
+		let arr = str.toLowerCase().split("-");
+		let result = arr[0];
+		for (let i = 1; i < arr.length; i++) {
+			result += arr[i].charAt(0).toUpperCase() + arr[i].slice(1);
+		}
+		return result
+	}
+
+	/**
+	 * 小驼峰命名法转Kebab命名法
+	 * @description 将小驼峰命名法的文本转为Kebab命名法
+	 * @example 
+	   camelCaseToKebabCase("vueComponent")
+	 * @param { string } str 待转换的字符串
+	*/
+
+	camelCaseToKebabCase(str : string) : string {
+		return str.replace(/([A-Z])/g, "-$1").toLowerCase()
+	}
+
+	/**
+	 * @name 数字转大写金额
+	 * @description 将阿拉伯数字转换为中文大写金额。
+	 * @param {string} num - 待转换的数字。
+	 * @returns {string} - 返回中文大写金额的字符串。
+	 * @example
+	 * let chineseAmount = numToUpper(23125.102);
+	 */
+
+	numToUpper(num : string) : string {
+		let unit = "仟佰拾极仟佰拾载仟佰拾正仟佰拾涧仟佰拾沟仟佰拾穰仟佰拾秭仟佰拾垓仟佰拾京仟佰拾兆仟佰拾亿仟佰拾万仟佰拾元角分"
+		if (!this.isNumberString(num) || (num.split('.')[0].length > unit.length - 2)) return "Illegal Data";
+		let str = "";
+		num += "00";
+		let p = num.indexOf('.');
+		if (p >= 0)
+			num = num.substring(0, p) + num.substring(p + 1, p + 3);
+		unit = unit.substring(unit.length - num.length);
+		for (let i = 0; i < num.length; i++)
+			str += '零壹贰叁肆伍陆柒捌玖'.charAt(parseInt(num.charAt(i))) + unit.charAt(i);
+		return str.replace(/零(仟|佰|拾|角)/g, "零").replace(/(零)+/g, "零").replace(/零(万|亿|元)/g, "$1").replace(/(亿)万/g, "$1$2").replace(/^元零?|零分/g, "").replace(/元$/g, "元整");
+	}
+
+	/**
+	 * @name 姓名脱敏
+	 * @description 为姓名脱敏。
+	 * @param {string} name - 待脱敏的名字。
+	 * @returns {string} - 返回脱敏后的名字。
+	 * @example
+	 * let encryptedName = encryptName('张三');
+	 */
+
+	encryptName(name : string) : string {
+		if (name.length == 2) {
+			return name.charAt(0) + '*';
+		} else if (name.length > 2) {
+			return name.charAt(0) + '*' + name.slice(-1);
+		} else {
+			return name;
+		}
+	}
+
+	/**
+	 * @name 电话号码脱敏
+	 * @description 为电话号码脱敏。支持 11 位手机号码和座机号码。
+	 * @param {string} phone - 待脱敏的电话号码。
+	 * @returns {string} - 返回脱敏后的电话号码。
+	 * @example
+	 * let encryptedPhone = encryptPhone('13800138000');
+	 */
+
+	encryptPhone(phone : string) : string {
+		phone = phone.replace(/\s|\/|-/g, '');
+		let length = phone.length;
+		if (length == 11 && /^\d{11}$/.test(phone)) {
+			return phone.slice(0, 3) + '****' + phone.slice(7);
+		} else if ((length == 10 || length == 11) && /^\d+$/.test(phone)) {
+			let areaCodeLength = length == 10 ? 3 : 4;
+			return phone.slice(0, areaCodeLength) + '****' + phone.slice(-4);
+		} else {
+			return length > 2 ? phone.charAt(0) + '*'.repeat(length - 2) + phone.charAt(length - 1) : phone;
+		}
+
+	}
+
+	/**
+	 * @name 身份证号脱敏
+	 * @description 为身份证号脱敏。隐藏中间的11位数字，只保留前3位和后4位。
+	 * @param {string} no - 待脱敏的身份证号码。
+	 * @returns {string} - 返回脱敏后的身份证号码。
+	 * @example
+	 * let encryptedIDCard = encryptIDCard('110105199001012345');
+	 */
+
+	encryptIDCard(no : string) : string {
+		return no.replace(/(\d{3})\d{11}(\d{4})/, '$1********$2');
+	}
+
+	/**
+	 * @name 邮箱脱敏
+	 * @description 为邮箱邮箱。隐藏用户名的一部分。
+	 * @param {string} email - 待脱敏的电子邮件地址。
+	 * @returns {string} - 返回脱敏后的电子邮件地址。
+	 * @example
+	 * let encryptedEmail = encryptEmail('example@email.com');
+	 */
+	encryptEmail(email : string) : string {
+		const [username, domain] = email.split('@');
+		const usernameLength = username.length;
+		if (usernameLength == 1) {
+			return '*@' + domain;
+		} else {
+			return username.charAt(0) + '*'.repeat(usernameLength - 2) + username.charAt(usernameLength - 1) + '@' + domain;
+		}
+	}
+
+	/**
+	 * @name 银行卡号脱敏
+	 * @description 为银行卡号脱敏，隐藏中间的部分数字，只保留前3位和后4位。
+	 * @param {string} no - 待脱敏的银行卡号。
+	 * @returns {string} - 返回脱敏后的银行卡号。
+	 * @example
+	 * let encryptedBankCard = encryptBankCard('123456789012345678');
+	 */
+	encryptBankCard(no : string) : string {
+		no = no.replace(/\s|-/g, '');
+
+		if (no.length >= 8) {
+			return no.slice(0, 3) + '*'.repeat(no.length - 7) + no.slice(-4);
+		} else {
+			return no.charAt(0) + '*'.repeat(no.length - 2) + no.slice(-1);;
+		}
+	}
+
+	/**
+	 * @name 分割数字
+	 * @description 将数字字符串格式化为带有指定分隔符的格式，例如每三位数字后加一个逗号。
+	 * @param {string} num - 输入的数字字符串。
+	 * @param {number} [digits=3] - 数字分隔的位数，默认为3。
+	 * @param {string} [separator=","] - 数字分隔符，默认为逗号。
+	 * @returns {string} 返回格式化后的数字字符串。
+	 * @example
+	 * // 示例用法
+	 * const formattedNumber = separateNumber('1234567890'); // 返回 "1,234,567,890"
+	 * const formattedNegativeNumber = separateNumber('-1234567890', 4); // 返回 "-12,3456,7890"
+	 */
+
+	separateNumber(num : string, digits : number = 3, separator : string = ",") : string {
+		if (digits == 0 || !/^[0-9]*$/.test(digits.toString())) {
+			throw new SnError('utils', 'separateNumber', 9010014);
+		}
+		let point = num.indexOf('.')
+		let int = point != -1 ? num.substring(0, point) : num
+		let decimal = point != -1 ? num.substring(point) : ''
+		let isNegative = int.startsWith('-');
+		let numStr = isNegative ? int.substring(1) : int;
+		let result = '';
+		for (let i : number = numStr.length; i > 0; i -= digits) {
+			result = (i <= digits ? '' : separator) + numStr.substring(i - digits, i) + result;
+		}
+		return (isNegative ? '-' : '') + result + decimal;
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	/**
+	 * Platform 平台
+	 */
+
+	/**
+	 * 打开链接
+	 * @description 使用默认应用打开链接（Url、Schemes等）。Android 必须加上协议，否则会报错。
+	 * @example 
+	   openLink("https://www.example.com")
+	   openLink("tel://15415551234")
+	 * @param { string } href 链接
+	*/
+
+	openLink(href : string) : void {
+		// #ifdef APP-ANDROID
+		let intent = new Intent(Intent.ACTION_VIEW, Uri.parse(href));
+		try {
+			UTSAndroid.getUniActivity()!.startActivity(intent);
+		} catch (e) {
+			console.error('SnUtils.openLink: 链接打开失败', e)
+		}
+		// #endif
+		// #ifndef APP-ANDROID
+		window.open(href, '_blank');
+		// #endif
+	}
+
+	/**
+	 * @name 拨打电话
+	 * @description 直接拨打指定的电话号码。
+	 * @param {string} phoneNumber - 需要拨打的电话号码。
+	 * @example
+	 * // 示例用法
+	 * makePhoneCall('1234567890'); // 拨打电话号码 1234567890
+	 */
+
+	makePhoneCall(phoneNumber : string) : void {
+		// #ifdef APP-ANDROID
+		let permission = ["android.permission.CALL_PHONE"]
+		UTSAndroid.requestSystemPermission(UTSAndroid.getUniActivity()!, permission, function (allRight : boolean, grantedList : string[]) {
+			if (allRight) {
+				const intent = new Intent(Intent.ACTION_CALL)
+				intent.setData(Uri.parse(`tel:${phoneNumber}`));
+
+				if (intent.resolveActivity(UTSAndroid.getAppContext()!.getPackageManager()) != null) {
+					const context = UTSAndroid.getUniActivity()!;
+					context.startActivity(intent);
+				}
+			}
+		}, function (doNotAskAgain : boolean, _ : string[]) {
+			if (doNotAskAgain) {
+			}
+		})
+		// #endif
+		// #ifdef WEB
+		window.open(`tel:${phoneNumber}`, '_blank')
+		// #endif
+	}
+
+	/**
+	 * 写入剪切板
+	 * @description 将文本写入剪切板
+	 * @example 
+	   setClipboardData("abcdefg")
+	 * @param { string } data 数据文本
+	*/
+
+	setClipboardData(data : string) : void {
+		// #ifdef APP-ANDROID
+		const context = UTSAndroid.getAppContext();
+		if (context != null) {
+			const cm = context.getSystemService(
+				Context.CLIPBOARD_SERVICE
+			) as ClipboardManager;
+			cm.setText(data);
+		}
+		// #endif
+		// #ifdef WEB
+		navigator.clipboard
+			.writeText(data)
+			.catch(() => {
+				const input = document.createElement('input')
+				document.body.appendChild(input)
+				input.setAttribute('value', data)
+				input.select()
+				if (document.execCommand('copy')) {
+					document.execCommand('copy')
+				}
+				document.body.removeChild(input)
+			})
+		// #endif
+	}
+
+	/**
+	 * 从剪切板读取
+	 * @description 从剪切板读取文本数据
+	 * @example 
+	getClipboardData().then((text:string)=>{
+		  console.log(text) 
+	   })
+	 * @param { string } data 数据文本
+	*/
+
+	async getClipboardData() : Promise<string> {
+		// #ifdef APP-ANDROID
+		const context = UTSAndroid.getAppContext();
+		if (context != null) {
+			const cm = context.getSystemService(
+				Context.CLIPBOARD_SERVICE
+			) as ClipboardManager;
+			return cm.getText().toString()
+		}
+		// #endif
+		// #ifdef WEB
+		let permRes = await navigator.permissions.query({
+			name: 'clipboard-read'
+		})
+		if (permRes.state == 'granted' || permRes.state == 'prompt') {
+			//读取剪贴板
+			let res = await navigator.clipboard.readText()
+			return res
+		}
+		// #endif
+		return ''
+
+	}
+
+	/**
+	 * @name 显示原生提示框
+	 * @description 在不同平台上显示原生提示框。Android 平台可设置提示框的显示时长和位置。
+	 * @param {UTSJSONObject} params - 提示框的配置参数。
+	 * @param {string} [params.title=''] - 提示框的标题文本。
+	 * @param {string} [params.type='short'] - 提示框的显示时长，可选值为 'short' 或 'long'。
+	 * @param {string} [params.position=''] - 提示框的显示位置，可选值为 'top', 'center', 'bottom'。
+	 * @returns {void}
+	 * @example
+	 * // 示例用法
+	 * showSysToast({ title: '操作成功', type: 'long', position: 'center' });
+	 */
+
+	showSysToast(params : UTSJSONObject) : void {
+		let title = (params['title'] ?? '') as string
+		// #ifdef APP-ANDROID
+		let time : number = Toast.LENGTH_SHORT
+		switch (params['type'] ?? 'short') {
+			case 'short':
+				time = Toast.LENGTH_SHORT
+				break
+			case 'long':
+				time = Toast.LENGTH_LONG
+				break
+			default:
+				time = Toast.LENGTH_SHORT
+				break
+		}
+		let toast = Toast.makeText(UTSAndroid.getAppContext(), title, time);
+		switch (params['position'] ?? 'center') {
+			case 'top':
+				toast.setGravity(Gravity.TOP, 0, 0);
+				break
+			case 'center':
+				toast.setGravity(Gravity.CENTER, 0, 0);
+				break
+			case 'bottom':
+				toast.setGravity(Gravity.BOTTOM, 0, 0);
+				break
+			default:
+				toast.setGravity(Gravity.CENTER, 0, 0);
+				break
+		}
+		toast.show();
+		// #endif
+		// #ifdef WEB
+		alert(title)
+		// #endif
+	}
+
+	/**
+	 * @name 显示提示框
+	 * @description 在各端提供基本一致的提示框样式。
+	 * @param {SnToastyConfig} config - 提示框的配置参数。
+	 * @returns {void}
+	 * @example
+	 * // 示例用法
+	 * showToasty({ 
+	 * 	text: '操作成功', 
+	 * 	type: 'success'
+	 * } as SnToastyConfig);
+	 */
+
+	showToasty(config : SnToastyConfig) {
+		toast(config)
+	}
+
+
+	/**
+	 * 使用内置全屏Webview打开网址
+	 * @description 使用内置全屏 Webview 打开网址。
+	 * @example 
+	   viewUrlByWebview("https://www.example.com")
+	 * @param { string } url 网址
+	*/
+
+	viewUrlByWebview(url : string) : void {
+		// #ifdef APP-ANDROID
+		let webview = new WebView(UTSAndroid.getAppContext()!);
+		webview.getSettings().setJavaScriptEnabled(true);
+		webview.loadUrl(url);
+		UTSAndroid.getUniActivity()!.setContentView(webview);
+		// #endif
+		// #ifdef WEB
+		window.open(url, '_self')
+		// #endif
+	}
+
+	/**
+	 * @name 获取平台主题
+	 * @description 获取当前平台的主题设置，包括暗黑模式和浅色模式。
+	 * @returns {string} 返回当前平台的主题，可以是 'dark' 或 'light'。
+	 * @example
+	 * // 示例用法
+	 * const osTheme = getOsTheme();
+	 */
+
+	getOsTheme() : string {
+		// #ifdef APP-ANDROID
+		let activity = UTSAndroid.getUniActivity()!;
+		return (activity.getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES ? 'dark' : 'light'
+		// #endif
+		// #ifdef APP-IOS
+		return uni.getSystemInfoSync().osTheme || 'light'
+		// #endif
+		// #ifdef WEB
+		return window.matchMedia("(prefers-color-scheme: dark)").matches ? 'dark' : 'light'
+		// #endif
+		return 'light'
+	}
+
+	/**
+	 * @name 选择媒体文件
+	 * @description 允许用户调用系统界面从设备选择图片或视频文件。
+	 * @param {SnChooseMediaOptions} options - 媒体选择配置对象。
+	 * @returns {void}
+	 * @example
+	 * // 示例用法：选择单张图片
+	 * chooseMedia({
+	 *   type: 'image',
+	 *   success: (files: SnFile[]) => {
+	 * 		console.log('选择的图片:', files)
+	 * 	}
+	 * });
+	 */
+
+	chooseMedia(options : SnChooseMediaOptions) {
+		// #ifdef APP-ANDROID
+		const REQUEST_CODE_PICK_IMAGE = 1004 as Int
+		const activity = UTSAndroid.getUniActivity()!
+		let intent = new Intent(Intent.ACTION_PICK);
+
+		if (options.type == 'image') {
+			intent.setType("image/*");
+		} else if (options.type == 'video')
+			intent.setType("video/*");
+		else {
+			let mimeTypes = ["image/*", "video/*"];
+			intent.putExtra(Intent.EXTRA_MIME_TYPES, mimeTypes);
+			intent.setType("*/*")
+		}
+
+		if (options.multiple == true) {
+			intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+			if (options.maxCount != null && (options.maxCount as number) > 0) {
+				Toast.makeText(UTSAndroid.getAppContext(), `多选只保留前 ${options.maxCount} 张`, Toast.LENGTH_SHORT).show();
+			}
+		}
+		activity.startActivityForResult(intent, REQUEST_CODE_PICK_IMAGE);
+		let onAppActivityResult : ((requestCode : Int, resultCode : Int, data ?: Intent) => void) | null = null
+		onAppActivityResult = (requestCode : Int, resultCode : Int, data ?: Intent) => {
+			if (requestCode != REQUEST_CODE_PICK_IMAGE) return
+			UTSAndroid.offAppActivityResult(onAppActivityResult!)
+			if (resultCode != -1) {
+				options.fail?.(new SnError('utils', 'chooseMedia', 1))
+				return
+			}
+			if (data == null) {
+				options.fail?.(new SnError('utils', 'chooseMedia', 9010005))
+				return
+			}
+			this.throttle(() => {
+				let uris = [] as string[]
+				if (options.multiple == true) {
+					let clipData = data!.getClipData()
+					if (clipData == null) {
+						options.fail?.(new SnError('utils', 'chooseMedia', 9010005))
+						return
+					}
+					let count = clipData.getItemCount();
+					for (let i : Int = 0; i < count; i++) {
+						let uri = clipData.getItemAt(i).getUri().toString() ?? ''
+						uris.push(uri)
+					}
+					uris = uris.slice(0, options.maxCount ?? uris.length)
+				} else {
+					if (data!.getData() == null) {
+						options.fail?.(new SnError('utils', 'chooseMedia', 9010005))
+						return
+					}
+					uris = [data!.getData()!.toString() ?? '']
+				}
+				let returnFiles = [] as SnFile[]
+				uris.forEach((uri : string) => {
+					const uriObj = Uri.parse(uri)
+					const contentResolver = UTSAndroid.getAppContext()!.getContentResolver()!;
+					let type = ''
+					
+					// 获取扩展名
+					if (uriObj.scheme == ContentResolver.SCHEME_CONTENT) {
+						type = contentResolver.getType(uriObj) ?? ''
+					} else {
+						let fileExtension = MimeTypeMap.getFileExtensionFromUrl(uriObj.toString())
+						type = MimeTypeMap.getSingleton().getMimeTypeFromExtension(fileExtension.toLowerCase()) ?? ''
+					}
+					let _type_split_tmp = type.split('/')
+					type = _type_split_tmp[_type_split_tmp.length - 1]
+					
+					// 输出新文件
+			        const inputStream = contentResolver.openInputStream(uriObj)
+					const newFile = new File(UTSAndroid.getAppCachePath()!, `${this.uuid()}.${type}`)
+					
+			        // 使用输出流将图片保存到文件
+					if (inputStream != null) {
+					    try {
+					        const outputStream = new FileOutputStream(newFile)
+					        try {
+					            inputStream.copyTo(outputStream)
+							} finally {
+					            outputStream.close()
+					        }
+						} finally {
+					        inputStream.close()
+					    } 
+					}
+
+					returnFiles.push({
+						ext: type,
+						filename: this.uuid(),
+						path: 'file://'+newFile.getAbsolutePath(),
+						size: Number.from(newFile.length())
+					} as SnFile)
+				})
+				options.success?.(returnFiles)
+			}, 5)
+			
+		}
+		UTSAndroid.onAppActivityResult(onAppActivityResult!);
+		// #endif
+		// #ifdef WEB
+		const inputElement = document.createElement('input');
+		inputElement.type = 'file';
+		inputElement.style.display = 'none';
+
+		switch (options.type) {
+			case 'image':
+				inputElement.accept = 'image/*';
+				break;
+			case 'video':
+				inputElement.accept = 'video/*';
+				break;
+			default:
+				inputElement.accept = '*/*';
+				inputElement.setAttribute('accept', 'image/*,video/*');
+				break;
+		}
+
+		if (options.multiple) {
+			inputElement.multiple = true;
+			if (options.maxCount) {
+				alert(`多选只保留前 ${options.maxCount} 个文件`);
+			}
+		}
+
+		document.body.appendChild(inputElement);
+
+		inputElement.onchange = () => {
+			if (inputElement.files && inputElement.files.length > 0) {
+				let files = Array.from(inputElement.files);
+				if (options.maxCount && files.length > options.maxCount) {
+					files = files.slice(0, options.maxCount);
+				}
+				let returnFiles = [] as SnFile[]
+				files.forEach((file : File) => {
+					let _partList = file.name.split('.')
+					let _suffix = _partList[_partList.length - 1] ?? ''
+					returnFiles.push({
+						filename: file.name,
+						path: URL.createObjectURL(file),
+						ext: _suffix,
+						size: file.size
+					} as SnFile)
+				});
+				options.success && options.success(returnFiles);
+			} else {
+				options.fail && options.fail?.(new SnError('utils', 'chooseMedia', 1))
+			}
+			document.body.removeChild(inputElement);
+		};
+
+		inputElement.onerror = () => {
+			options.fail && options.fail(new SnError('utils', 'chooseMedia', 9010010))
+			document.body.removeChild(inputElement);
+		};
+
+		inputElement.click();
+		// #endif
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	/**
+	 * Permission 权限类
+	 */
+
+	/**
+	 * @name 是否具备指定权限
+	 * @description 检查当前应用是否已经具备指定权限。
+	 * @param {string[]} permissions - 需要检查的系统权限名称数组。
+	 * @returns {boolean} 如果所有权限都已授权，返回 true，否则返回 false。
+	 * @example
+	 * // 示例用法
+	 * const isGranted = checkSystemPermissionGranted(['android.permission.CAMERA', 'android.permission.INTERNET']);
+	 */
+
+	checkSystemPermissionGranted(permissions : string[]) : boolean {
+		let _permissions = this.deepClone(permissions)
+		// #ifdef APP-ANDROID
+		var grant = UTSAndroid.checkSystemPermissionGranted(UTSAndroid.getUniActivity()!, _permissions)
+		return grant
+		// #endif
+		// #ifdef WEB
+		return false
+		// #endif
+	}
+
+	/**
+	 * @name 获取未授权的系统权限
+	 * @description 获取指定权限中未授权的权限。
+	 * @param {string[]} permissions - 需要检查的系统权限名称数组。
+	 * @returns {string[]} 返回一个包含所有未授权权限名称的数组，如果所有权限都已授权，则返回空数组。
+	 * @example
+	 * // 示例用法
+	 * const deniedPermissions = getSystemPermissionDenied(['camera', 'location']);
+	 * if (deniedPermissions.length > 0) {
+	 *   console.log('以下权限未授权:', deniedPermissions);
+	 * } else {
+	 *   console.log('所有权限已授权');
+	 * }
+	 */
+
+	getSystemPermissionDenied(permissions : string[]) : string[] {
+		let _permissions = this.deepClone(permissions)
+		// #ifdef APP-ANDROID
+		var denied = UTSAndroid.getSystemPermissionDenied(UTSAndroid.getUniActivity()!, _permissions)
+		return denied
+		// #endif
+		// #ifdef WEB
+		return [] as string[]
+		// #endif
+	}
+
+	/**
+	 * @name 请求系统权限
+	 * @description 向用户请求指定的系统权限。
+	 * @param {SnRequestSystemPermissionOptions} options - 请求权限的配置选项。
+	 * @param {string[]} options.permissions - 需要请求的系统权限名称数组。
+	 * @param {Function} [options.success] - 请求权限成功时的回调函数，接受两个参数：allRight（所有权限是否都已授权）和 grantedList（已授权的权限列表）。
+	 * @param {Function} [options.fail] - 请求权限失败时的回调函数，接受两个参数：doNotAskAgain（用户是否选择了不再询问）和 grantedList（已授权的权限列表）。
+	 * @returns {void}
+	 * @example
+	 * // 示例用法
+	 * requestSystemPermission({
+	 *   permissions: ['android.permission.CAMERA', 'android.permission.ACCESS_FINE_LOCATION'],
+	 *   success: function(allRight:boolean, grantedList:string[]) {
+	 *     if (allRight) {
+	 *       console.log('所有权限已授权:', grantedList);
+	 *     } else {
+	 *       console.log('部分权限已授权:', grantedList);
+	 *     }
+	 *   },
+	 *   fail: function(doNotAskAgain:boolean, grantedList:string[]) {
+	 *     if (doNotAskAgain) {
+	 *       console.log('用户选择不再询问权限:', grantedList);
+	 *     } else {
+	 *       console.log('权限请求失败:', grantedList);
+	 *     }
+	 *   }
+	 * });
+	 */
+
+	requestSystemPermission(options : SnRequestSystemPermissionOptions) {
+		// #ifdef APP-ANDROID
+		let _permissions = this.deepClone(options.permissions)
+		UTSAndroid.requestSystemPermission(
+			UTSAndroid.getUniActivity()!,
+			_permissions,
+			options.success ?? function (allRight : boolean, grantedList : string[]) { },
+			options.fail ?? function (doNotAskAgain : boolean, grantedList : string[]) { }
+		)
+		// #endif
+	}
+
+	/**
+	 * @name 跳转到系统权限设置页面
+	 * @description 跳转到操作系统的权限设置页面，以便用户可以直接在系统设置中管理应用权限。
+	 * @param {string[]} permissions - 需要用户在系统设置中管理的权限名称数组。
+	 * @returns {void}
+	 * @example
+	 * // 示例用法
+	 * gotoSystemPermissionActivity(['android.permission.CAMERA']);
+	 */
+
+	gotoSystemPermissionActivity(permissions : string[]) : void {
+		// #ifdef APP-ANDROID
+		let _permissions = this.deepClone(permissions)
+		UTSAndroid.gotoSystemPermissionActivity(UTSAndroid.getUniActivity()!, _permissions)
+		// #endif
+	}
+
+	/**
+	 * @name 请求媒体权限
+	 * @description 根据不同的Android版本，请求相应的媒体访问权限。适配 Android 12 及以下版本、Android 13、Android 14 及以上版本。
+	 * @param {SnRequestMediaPermissionOptions} options - 请求权限的配置选项。
+	 * @param {string[]} options.types - 需要请求的媒体类型，可选值为 'image', 'video', 'audio'。
+	 * @param {Function} [options.success] - 请求权限成功时的回调函数，接受两个参数：allRight（所有权限是否都已授权）和 grantedList（已授权的权限列表）。
+	 * @param {Function} [options.fail] - 请求权限失败时的回调函数，接受两个参数：doNotAskAgain（用户是否选择了不再询问）和 grantedList（已授权的权限列表）。
+	 * @returns {void}
+	 * @example
+	 * // 示例用法
+	 * requestMediaPermission({
+	 *   types: ['image', 'video'],
+	 *   success: function(allRight, grantedList) {
+	 *     if (allRight) {
+	 *       console.log('所有媒体权限已授权:', grantedList);
+	 *     } else {
+	 *       console.log('部分媒体权限已授权:', grantedList);
+	 *     }
+	 *   },
+	 *   fail: function(doNotAskAgain, grantedList) {
+	 *     if (doNotAskAgain) {
+	 *       console.log('用户选择不再询问媒体权限:', grantedList);
+	 *     } else {
+	 *       console.log('媒体权限请求失败:', grantedList);
+	 *     }
+	 *   }
+	 * });
+	 */
+	requestMediaPermission(options : SnRequestMediaPermissionOptions) {
+		// #ifdef APP-ANDROID
+		const imagePerm = 'android.permission.READ_MEDIA_IMAGES'
+		const videoPerm = 'android.permission.READ_MEDIA_VIDEO'
+		const audioPerm = 'android.permission.READ_MEDIA_AUDIO'
+		const selected = 'android.permission.READ_MEDIA_VISUAL_USER_SELECTED'
+		const readExternal = 'android.permission.READ_EXTERNAL_STORAGE'
+		const perms : string[] = []
+		// Android 13 和 Android 14 完整照片和视频访问权限
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU || Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+			if (options.types.includes('image')) perms.push(imagePerm)
+			if (options.types.includes('video')) perms.push(videoPerm)
+			if (options.types.includes('audio')) perms.push(audioPerm)
+		}
+		// Android 14 及以上 选择性照片和视频访问权限
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+			perms.push(selected)
+		}
+
+		// Android 12 及以下完整本地读写访问权限
+		if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+			perms.push(readExternal)
+		}
+
+		if (!this.checkSystemPermissionGranted(perms)) {
+			this.requestSystemPermission({
+				permissions: perms,
+				success: options?.success,
+				fail: options?.fail,
+			} as SnRequestSystemPermissionOptions)
+		} else if (options?.success != null) {
+			options.success!(true, perms)
+		}
+		// #endif
+	}
+
+	/**
+	 * @name 检查媒体权限
+	 * @description 检查用户是否已经授权了媒体访问权限。
+	 * @returns {boolean} 是否所有媒体权限都已授权。
+	 * @example
+	 * // 示例用法
+	 * const isGranted = checkMediaPermission();
+	 * if (isGranted) {
+	 *   console.log('所有媒体权限已授权');
+	 * } else {
+	 *   console.log('存在未授权的媒体权限');
+	 * }
+	 */
+	checkMediaPermission(types : SnRequestMediaPermissionOptionsType[]) : boolean {
+		// #ifdef APP-ANDROID
+		const imagePerm = 'android.permission.READ_MEDIA_IMAGES'
+		const videoPerm = 'android.permission.READ_MEDIA_VIDEO'
+		const audioPerm = 'android.permission.READ_MEDIA_AUDIO'
+		const selected = 'android.permission.READ_MEDIA_VISUAL_USER_SELECTED'
+		const readExternal = 'android.permission.READ_EXTERNAL_STORAGE'
+		const perms : string[] = []
+		// Android 13 和 Android 14 完整照片和视频访问权限
+		if (Build.VERSION.SDK_INT >= 33) {
+			if (types.includes('image')) perms.push(imagePerm)
+			if (types.includes('video')) perms.push(videoPerm)
+			if (types.includes('audio')) perms.push(audioPerm)
+		}
+		// Android 14 及以上 选择性照片和视频访问权限
+		if (Build.VERSION.SDK_INT >= 34) {
+			perms.push(selected)
+		}
+
+		// Android 12 及以下完整本地读写访问权限
+		if (Build.VERSION.SDK_INT < 33) {
+			perms.push(readExternal)
+		}
+		return this.checkSystemPermissionGranted(perms)
+		// #endif
+		// #ifdef WEB
+		return false
+		// #endif
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	/**
+	 * Random 随机类
+	 */
+
+	/**
+	 * @name 生成随机整数
+	 * @description 生成一个介于最小值和最大值之间的随机整数。
+	 * @param {number} min - 随机数的最小值（包含）。
+	 * @param {number} max - 随机数的最大值（包含）。
+	 * @returns {number} 返回生成的随机整数。
+	 * @example
+	 * // 示例用法
+	 * const randomNum = randint(1, 100); // 可能返回1到100之间的任意整数
+	 */
+
+	randint(min : number, max : number) : number {
+		if (max >= min) {
+			return Math.floor(Math.random() * (max - min + 1) + min)
+		}
+		return 0
+	}
+
+	/**
+	 * @name 生成指定位数的随机整数
+	 * @description 生成一个指定位数的随机整数。
+	 * @param {number} digit - 随机数的长度。
+	 * @returns {number} 返回生成的随机整数。
+	 * @example
+	 * // 示例用法
+	 * const randomDigitNum = randomNumber(4); // 可能返回1000到9999之间的任意整数
+	 */
+
+	randomNumber(digit : number) : number {
+		if (digit == 0) return 0
+		const min = Math.pow(10, digit - 1)
+		const max = Math.pow(10, digit)
+		return Math.floor(Math.random() * (max - min + 1)) + min
+	}
+
+	/**
+	 * @name 生成UUID
+	 * @description 生成一个UUID格式的字符串。
+	 * @returns {string} 返回生成的UUID字符串。
+	 * @example
+	 * // 示例用法
+	 * const uuidStr = uuid(); // 可能返回类似于"5f3f2e1d-0123-4567-89ab-cdef01234567"的字符串
+	 */
+
+	uuid() : string {
+		const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'.split('')
+		let uuid : string[] = []
+
+		for (let i = 0; i < 36; i++) {
+			let r = 0 | Math.random() * 16
+			let c = chars[(i == 19) ? (r & 0x3) | 0x8 : r]
+			uuid.push(c)
+		}
+		uuid[8] = '-'
+		uuid[13] = '-'
+		uuid[18] = '-'
+		uuid[23] = '-'
+		uuid[14] = '4'
+		return uuid.join('')
+	}
+
+	/**
+	 * Sort 排序类
+	 */
+
+	/**
+	 * @name 冒泡排序
+	 * @description 对给定数组进行冒泡排序，按照升序排列数组元素。
+	 * @param {number[]} arr - 需要排序的数字数组。
+	 * @returns {number[]} - 返回排序后的数组。
+	 * @example
+	 * // 示例用法
+	 * const sortedArray = bubbleSort([5, 3, 8, 4, 6]);
+	 * console.log(sortedArray); // 输出: [3, 4, 5, 6, 8]
+	 */
+	bubbleSort(arr : number[]) : number[] {
+		let n = arr.length;
+		for (let i = 0; i < n - 1; i++) {
+			for (let j = 0; j < n - 1; j++) {
+				if (arr[j] > arr[j + 1]) {
+					let tmp = arr[j];
+					arr[j] = arr[j + 1];
+					arr[j + 1] = tmp;
+				}
+			}
+		}
+		return arr;
+	}
+
+	/**
+	 * @name 选择排序
+	 * @description 对给定数组进行选择排序，按照升序排列数组元素。
+	 * @param {number[]} arr - 需要排序的数字数组。
+	 * @returns {number[]} - 返回排序后的数组。
+	 * @example
+	 * // 示例用法
+	 * const sortedArray = selectionSort([64, 25, 12, 22, 11]);
+	 * console.log(sortedArray); // 输出: [11, 12, 22, 25, 64]
+	 */
+	selectionSort(arr : number[]) : number[] {
+		let n = arr.length;
+		for (let i = 0; i < n - 1; i++) {
+			let min = i;
+			for (let j = i + 1; j < n; j++) {
+				if (arr[j] < arr[min]) min = j;
+			}
+			let tmp = arr[min];
+			arr[min] = arr[i];
+			arr[i] = tmp;
+		}
+		return arr;
+	}
+
+	/**
+	 * @name 插入排序
+	 * @description 对给定数组进行插入排序，按照升序排列数组元素。
+	 * @param {number[]} arr - 需要排序的数字数组。
+	 * @returns {number[]} - 返回排序后的数组。
+	 * @example
+	 * // 示例用法
+	 * const sortedArray = insertionSort([5, 2, 4, 6, 1, 3]);
+	 * console.log(sortedArray); // 输出: [1, 2, 3, 4, 5, 6]
+	 */
+	insertionSort(arr : number[]) : number[] {
+		let n = arr.length;
+		for (let i = 1; i < n; i++) {
+			let key = arr[i];
+			let j = i - 1;
+			while (j >= 0 && arr[j] > key) {
+				arr[j + 1] = arr[j];
+				j = j - 1;
+			}
+			arr[j + 1] = key;
+		}
+		return arr;
+	}
+
+	/**
+	 * @name 快速排序
+	 * @description 对给定数组进行快速排序，按照升序排列数组元素。
+	 * @param {number[]} arr - 需要排序的数字数组。
+	 * @param {number} [left=0] - 快速排序的左边界索引。
+	 * @param {number} [right=arr.length-1] - 快速排序的右边界索引。
+	 * @returns {number[]} - 返回排序后的数组。
+	 * @example
+	 * // 示例用法
+	 * const sortedArray = quickSort([10, 7, 8, 9, 1, 5]);
+	 * console.log(sortedArray); // 输出: [1, 5, 7, 8, 9, 10]
+	 */
+	quickSort(arr : number[], left : number = 0, right : number = arr.length - 1) : number[] {
+		function partition(arr : number[], left : number, right : number) : number {
+			let pivot = arr[right];
+			let i = left - 1;
+			for (let j = left; j < right; j++) {
+				if (arr[j] < pivot) {
+					i++;
+					let tmp = arr[i];
+					arr[i] = arr[j];
+					arr[j] = tmp;
+				}
+			}
+			let tmp = arr[i + 1]
+			arr[i + 1] = arr[right];
+			arr[right] = tmp;
+			return i + 1;
+		}
+		if (left < right) {
+			let pivotIndex = partition(arr, left, right);
+			this.quickSort(arr, left, pivotIndex - 1);
+			this.quickSort(arr, pivotIndex + 1, right);
+		}
+		return arr;
+	}
+
+	/**
+	 * @name 归并排序
+	 * @description 对给定数组进行归并排序，按照升序排列数组元素。
+	 * @param {number[]} arr - 需要排序的数字数组。
+	 * @returns {number[]} - 返回排序后的数组。
+	 * @example
+	 * // 示例用法
+	 * const sortedArray = mergeSort([38, 27, 43, 3, 9, 82, 10]);
+	 * console.log(sortedArray); // 输出: [3, 9, 10, 27, 38, 43, 82]
+	 */
+	mergeSort(arr : number[]) : number[] {
+		if (arr.length < 2) {
+			return arr;
+		}
+		let middle = Math.floor(arr.length / 2);
+		let left = arr.slice(0, middle);
+		let right = arr.slice(middle);
+		function merge(left : number[], right : number[]) : number[] {
+			let result : number[] = [];
+			while ((left.length != 0) && (right.length != 0)) {
+				if (left[0] < right[0]) {
+					result.push(left.shift()!);
+				} else {
+					result.push(right.shift()!);
+				}
+			}
+			return [...result, ...left, ...right];
+		}
+		return merge(this.mergeSort(left), this.mergeSort(right));
+	}
+
+	/**
+	 * @name 堆排序
+	 * @description 对给定数组进行堆排序，按照升序排列数组元素。
+	 * @param {number[]} arr - 需要排序的数字数组。
+	 * @returns {number[]} - 返回排序后的数组。
+	 * @example
+	 * // 示例用法
+	 * const sortedArray = heapSort([12, 11, 13, 5, 6, 7]);
+	 * console.log(sortedArray); // 输出: [5, 6, 7, 11, 12, 13]
+	 */
+
+	heapSort(arr : number[]) : number[] {
+		let n = arr.length;
+
+		function heapify(arr : number[], n : number, i : number) : void {
+			let largest = i; // 初始化最大值为根节点
+			let left = 2 * i + 1; // 左子节点
+			let right = 2 * i + 2; // 右子节点
+
+			// 如果左子节点大于根节点
+			if (left < n && arr[left] > arr[largest]) {
+				largest = left;
+			}
+
+			// 如果右子节点比最大值还大
+			if (right < n && arr[right] > arr[largest]) {
+				largest = right;
+			}
+
+			// 如果最大值不是根节点
+			if (largest != i) {
+				let tmp = arr[i]
+				arr[i] = arr[largest];
+				arr[largest] = tmp;
+				// 递归地调整受影响的子堆
+				heapify(arr, n, largest);
+			}
+		}
+
+		// 建立最大堆
+		for (let i = Math.floor(n / 2) - 1; i >= 0; i--) {
+			heapify(arr, n, i);
+		}
+
+		// 排序
+		for (let i = n - 1; i > 0; i--) {
+			// 交换堆顶和最后一个元素
+			let tmp = arr[i]
+			arr[i] = arr[0];
+			arr[0] = tmp;
+			// 重新调整最大堆
+			heapify(arr, i, 0);
+		}
+
+		return arr;
+	}
+
+	/**
+	 * @name 希尔排序
+	 * @description 对给定数组进行希尔排序，按照升序排列数组元素。
+	 * @param {number[]} arr - 需要排序的数字数组。
+	 * @returns {number[]} - 返回排序后的数组。
+	 * @example
+	 * // 示例用法
+	 * const sortedArray = shellSort([12, 11, 13, 5, 6, 7]);
+	 * console.log(sortedArray); // 输出: [5, 6, 7, 11, 12, 13]
+	 */
+
+	shellSort(arr : number[]) : number[] {
+		let n = arr.length;
+		for (let gap = Math.floor(n / 2); gap > 0; gap = Math.floor(gap / 2)) {
+			for (let i = gap; i < n; i += 1) {
+				let temp = arr[i];
+				let j = 0;
+				for (j = i; j >= gap && arr[j - gap] > temp; j -= gap) {
+					arr[j] = arr[j - gap];
+				}
+				arr[j] = temp;
+			}
+		}
+		return arr;
+	}
+
+	/**
+	 * @name 桶排序
+	 * @description 对给定数组进行桶排序，按照升序排列数组元素。
+	 * @param {number[]} arr - 需要排序的数字数组。
+	 * @param {number} [bucketSize=5] - 每个桶的大小，用于将数组中的值分配到各个桶里。
+	 * @returns {number[]} - 返回排序后的数组。
+	 * @example
+	 * // 示例用法
+	 * const sortedArray = bucketSort([12, 11, 13, 5, 6, 7], 5);
+	 * console.log(sortedArray); // 输出: [5, 6, 7, 11, 12, 13]
+	 */
+	bucketSort(arr : number[], bucketSize : number = 5) : number[] {
+		if (arr.length == 0) {
+			return arr;
+		}
+
+		let minValue = arr[0];
+		let maxValue = arr[0];
+		for (let i = 1; i < arr.length; i++) {
+			if (arr[i] < minValue) {
+				minValue = arr[i];                // 输入数据的最小值
+			} else if (arr[i] > maxValue) {
+				maxValue = arr[i];                // 输入数据的最大值
+			}
+		}
+
+		// 初始化桶
+		let bucketCount = Math.floor((maxValue - minValue) / bucketSize) + 1;
+		let buckets : number[][] = []
+		for (let i = 0; i < bucketCount; i++) {
+			buckets.push([] as number[])
+		}
+
+		// 将数组中的值分配到各个桶里
+		for (let i = 0; i < arr.length; i++) {
+			let bucketIndex = Math.floor((arr[i] - minValue) / bucketSize);
+			buckets[bucketIndex].push(arr[i]);
+		}
+
+		// 对每个桶进行排序，这里使用了插入排序
+		for (let i = 0; i < buckets.length; i++) {
+			this.insertionSort(buckets[i]);
+		}
+
+		// 合并桶
+		let sortedIndex = 0;
+		for (let i = 0; i < buckets.length; i++) {
+			for (let j = 0; j < buckets[i].length; j++) {
+				arr[sortedIndex++] = buckets[i][j];
+			}
+		}
+
+		return arr;
+	}
+}

@@ -1,0 +1,124 @@
+<template>
+	<view class="sn-skeleton"
+	ref="skeletonEle"
+	@transitionend="ontransitioned"
+	:style="[skeletonStylesC, customStyle]">
+	</view>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-skeleton
+	 * @tutorial https://sinleui.pages.dev/components/sn-skeleton
+	 * @description  Skeleton 骨架屏
+	 *
+	 *- 加载较慢时，在页面真实数据加载之前，给用户展示出页面的大致结构。
+	 *
+	 *- 你可以把它当做一个带闪烁动画的 `view` 来用，本身不带UI，样式完全由你控制。
+	 * @property {String} width    String | 骨架屏宽度
+	 * @property {String} height    String | 骨架屏高度
+	 * @property {String} borderRadius    String | 骨架屏圆角大小
+	 * @property {String} margin    String | 骨架屏外边距
+	 * @property {Number} aniTime    String | 动画时间，单位为毫秒
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义骨架屏样式
+	 */
+
+	// 依赖
+	import { $snui, useResize, useFormatProp } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-skeleton'
+	})
+	
+	// SinleUI 配置
+	const snu = $snui.utils;
+	const colors = $snui.colors
+		
+	// 组件属性
+	const props = defineProps({
+		width: {
+			type: String,
+			default: ''
+		},
+		height: {
+			type: String,
+			default: ''
+		},
+		borderRadius: {
+			type: String,
+			default: ''
+		},
+		margin: {
+			type: String,
+			default: ''
+		},
+		aniTime: {
+			type: Number,
+			default: 1000
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+	})
+	
+	// 基本变量
+	const skeletonEle = ref(null as UniElement | null)
+	const id = ref(snu.randomComId())
+	
+	// 计算属性
+	const borderRadiusC = computed(():string=>{
+		return useFormatProp('radius', props.borderRadius, $snui.configs.radius.xsmall)
+	})
+	
+	const skeletonStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('width', props.width)
+		styles.set('height', props.height)
+		styles.set('margin', props.margin)
+		styles.set('borderRadius', borderRadiusC.value)
+		styles.set('background', colors.value.infoActive)
+		styles.set('transition-duration', `${props.aniTime}ms`)
+		return styles
+	})
+	
+	function ontransitioned(){
+		let ele = skeletonEle.value!
+		let opacity = (`${ele.style.getPropertyValue('opacity')}`).trim()
+		if (opacity == '' || opacity == '1') {
+			ele.style.setProperty('opacity', '0.2')
+		} else {
+			ele.style.setProperty('opacity', '1')
+		}
+	}
+	
+	function init(){
+		nextTick(()=>{
+			snu.debounce(()=>{
+				ontransitioned()
+			}, 50, id.value)
+		})
+	}
+	
+	onUpdated(()=>{
+		init()
+	})
+	
+	onPageShow(()=>{
+		init()
+	})
+	
+	onMounted(()=>{
+		init()
+		useResize(skeletonEle.value,()=>{
+			init()
+		})
+	})
+</script>
+
+<style lang="scss">
+	.sn-skeleton {
+		opacity: 1;
+		transition-timing-function: linear;
+	}
+</style>

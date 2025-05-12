@@ -1,0 +1,253 @@
+<template>
+	<view class="sn-backtop"
+	ref="backtopEle"
+	:class="disabled?'disabled':''"
+	@click="onClick"
+	:style="[backTopStylesC, customStyle]">
+		<sn-icon :name="icon"
+		:size="iconSizeC"
+		:color="iconColorC"></sn-icon>
+	</view>
+</template>
+
+<script setup lang="uts">
+	
+	/**
+	 * @name sn-backtop
+	 * @tutorial https://sinleui.pages.dev/components/sn-backtop
+	 * @description Backtop 回到顶部
+	 * 
+	 * - 用于长页面，滑动一定距离后，出现回到顶部按钮，点击按钮快速返回顶部。自动绑定同级或父级 `sn-scroll`/`sn-longlist`/`sn-page`（不可用作 `sn-longlist` 子节点）
+	 * @property {String} icon    String | 回到顶部按钮内部图标
+	 * @property {String} shape=[circle|square]    String | 回到顶部按钮形状
+	 * @value square 方形（可设置圆角）
+	 * @value circle 圆形
+	 * @property {String} type=[info|primary|success|error|warning]    String | 回到顶部按钮主题样式类型
+	 * @value info 信息
+	 * @value primary 主要
+	 * @value success 成功
+	 * @value error 错误
+	 * @value warning 警告
+	 * @property {String} level=[first|second|third|least]    String | 回到顶部按钮等级
+	 * @value first 第一等级
+	 * @value second 第二等级
+	 * @value third 第三等级
+	 * @value least 最小等级
+	 * @property {String} bgColor    String | 回到顶部按钮背景颜色，设置后将覆盖`type`和`level`所设置的主题色
+	 * @property {Number} zIndex    Number | 回到顶部按钮的`z-index`
+	 * @property {Number} aniTime    String | 回到顶部按钮动画时长
+	 * @property {String} size    String | 回到顶部按钮尺寸
+	 * @property {Number} top    Number | 滚动条滑动多少距离时显示，单位`px`
+	 * @property {Number} right    Number | 回到顶部按钮距右边界距离，单位`px`
+	 * @property {Number} bottom    Number | 回到顶部按钮距下边界距离，单位`px`
+	 * @property {String} iconColor    String | 回到顶部按钮内部图标颜色
+	 * @property {String} iconSize    String | 回到顶部按钮内部图标大小
+	 * @property {Boolean} disabled    Boolean | 是否禁用
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义回到顶部按钮样式
+	 */
+	
+	// 依赖
+	import { $snui, useFormatProp, SnError } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-backtop'
+	})
+	
+	// SinleUI 配置
+	const snu = $snui.utils;
+	const colors = $snui.colors
+	const instance = getCurrentInstance()!;
+	
+	// 事件注册
+	const emit = defineEmits(['click'])
+	
+	// 组件属性
+	const props = defineProps({
+		icon: {
+			type: String,
+			default: 'skip-up-line'
+		},
+		shape: {
+			type: String,
+			default: 'circle'
+		},
+		bgColor: {
+			type: String,
+			default: ''
+		},
+		zIndex: {
+			type: Number,
+			default: $snui.configs.zIndex.float
+		},
+		aniTime: {
+			type: String,
+			default: $snui.configs.aniTime.normal
+		},
+		size: {
+			type: String,
+			default: '50px'
+		},
+		top: {
+			type: Number,
+			default: 400
+		},
+		right: {
+			type: Number,
+			default: 30
+		},
+		bottom: {
+			type: Number,
+			default: 100
+		},
+		iconSize: {
+			type: String,
+			default: ''
+		},
+		iconColor: {
+			type: String,
+			default: ''
+		},
+		type: {
+			type: String,
+			default: "primary"
+		},
+		level: {
+			type: String,
+			default: "first"
+		},
+		disabled: {
+			type: Boolean,
+			default: false
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+	})
+	
+	// 基本变量
+	const show = ref(false)
+	const backtopEle = ref(null as UniElement | null)
+	const bonded = ref(null as ComponentPublicInstance | null)
+	
+	// 计算属性
+	const zIndexC = computed(():number=>{
+		return props.zIndex == $snui.configs.zIndex.float ? $snui.configs.zIndex.float : props.zIndex
+	})
+	
+	const iconSizeC = computed((): string => {
+		return useFormatProp('font', $snui.configs.font.size(5), props.iconSize)
+	})
+	
+	const aniTimeC = computed((): string => {
+		return useFormatProp('aniTime', $snui.configs.aniTime.normal, props.aniTime)
+	})
+	
+	const levelC = computed(() : string => {
+		let types = ['first', 'second', 'third', 'least']
+		return types.includes(props.level) ? props.level : 'first'
+	})
+	
+	const typeC = computed(() : string => {
+		let types = ['info', 'warning', 'error', 'success', 'primary']
+	
+		return types.includes(props.type) ? props.type : 'info'
+	})
+	
+	const bgColorC = computed(() : string => {
+		if (!props.disabled) {
+			if (snu.isEmpty(props.bgColor)) {
+				if (typeC.value == 'info' && levelC.value != 'least') return colors.value.info
+
+				switch (levelC.value) {
+					case 'first':
+						return colors.value[`${typeC.value}`] as string
+					case 'second':
+						return colors.value[`${typeC.value}Light`] as string
+					case 'third':
+						return colors.value.info
+					default:
+						return colors.value[`${typeC.value}`] as string
+				}
+			} else {
+				return props.bgColor
+			}
+		} else {
+			return colors.value.disabled
+		}
+	})
+	
+	const iconColorC = computed(() : string => {
+		if (!props.disabled) {
+			if (snu.isEmpty(props.iconColor)) {
+				if (typeC.value == 'info') return colors.value.infoText
+				return (levelC.value == 'first') ? colors.value[`${typeC.value}Text`] as string : colors.value[`${typeC.value}LightText`] as string
+			} else {
+				return props.iconColor
+			}
+		} else {
+			return colors.value.disabledText
+		}
+	})
+
+	
+	const backTopStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('border-radius', props.shape=='square'?$snui.configs.radius.small:$snui.configs.radius.circle)
+		styles.set('background', bgColorC.value)
+		styles.set('width', snu.addUnit(props.size))
+		styles.set('height', snu.addUnit(props.size))
+		styles.set('right', snu.addPx(props.right))
+		styles.set('bottom', snu.addPx(props.bottom))
+		styles.set('zIndex', zIndexC.value.toString())
+		styles.set('transform', `scale(${show.value?1:0.001})`)
+		styles.set('transition-duration', aniTimeC.value)
+		return styles
+	})
+	
+	// 方法
+	function onClick(e: UniPointerEvent){
+		if (!props.disabled){
+			show.value = false
+			bonded.value!.$callMethod('scrollTo', 0,0)
+			emit('click', e)
+		}
+	}
+	
+	function setScrollTop(top: number){
+		show.value = top >= (props.top as number)
+	}
+
+	// 生命周期
+	onMounted(()=>{
+		nextTick(()=>{
+			bonded.value = snu.findBrother(instance.proxy!, ['sn-longlist','sn-scroll','sn-page'])
+			if (bonded.value == null){
+				bonded.value = snu.findParent(instance.proxy!, ['sn-longlist','sn-scroll','sn-page'])
+			}
+			if (bonded.value == null){
+				throw new SnError('components', 'snBacktop', 9010011)
+			} else {
+				bonded.value!.$callMethod('registerBacktop', setScrollTop)
+			}
+		})
+	})
+</script>
+
+<style lang="scss">
+	.sn-backtop {
+		position: fixed;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		// #ifdef WEB
+		cursor: pointer;
+		// #endif
+	}
+	
+	.disabled {
+		// #ifdef WEB
+		cursor: not-allowed;
+		// #endif
+	}
+</style>

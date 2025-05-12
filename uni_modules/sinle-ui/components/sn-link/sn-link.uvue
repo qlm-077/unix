@@ -1,0 +1,153 @@
+<template>
+	<view class="sn-link" 
+	@click="onClick"
+	:style="[linkStylesC, customStyle]">
+		<slot name="prefix">
+			<sn-icon v-if="prefixIcon.trim()!=''"
+			:name="prefixIcon"
+			:color="colorC"
+			:size="sizeC"
+			:style="[customIconStyle]"></sn-icon>
+		</slot>
+		<sn-text :text="text"
+		:color="colorC"
+		:size="sizeC"
+		:decorationLine="underline?'underline':''"
+		:customStyle="customTextStyle"></sn-text>
+		<slot name="suffix">
+			<sn-icon v-if="suffixIcon.trim()!=''"
+			:name="suffixIcon"
+			:color="colorC"
+			:size="sizeC"
+			:style="[customIconStyle]"></sn-icon>
+		</slot>
+	</view>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-link
+	 * @tutorial https://sinleui.pages.dev/components/sn-link
+	 * @description  Link 链接
+	 *
+	 *- 用于创建可点击的文本链接。
+	 *
+	 *- 可添加图标前缀和后缀。
+	 * @property {String} text    String | 链接文本内容
+	 * @property {String} prefixIcon    String | 链接前图标名称
+	 * @property {String} suffixIcon    String | 链接后图标名称
+	 * @property {String} href    String | 链接跳转地址
+	 * @property {String} color    String | 链接文本颜色
+	 * @property {String} size    String | 链接文本大小
+	 * @property {Boolean} underline    Boolean | 链接文本是否显示下划线
+	 * @property {Boolean} local    Boolean | 是否使用本地内置Webview打开（仅对WebURL生效）
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义链接样式
+	 * @property {UTSJSONObject} customTextStyle    UTSJSONObject | 自定义链接文本样式
+	 * @property {UTSJSONObject} customIconStyle    UTSJSONObject | 自定义链接图标样式
+	 */
+	// 依赖
+	import { $snui, useFormatProp } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-link'
+	})
+
+	// SinleUI 配置
+	const colors = $snui.colors
+	const snu = $snui.utils
+
+	// 组件属性
+	const props = defineProps({
+		text: {
+			type: String,
+			default: ""
+		},
+		prefixIcon: {
+			type: String,
+			default: ""
+		},
+		suffixIcon: {
+			type: String,
+			default: ""
+		},
+		href: {
+			type: String,
+			default: ""
+		},
+		color: {
+			type: String,
+			default: ""
+		},
+		size: {
+			type: String,
+			default: ''
+		},
+		underline: {
+			type: Boolean,
+			default: false
+		},
+		local: {
+			type: Boolean,
+			default: false
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customTextStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customIconStyle: {
+			type: Object,
+			default: {
+				margin: '0 5px'
+			} as UTSJSONObject
+		}
+	})
+
+	// 计算属性
+	const colorC = computed(() : string => {
+		return useFormatProp('color', props.color, colors.value.primaryDark)
+	})
+	
+	const sizeC = computed((): string => {
+		return useFormatProp('font', props.size, $snui.configs.font.size(3))
+	})
+	
+	const linkStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('transition-duration',$snui.configs.aniTime.normal)
+		return styles
+	})
+	
+	// 方法
+	function onClick() {
+		let href = props.href
+
+		if (!snu.isEmpty(href)) {
+			let urlPattern = /(?:^|[\s\n])((?:http(s)?\:)?\/\/)?([\w-]+\.)+[\w-]+[\w\/\.\-]*(?![^<]*>|[^<>]*<\/a>)/gi;
+			href = href.replace(urlPattern, (match, p1, p2, p3, offset, string) : string => {
+				if (p1 != null) return match;
+				return `https://${match}`;
+			})
+
+			if ((props.local)) {
+				snu.viewUrlByWebview(href)
+			} else {
+				snu.openLink(href)
+			}
+		}
+	}
+</script>
+
+<style lang="scss">
+	.sn-link {
+		flex: 1;
+		flex-direction: row;
+		transition-property: color, font-size;
+		// #ifdef WEB
+		cursor: pointer;
+		// #endif
+	}
+</style>

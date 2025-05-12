@@ -1,0 +1,121 @@
+<template>
+	<sn-text :text="textC"
+	:color="textColor"
+	:size="textSize"
+	:font="textFont"></sn-text>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-dateformat
+	 * @tutorial https://sinleui.pages.dev/components/sn-dateformat
+	 * @description  DateFormat 日期格式化
+	 *
+	 *- 用于将日期和时间格式化为指定的字符串。
+	 *
+	 *- 支持自定义格式、阈值和本地化。
+	 * @property {Number} date    Number | 需要格式化的日期
+	 * @property {String} format    String | 日期格式
+	 * @property {Array<Number[]>} threshold    Array<Number[]> | 阈值，用于判断显示相对时间还是格式化时间
+	 * @property {String} locale=[zh-cn,en]    String | 本地化语言
+	 * @value zh-cn 中文
+	 * @value en 英文
+	 * @property {String} textColor    String | 文本颜色
+	 * @property {String} textSize    String | 文本大小
+	 * @property {String} textFont    String | 文本字体
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义样式
+	 */
+
+	// 依赖
+	import { $snui, useFormatProp } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-dateformat'
+	})
+	
+	// SinleUI 配置
+	const snu = $snui.utils;
+	const colors = $snui.colors
+	
+	// 组件属性
+	const props = defineProps({
+		date: {
+			type: Number,
+			default: Date.now()
+		},
+		format: {
+			type: String,
+			default: 'YYYY-MM-DD HH:mm:ss',
+		},
+		threshold: {
+			type: Array as PropType<number[]>,
+			default: [60000, 86400000] as number[]
+		},
+		locale: {
+			type: String,
+			default: 'zh-cn',
+		},
+		textColor: {
+			type: String,
+			default: '',
+		},
+		textSize: {
+			type: String,
+			default: '',
+		},
+		textFont: {
+			type: String,
+			default: '',
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+	})
+	
+	// 计算属性
+	const localeC = computed((): string =>{
+		let locales = ['zh-cn', 'en']
+		return locales.includes(props.locale) ? props.locale : locales[0]
+	})
+	
+	const localeTexts = computed((): Map<string, string> =>{
+		let texts = new Map<string, string>()
+		if (localeC.value == 'zh-cn'){
+			texts.set('justnow', '刚刚')
+			texts.set('soon', '马上')
+		} else if (localeC.value == 'en'){
+			texts.set('justnow', 'Just now')
+			texts.set('soon', 'Soon')
+		}
+		return texts
+	})
+	
+	const textC = computed((): string =>{
+		let date = $snui.libs.date.dayuts(props.date).locale(localeC.value)
+		let fText = date.format(props.format)
+		let threshold = props.threshold
+		if (threshold.length > 2){
+			threshold = threshold.slice(0,2)
+		} else if (threshold.length < 0){
+			threshold = [0,0]
+		} 
+		threshold = snu.insertionSort(threshold)
+		let delta = date.valueOf() - Date.now()
+		let abs = Math.abs(delta)
+		if (abs < threshold[0]) {
+			if (delta < 0) {
+				fText = localeTexts.value.get('justnow') ?? '刚刚'
+			} else {
+				fText = localeTexts.value.get('soon') ?? '马上'
+			}
+		} else if (abs >= threshold[0] && abs < threshold[1]) {
+			fText = date.fromNow()
+		}
+		return fText
+	})
+</script>
+
+<style>
+		
+</style>

@@ -1,0 +1,209 @@
+<template>
+	<view class="sn-radio-contain"
+	:class="disabled?'disabled':''"
+	android-layer-type="hardware"
+	@click="radioClicked"
+	:style="[customRadioContainStyle, customContainStyle]">
+		<view class="sn-radio"
+		:style="[radioStylesC, customStyle, customRadioStyle]">
+			<view :class="`sn-radio-dot${selected?'-active':''}`"
+			:style="dotStylesC"></view>
+		</view>
+		<slot>
+			<text v-if="showTextC" 
+			class="sn-radio-text"
+			:style="[textStylesC, customTextStyle]">{{text}}</text>
+		</slot>
+	</view>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-radio
+	 * @tutorial https://sinleui.pages.dev/components/sn-radio
+	 * @description Radio 单选框
+	 * 
+	 * - 分为三个组件：`sn-radio-group` ,  `sn-radio` ,  `sn-radio-tag`。
+	 * 
+	 * - 每一个选项（`sn-radio` 或 `sn-radio-tag`）必须是 `sn-radio-group` 的子代。
+	 * @property {String} text    String | radio单选组件文本内容
+	 * @property {Boolean} disabled    Boolean | 是否禁用radio单选组件
+	 * @property {UTSJSONObject} customContainStyle    UTSJSONObject | 自定义radio单选组件容器样式（仅针对单组件生效）
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义radio单选组件样式（仅针对单组件生效）
+	 */
+	// 依赖
+	import { $snui } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-radio'
+	})
+	
+	// SinleUI 配置
+	const colors = $snui.colors
+	const snu = $snui.utils
+	const instance = getCurrentInstance()!
+
+	// 组件属性
+	const props = defineProps({
+		text: {
+			type: String,
+			default: ''
+		},
+		disabled: {
+			type: Boolean,
+			default: false
+		},
+		customContainStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+	})
+
+	// 继承属性
+	const radioSize = inject('radioSize',ref('20px'))
+	const radioBorderWidth = inject('radioBorderWidth',ref('2px'))
+	const radioTextSize = inject('radioTextSize',computed(():string=>$snui.configs.font.size(3)))
+	const radioBgColor = inject('radioBgColor',computed(():string=>colors.value.front))
+	const disabledRadioBgColor = inject('disabledRadioBgColor',computed(():string=>colors.value.front))
+	const radioActiveBgColor = inject('radioActiveBgColor',computed(():string=>colors.value.front))
+	const disabledRadioActiveBgColor = inject('disabledRadioActiveBgColor',ref(colors.value.front))
+	const radioTextColor = inject('radioTextColor',computed(():string=>colors.value.text))
+	const disabledRadioTextColor = inject('disabledRadioTextColor',computed(():string=>colors.value.disabledText))
+	const radioBorderColor = inject('radioBorderColor',computed(():string=>colors.value.line))
+	const disabledRadioBorderColor = inject('disabledRadioBorderColor',computed(():string=>colors.value.disabled))
+	const radioActiveBorderColor = inject('radioActiveBorderColor',computed(():string=>colors.value.primary))
+	const disabledRadioActiveBorderColor = inject('disabledRadioActiveBorderColor',computed(():string=>colors.value.disabledDark))
+	const customRadioContainStyle = inject('customRadioContainStyle',ref({}))
+	const customRadioStyle = inject('customRadioStyle',ref({}))
+	const customTextStyle = inject('customTextStyle',ref({}))
+
+
+	// 基本变量
+	const selected = ref(false)
+
+	// 计算属性
+	const radioSizeC = computed(():number=>{
+		return snu.getPx(radioSize.value as string)
+	})
+	
+	const radioBorderWidthC = computed(():number=>{
+		return snu.getPx(radioBorderWidth.value as string)
+	})
+	
+	const showTextC = computed(() : boolean => {
+		return !snu.isEmpty(props.text)
+	})
+	
+	const radioStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('width', snu.addPx(radioSizeC.value))
+		styles.set('height', snu.addPx(radioSizeC.value))
+		styles.set('border-radius', $snui.configs.radius.circle)
+		styles.set('backgroundColor', selected.value?(props.disabled?disabledRadioActiveBorderColor.value:radioActiveBorderColor.value) as string:(props.disabled?disabledRadioBorderColor.value:radioBorderColor.value) as string)
+		styles.set('transition-duration',$snui.configs.aniTime.normal)
+		return styles
+	})
+	
+	const dotStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('width', snu.addPx(radioSizeC.value-2*radioBorderWidthC.value))
+		styles.set('height', snu.addPx(radioSizeC.value-2*radioBorderWidthC.value))
+		styles.set('left', snu.addPx(radioBorderWidthC.value))
+		styles.set('backgroundColor', selected.value?(props.disabled?disabledRadioActiveBgColor.value:radioActiveBgColor.value) as string:(props.disabled?disabledRadioBgColor.value:radioBgColor.value) as string)
+		styles.set('border-radius', $snui.configs.radius.circle)
+		styles.set('transition-duration',$snui.configs.aniTime.normal)
+		return styles
+	})
+	
+	const textStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('fontSize', radioTextSize.value as string)
+		styles.set('color', (props.disabled?disabledRadioTextColor.value:radioTextColor.value) as string)
+		styles.set('transition-duration',$snui.configs.aniTime.normal)
+		return styles
+	})
+
+	// 方法
+	function updateValue(v : boolean) {
+		selected.value = v
+	}
+	function radioClicked() {
+		if (!(props.disabled)) {
+			let ele = instance.proxy!
+			snu.findParent(ele, ['sn-radio-group'])?.$callMethod('syncData', ele as ComponentPublicInstance)
+		}
+	}
+	
+	function setProps(data: Map<string, any>){
+		radioSize.value = data.get('radioSize') as string;
+		radioBorderWidth.value = data.get('radioBorderWidth') as string;
+		radioTextSize.value = data.get('radioTextSize') as string;
+		radioBgColor.value = data.get('radioBgColor') as string;
+		disabledRadioBgColor.value = data.get('disabledRadioBgColor') as string;
+		radioActiveBgColor.value = data.get('radioActiveBgColor') as string;
+		disabledRadioActiveBgColor.value = data.get('disabledRadioActiveBgColor') as string;
+		radioTextColor.value = data.get('radioTextColor') as string;
+		disabledRadioTextColor.value = data.get('disabledRadioTextColor') as string;
+		radioBorderColor.value = data.get('radioBorderColor') as string;
+		disabledRadioBorderColor.value = data.get('disabledRadioBorderColor') as string;
+		radioActiveBorderColor.value = data.get('radioActiveBorderColor') as string;
+		disabledRadioActiveBorderColor.value = data.get('disabledRadioActiveBorderColor') as string;
+		customRadioContainStyle.value = data.get('customRadioContainStyle') as UTSJSONObject;
+		customRadioStyle.value = data.get('customRadioStyle') as UTSJSONObject;
+		customTextStyle.value = data.get('customTextStyle') as UTSJSONObject;
+	}
+
+	defineExpose({
+		setProps,
+		updateValue
+	})
+
+	// 初始化
+	onMounted(() => {
+		nextTick(() => {
+			let ele = instance.proxy!
+			snu.findParent(ele, ['sn-radio-group'])?.$callMethod('register', ele as ComponentPublicInstance)
+		})
+	})
+
+</script>
+
+<style lang="scss">
+	.sn-radio-contain {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		margin-right: 10px;
+		margin-bottom: 10px;
+		// #ifdef WEB
+		cursor: pointer;
+		// #endif
+	}
+	
+	.sn-radio {
+		margin-right: 6px;
+		box-sizing: border-box;
+		display: flex;
+		justify-content: center;
+	}
+	
+	.sn-radio-dot {
+		position: relative;
+		transform: scale(1);
+		transition-property: transform, background-color;
+	
+		&-active {
+			transform: scale(0.625)
+		}
+	}
+	
+	.disabled {
+		// #ifdef WEB
+		cursor: not-allowed;
+		// #endif
+	}
+</style>

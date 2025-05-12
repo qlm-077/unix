@@ -1,0 +1,345 @@
+<template>
+	<view class="sn-toast-contain"
+	:class="containClassesC"
+	:style="containStylesC">
+		<view class="sn-toast"
+		:style="toastStylesC">
+			<sn-icon v-if="showIcon&&!(config.loading ?? false)" 
+			:name="config.icon ?? ''"
+			:color="config.iconColor ?? iconColorC"
+			:size="config.iconSize ?? iconSizeC"
+			:style="iconStylesC"></sn-icon>
+			<sn-loading v-if="(config.loading ?? false)"
+			:iconColor="config.iconColor ?? iconColorC"
+			:iconSize="config.iconSize ?? iconSizeC"
+			:style="iconStylesC">
+			</sn-loading>
+			<sn-text :text="config.text ?? ''"
+			:align="config.textAlign ?? 'center'"
+			:color="config.textColor ?? textColorC"
+			:size="config.textSize ?? textSizeC"
+			:lines="config.textLines ?? 0"
+			:style="textStylesC"></sn-text>
+		</view>
+	</view>
+	<sn-overlay ref="overlayEle"
+	:maskClose="false"
+	:opacity="0">
+	</sn-overlay>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-toast
+	 * @tutorial https://sinleui.pages.dev/components/sn-toast
+	 * @description  Toast 轻提示
+	 *
+	 *- 很常见的吐司，但可玩性较高。通过 ref 方法使用。
+	 *
+	 *- 提供 15+ 配置属性，支持 props 和方法参数两种配置方法，能够面对绝大部分使用场景。
+	 * @property {String} text    String | 提示文本内容
+	 * @property {String} bgColor    String | 轻提示背景颜色
+	 * @property {Boolean} overlay    Boolean | 是否显示遮罩层（防穿透）
+	 * @property {String} position=[center|top|bottom]    String | 轻提示位置
+	 * @value center 中央
+	 * @value top 顶部
+	 * @value bottom 底部
+	 * @property {Number} duration    Number | 轻提示显示时间（单位：毫秒）
+	 * @property {String} textSize    String | 提示文本字体大小
+	 * @property {String} textColor    String | 提示文本颜色
+	 * @property {String} borderRadius    String | 轻提示圆角大小
+	 * @property {String} padding    String | 轻提示内边距
+	 * @property {String} icon    String | 提示图标名称
+	 * @property {String} iconSize    String | 图标大小
+	 * @property {String} iconColor    String | 图标颜色
+	 * @property {String} textAlign    String | 文本对齐方式
+	 * @property {Boolean} loading    Boolean | 是否显示加载中的图标
+	 * @property {Number} textLines    Number | 文本最大行数
+	 * @property {Object} customStyle    Object | 自定义轻提示样式
+	 */
+
+	// 依赖
+	import { $snui, SnToastParams, useFormatProp } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-toast'
+	})
+	
+	// SinleUI 配置
+	const snu = $snui.utils;
+	const colors = $snui.colors
+	
+	// 组件属性
+	const props = defineProps({
+		text: {
+			type: String,
+			default: ''
+		},
+		bgColor: {
+			type: String,
+			default: ''
+		},
+		overlay: {
+			type: Boolean,
+			default: false
+		},
+		position: {
+			type: String,
+			default: 'center'
+		},
+		duration: {
+			type: Number,
+			default: 2000
+		},
+		textSize: {
+			type: String,
+			default: ''
+		},
+		textColor: {
+			type: String,
+			default: ''
+		},
+		borderRadius: {
+			type: String,
+			default: ''
+		},
+		padding: {
+			type: String,
+			default: '12px 15px'
+		},
+		icon: {
+			type: String,
+			default: ''
+		},
+		iconSize: {
+			type: String,
+			default: ''
+		},
+		iconColor: {
+			type: String,
+			default: ''
+		},
+		textAlign: {
+			type: String,
+			default: 'center'
+		},
+		loading: {
+			type: Boolean,
+			default: false
+		},
+		textLines:{
+			type: Number,
+			default: 0
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+	})
+	
+	// 基本变量
+	const id = snu.randomComId()
+	const showToast = ref(false)
+	const overlayEle = ref(null as SnOverlayComponentPublicInstance | null)
+	const config = ref({} as SnToastParams)
+	
+	// 计算属性
+	const showIcon = computed((): boolean =>{
+		let icon = config.value.icon as string | null
+		return icon != null && icon.trim()!=''
+	})
+	
+	const textColorC = computed(():string=>{
+		return useFormatProp('color', props.textColor, '#fff')
+	})
+	
+	const textSizeC = computed(():string=>{
+		return useFormatProp('font', props.textSize, $snui.configs.font.size(2))
+	})
+	
+	const iconColorC = computed(():string=>{
+		return useFormatProp('color', props.iconColor, '#fff')
+	})
+	
+	const iconSizeC = computed(():string=>{
+		return useFormatProp('font', props.iconSize, $snui.configs.font.size(5))
+	})
+	
+	const bgColorC = computed(():string=>{
+		return props.bgColor == '' ? colors.value.toast : props.bgColor
+	})
+	
+	const borderRadiusC = computed(():string=>{
+		return useFormatProp('radius', props.borderRadius, $snui.configs.radius.normal)
+	})
+	
+	
+	const positionC = computed(():string=>{
+		let positions = ['center', 'top', 'bottom']
+		return positions.includes(props.position) ? props.position : 'center'
+	})
+	
+	const containStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('z-index', $snui.configs.zIndex.toast)
+		styles.set('transition-duration',$snui.configs.aniTime.normal)
+		return styles
+	})
+	
+	const iconStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('margin-right', '6px')
+		return styles
+	})
+	
+	const textStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('word-break', 'break-all')
+		styles.set('flex', '1')
+		return styles
+	})
+	
+	const toastStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('border-radius', config.value.borderRadius ?? borderRadiusC.value)
+		styles.set('padding', config.value.padding ?? props.padding)
+		styles.set('background',config.value.bgColor ?? bgColorC.value)
+		styles.set('transition-duration',$snui.configs.aniTime.normal)
+		return styles
+	})
+	
+	const containClassesC = computed((): Map<string, any>=>{
+		let classes = new Map<string, any>()
+		classes.set('top', config.value.position =='top')
+		classes.set('center', config.value.position =='center')
+		classes.set('bottom', config.value.position =='bottom')
+		classes.set('hover', showToast.value)
+		return classes
+	})
+	
+	// 方法
+	function close(){
+		showToast.value = false
+		overlayEle.value?.close?.()
+	}
+	
+	function show(){
+		config.value.bgColor = bgColorC.value
+		config.value.borderRadius = borderRadiusC.value
+		config.value.text = props.text
+		config.value.overlay = props.overlay
+		config.value.loading = props.loading
+		// @ts-ignore
+		config.value.position = positionC.value
+		config.value.duration = props.duration
+		config.value.textSize = textSizeC.value
+		config.value.textColor = textColorC.value
+		config.value.iconSize = iconSizeC.value
+		config.value.iconColor = iconColorC.value
+		config.value.padding = props.padding
+		config.value.icon = props.icon
+		config.value.textLines = props.textLines
+		config.value.textAlign = props.textAlign
+		if (config.value.overlay as boolean) {
+			overlayEle.value?.open?.()
+		}
+		showToast.value = true
+		if (!(config.value.loading as boolean)){
+			snu.debounce(()=>{
+				close()
+			}, config.value.duration!)
+		}
+	}
+	
+	function configShow(param: SnToastParams | null){
+		param = param ?? {} as SnToastParams
+		// 两种配置方式：组件属性和方法参数
+		config.value.bgColor = param.bgColor ?? bgColorC.value
+		config.value.borderRadius = param.borderRadius ?? borderRadiusC.value
+		config.value.text = param.text ?? props.text
+		config.value.overlay = param.overlay ?? props.overlay
+		config.value.loading = param.loading ?? props.loading
+		// @ts-ignore
+		config.value.position = param.position ?? positionC.value
+		config.value.duration = param.duration ?? props.duration
+		config.value.textSize = param.textSize ?? textSizeC.value
+		config.value.textColor = param.textColor ?? textColorC.value
+		config.value.iconSize = param.iconSize ?? iconSizeC.value
+		config.value.iconColor = param.iconColor ?? iconColorC.value
+		config.value.padding = param.padding ?? props.padding
+		config.value.icon = param.icon ?? props.icon
+		config.value.textLines = param.textLines ?? props.textLines
+		config.value.textAlign = param.textAlign ?? props.textAlign
+		if (config.value.overlay as boolean) {
+			overlayEle.value?.open?.()
+		}
+		showToast.value = true
+		if (!(config.value.loading as boolean)){
+			snu.debounce(()=>{
+				close()
+			}, config.value.duration!, id)
+		}
+	}
+	
+	defineExpose({
+		show,
+		configShow,
+		close
+	})
+	
+	
+
+</script>
+
+<style lang="scss">
+	.sn-toast-contain {
+		padding: 40px;
+		align-items: center;
+		justify-content: center;
+		position: fixed;
+		pointer-events: none;
+		left: 0;
+		right: 0;
+		opacity: 0;
+		transform: scale(0.9) translateY(-50%);
+		
+		&.top {
+			top: 0;
+			transform: scale(0.9) translateY(0px);
+			&.hover {
+				opacity: 1;
+				transform: scale(1) translateY(20px);
+			}
+		}
+		
+		&.center {
+			top: 50%;
+			transform: scale(0.9) translateY(-50%);
+			// #ifndef APP
+			transform-origin: 50% 0%;
+			// #endif
+			&.hover {
+				opacity: 1;
+				transform: scale(1) translateY(-50%);
+			}
+		}
+		
+		&.bottom {
+			bottom: 0;
+			transform: scale(0.9) translateY(0px);
+			&.hover {
+				opacity: 1;
+				transform: scale(1) translateY(-20px);
+			}
+		}
+	}
+	.sn-toast {
+		align-items: center;
+		justify-content: center;
+		flex-direction: row;
+		padding: 12px 15px;
+		// #ifndef APP
+		box-shadow: 0px 4px 12px -8px #000;
+		// #endif
+	}
+</style>

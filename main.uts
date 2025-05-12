@@ -1,0 +1,22 @@
+import App from './App.uvue'
+import { createSSRApp } from 'vue'
+import { $snui } from './uni_modules/sinle-ui'
+import { init } from './init.uts'
+import { setZPXConfig } from '@/uni_modules/z-paging-x/components/z-paging-x/config/index.uts'
+setZPXConfig({
+	//配置分页默认pageSize
+	'default-page-size': 10,
+	//配置空数据图默认描述文字为：空空如也~~
+	'empty-text': '空空如也~~',
+});
+export function createApp() {
+	const app = createSSRApp(App)
+	app.use($snui)
+	app.config.globalProperties.$snui = $snui
+	nextTick(() => {
+		init()
+	})
+	return {
+		app
+	}
+}

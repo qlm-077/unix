@@ -1,0 +1,95 @@
+import { SnEmptyColorConfig, $snui } from '../../index.uts'
+import { schedule, card, favor, coupon, data, location, fail, folder, page1, loading, message, star, page2, permission, record, search, server, shopping, network, slow } from './resource.uts'
+
+const colorLib = $snui.libs.color
+
+export const colorConfig = ref<SnEmptyColorConfig>({
+	themeColor: '',
+	hairColor: '',
+	clothesColor: '',
+	trousersColor: '',
+	shoesColor: '',
+	itemColor: '',
+	skinColor: '',
+	elementColor: ''
+})
+
+export function funThemeColor(coefficient : number = 1) : string {
+	return colorLib.tinyColor("#ffffff").mix(colorConfig.value.themeColor, coefficient * 100).toHexString()
+}
+
+export function funHairColor() : string {
+	return colorConfig.value.hairColor
+}
+
+export function funClothesColor(coefficient : number = 1) : string {
+	return colorLib.tinyColor("#ffffff").mix(colorConfig.value.clothesColor, coefficient * 100).toHexString()
+}
+
+export function funTrousersColor(coefficient : number = 1) : string {
+	return colorLib.tinyColor("#ffffff").mix(colorConfig.value.trousersColor, coefficient * 100).toHexString()
+}
+
+export function funShoesColor(coefficient : number = 1) : string {
+	return colorLib.tinyColor("#ffffff").mix(colorConfig.value.shoesColor, coefficient * 100).toHexString()
+}
+
+export function funSkinColor(coefficient : number = 1) : string {
+	return colorLib.tinyColor("#ffffff").mix(colorConfig.value.skinColor, coefficient * 100).toHexString()
+}
+
+export function funElementColor() : string {
+	return colorConfig.value.elementColor
+}
+
+export function funItemColor() : string {
+	return colorConfig.value.itemColor
+}
+
+export function getImage(imgName : string) : string {
+	const images = new Map<string, string>()
+	switch (imgName){
+		case 'schedule':
+			return schedule.value
+		case 'card':
+			return card.value
+		case 'favor':
+			return favor.value
+		case 'coupon':
+			return coupon.value
+		case 'data':
+			return data.value
+		case 'location':
+			return location.value
+		case 'fail':
+			return fail.value
+		case 'folder':
+			return folder.value
+		case 'page1':
+			return page1.value
+		case 'loading':
+			return loading.value
+		case 'message':
+			return message.value
+		case 'star':
+			return star.value
+		case 'page2':
+			return page2.value
+		case 'permission':
+			return permission.value
+		case 'record':
+			return record.value
+		case 'search':
+			return search.value
+		case 'server':
+			return server.value
+		case 'shopping':
+			return shopping.value
+		case 'network':
+			return network.value
+		case 'slow':
+			return slow.value
+		default:
+			return ''
+	}
+}

@@ -1,0 +1,40 @@
+import { utils } from './index.uts'
+
+const baseSize = ref('14px')
+const sizePalette = ref([10, 12, 14, 16, 20, 24, 30, 38, 46, 56, 68] as number[])
+const mainFamily = ref(``)
+
+export class FontConfig {
+	get mainFamily() : string {
+		return mainFamily.value
+	}
+	
+	set mainFamily(name : string) {
+		mainFamily.value = name
+	}
+	/**
+	 * @name 获取字号
+	 * @description 根据提供的字号等级，从字号板获取对应的字号。字号等级默认为2，有效范围是0到10。
+	 * @param {number} [level=2] 字号等级，有效值为0到10之间的整数。
+	 * @returns {number} 对应的字号大小。
+	 * @example
+	 * // 假设当前字号板定义为 [10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30]
+	 * size(3); // 返回 '16'
+	 * size(); // 返回默认值 '14'
+	 * size(11); // 返回最大值 '30'，因为11超出了有效范围
+	 */
+	size(level : number) : string {
+		let levelTmp = Math.min(Math.max(level, 0), 10);
+		return utils.addUnit(sizePalette.value[levelTmp]);
+	}
+
+	get baseSize() : string {
+		return baseSize.value
+	}
+
+	set baseSize(size : string) {
+		let v = Math.max(utils.getPx(size), 5)
+		sizePalette.value = [v - 4, v - 2, v, v + 2, v + 6, v + 10, v + 16, v + 24, v + 32, v + 42, v + 54]
+		baseSize.value = utils.addUnit(v)
+	}
+}

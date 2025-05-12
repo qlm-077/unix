@@ -1,0 +1,278 @@
+<template>
+	<slot>
+		<sn-text :text="value"
+		:color="textColorC"
+		:size="textSizeC"
+		:customStyle="customStyle"></sn-text>
+	</slot>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-countdown
+	 * @tutorial https://sinleui.pages.dev/components/sn-countdown
+	 * @description Countdown 倒计时
+	 * 
+	 * - 用于显示某个活动的截止时间
+	 * 
+	 * - 推荐使用插槽布局为主，样式更好调。
+	 * @property {String} format    String | 时间格式（参考[`Day.js`](https://dayjs.fenxianglu.cn/category/parse.html#%E5%AD%97%E7%AC%A6%E4%B8%B2-%E6%A0%BC%E5%BC%8F)）
+	 * @property {Number} time    Number | 总时长（单位`ms`）
+	 * @property {Boolean} autoplay    Boolean | 自动开始计时
+	 * @property {Boolean} millisecond    Boolean | 毫秒级精度（如果要显示毫秒请务必开启）
+	 * @property {String} textSize    String | 倒计时文本字体大小
+	 * @property {String} textColor    String | 倒计时文本颜色
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义倒计时样式
+	 * @event {Function} finish   ()=>void | 倒计时完成时触发
+	 * @event {Function} change   (value:[SnTime](/api/types/components#sncountdowntime))=>void | 倒计时时间变化时触发
+	 */
+	// 依赖
+	import { $snui, SnTime, useFormatProp } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-countdown'
+	})
+	
+	// SinleUI 配置
+	const colors = $snui.colors
+	
+	// 事件注册
+	const emit = defineEmits(['change', 'finish'])
+	
+	// 组件属性
+	const props = defineProps({
+		format: {
+			type: String,
+			default: 'HH:mm:ss'
+		},
+		time: {
+			type: Number,
+			default: 0
+		},
+		autoplay: {
+			type: Boolean,
+			default: true
+		},
+		millisecond: {
+			type: Boolean,
+			default: false
+		},
+		textSize: {
+			type: String,
+			default: ''
+		},
+		textColor: {
+			type: String,
+			default: ''
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+	})
+	
+	// 基本变量
+	const value = ref('')
+	const timer = ref(0)
+	const endTime = ref(0)
+	const remainTime = ref(0)
+	const running = ref(false)
+	const time = ref({
+		d : 0,
+		h : 0,
+		m : 0,
+		s : 0,
+		ms : 0
+	} as SnTime)
+	
+	// 计算属性
+	const textSizeC = computed((): string => {
+		return useFormatProp('font', props.textSize, $snui.configs.font.baseSize)
+	})
+	
+	const textColorC = computed((): string => {
+		return useFormatProp('color', props.textColor, colors.value.text)
+	})
+	
+	// 方法
+	function clearCache() {
+		clearTimeout(timer.value)
+		timer.value = 0
+	}
+	
+	function isSameSecond(time1 : number, time2 : number) : boolean {
+		return Math.floor(time1 / 1000) == Math.floor(time2 / 1000)
+	}
+		
+	function parseTimeData(time : number) : SnTime {
+		const S = 1000
+		const M = 60 * S
+		const H = 60 * M
+		const D = 24 * H
+			
+		const d = Math.floor(time / D)
+		const h = Math.floor((time % D) / H)
+		const m = Math.floor((time % H) / M)
+		const s = Math.floor((time % M) / S)
+		const ms = Math.floor(time % S)
+			
+		return {
+			d,
+			h,
+			m,
+			s,
+			ms
+		} as SnTime
+	}
+		
+	function parseFormat(format : string, timeData : SnTime) : string {
+		let {
+			d,
+			h,
+			m,
+			s,
+			ms
+		} = timeData
+			
+		if (format.indexOf('DD') == -1) {
+			h += d! * 24
+		} else {
+			format = format.replace('DD', `${d}`.padStart(2, '0'))
+		}
+		if (format.indexOf('HH') == -1) {
+			m += h! * 60
+		} else {
+			format = format.replace('HH', `${h}`.padStart(2, '0'))
+		}
+		if (format.indexOf('mm') == -1) {
+			s += m! * 60
+		} else {
+			format = format.replace('mm', `${m}`.padStart(2, '0'))
+		}
+		if (format.indexOf('ss') == -1) {
+			ms += s! * 1000
+		} else {
+			format = format.replace('ss', `${s}`.padStart(2, '0'))
+		}
+		return format.replace('SSS', `${ms}`.padStart(3, '0')).replace('SS', `${Math.trunc(ms/10)}`.padStart(2, '0')).replace('S', `${Math.trunc(ms/100)}`)
+	}
+		
+	function pause() {
+		running.value = false;
+		clearCache()
+	}
+	
+	function getRemainTime() : number {
+		return Math.max(endTime.value - Date.now(), 0)
+	}
+	
+	function stop() {
+		pause()
+		remainTime.value = 0
+		time.value = parseTimeData(0)
+		emit('change', time.value)
+		value.value = parseFormat(props.format, time.value)
+		emit('finish')
+	}
+	
+	function setRemainTime(remain : number) {
+		remainTime.value = remain
+
+		time.value = parseTimeData(remain)
+		emit('change', time.value)
+
+		value.value = parseFormat(props.format, time.value)
+		if (remain <= 0) {
+			stop()
+		}
+	}
+		
+	function macroTick() {
+		clearCache()
+		
+		timer.value = setTimeout(() => {
+			let remain = getRemainTime()
+		
+			if (!isSameSecond(remain, remainTime.value) || remain == 0) {
+				setRemainTime(remain)
+			}
+			
+			if (remainTime.value != 0) {
+				macroTick()
+			}
+		}, 30)
+	}
+		
+	function microTick() {
+		clearCache()
+		
+		timer.value = setTimeout(() => {
+			setRemainTime(getRemainTime())
+		
+			if (remainTime.value != 0) {
+				microTick()
+			}
+		}, 10)
+	}
+	
+	function toTick() {
+		if (props.millisecond) {
+			microTick()
+		} else {
+			macroTick()
+		}
+	}
+	
+	function start() {
+		
+		if (running.value) return
+		
+		running.value = true
+		endTime.value = Date.now() + remainTime.value
+		
+		toTick()
+	}
+	
+	function reset() {
+		pause()
+		remainTime.value = props.time
+		setRemainTime(remainTime.value)
+			
+		if (props.autoplay) {
+			start()
+		}
+	}
+	
+	function init() {
+		reset()
+	}
+	
+	// 暴露方法
+	
+	defineExpose({
+		start,
+		pause,
+		reset,
+		stop
+	})
+	
+	// 监听状态
+	const timeC = computed(():number => props.time)
+	
+	watch(timeC, () => {
+		init()
+	})
+	
+	// 生命周期
+	onMounted(() => {
+		init()
+	})
+	
+	onUnmounted(() => {
+		clearCache()
+	})
+</script>
+
+<style>
+
+</style>

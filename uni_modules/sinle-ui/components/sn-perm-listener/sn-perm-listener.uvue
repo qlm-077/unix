@@ -1,0 +1,243 @@
+<template>
+	<!-- #ifdef APP -->
+	<sn-popup ref="popEle"
+	:position="positionC"
+	:opacity="maskOpacity">
+		<view class="sn-perm-listener"
+		:style="[bodyStylesC, customStyle]">
+			<view class="sn-perm-listener-row"
+			v-for="(e, i) in uiShowedConfigs"
+			:key="i">
+				<sn-icon v-if="e.icon != ''"
+				:name="e.icon"
+				:size="iconSizeC"
+				:color="iconColorC"></sn-icon>
+				
+				<view class="sn-perm-listener-row-body">
+					<sn-text bold
+					:size="titleSizeC"
+					:color="titleColorC"
+					:text="e.title"
+					:style="[i!=0?'margin-top: 10px':'']"></sn-text>
+					<sn-text :text="e.content"
+					:size="contentSizeC"
+					:color="contentColorC"></sn-text>
+				</view>
+			</view>
+		</view>
+	</sn-popup>
+	<!-- #endif -->
+</template>
+
+<script setup>
+	// 依赖
+	import { $snui, useFormatProp } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-perm-listener'
+	})
+	
+	type permConfig = {
+		name: string,
+		title: string,
+		content: string,
+		icon: string
+	}
+	
+	// SinleUI 配置
+	const snu = $snui.utils;
+	const colors = $snui.colors
+	
+	// 组件属性
+	const props = defineProps({
+		data: {
+			type: Object as PropType<Map<string, UTSJSONObject>>,
+			default: new Map<string, UTSJSONObject>()
+		},
+		padding: {
+			type: String,
+			default: '20px',
+		},
+		position: {
+			type: String,
+			default: 'top',
+		},
+		maskOpacity: {
+			type: Number,
+			default: 0.5,
+		},
+		bgColor: {
+			type: String,
+			default: '',
+		},
+		iconSize: {
+			type: String,
+			default: '',
+		},
+		iconColor: {
+			type: String,
+			default: '',
+		},
+		contentSize: {
+			type: String,
+			default: '',
+		},
+		contentColor: {
+			type: String,
+			default: '',
+		},
+		titleSize: {
+			type: String,
+			default: '',
+		},
+		titleColor: {
+			type: String,
+			default: '',
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+	})
+	
+	// 基本变量
+	// #ifdef APP
+	const listener = ref(null as RequestPermissionListener | null)
+	// #endif
+	const timeoutId = ref(0)
+	const statusBarHeight = ref(0)
+	const popEle = ref(null as SnPopupComponentPublicInstance | null)
+	const showedConfigs = ref<permConfig[]>([])
+	const uiShowedConfigs = ref<permConfig[]>([])
+	
+	
+	// 计算属性
+	const paddingC = computed((): string=>{
+		return useFormatProp('other', props.padding, '10px')
+	})
+	
+	const permDataC = computed((): Map<string, permConfig>=>{
+		const data = new Map<string, permConfig>();
+		
+		props.data.forEach((v: any, k: any)=>{
+			if (typeof k == typeof ''){
+				if (v instanceof UTSJSONObject){
+					let tmpv = (v as UTSJSONObject).toMap()
+					if (tmpv.has('title') && tmpv.has('content')){
+						let perm: permConfig = {
+							name: `${k}`,
+							title: `${tmpv.get('title')}`,
+							content: `${tmpv.get('content')}`,
+							icon: `${tmpv.get('icon') ?? ''}`
+						}
+						data.set(k as string, perm)
+					}
+				}
+			}
+		})
+		return data
+	})
+	
+	const bgColorC = computed((): string=>{
+		return useFormatProp('color', props.bgColor, colors.value.front)
+	})
+
+	const titleColorC = computed((): string=>{
+		return useFormatProp('color', props.titleColor, colors.value.title)
+	})
+
+	const iconColorC = computed((): string=>{
+		return useFormatProp('color', props.iconColor, colors.value.title)
+	})
+
+	const iconSizeC = computed((): string=>{
+		return useFormatProp('font', props.iconSize, $snui.configs.font.size(5))
+	})
+
+	const contentColorC = computed((): string=>{
+		return useFormatProp('color', props.contentColor, colors.value.text)
+	})
+
+	const contentSizeC = computed((): string=>{
+		return useFormatProp('font', props.contentSize, $snui.configs.font.size(2))
+	})
+
+	const titleSizeC = computed((): string=>{
+		return useFormatProp('font', props.titleSize, $snui.configs.font.size(3))
+	})
+	
+	const positionC = computed((): string=>{
+		const pos = ['left', 'bottom', 'top', 'center', 'right']
+		return pos.includes(props.position) ? props.position : 'top'
+	})
+	
+	const bodyStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('background', bgColorC.value)
+		styles.set('padding', paddingC.value)
+		styles.set('margin-top', `${statusBarHeight.value}px`)
+		styles.set('transition-duration', $snui.configs.aniTime.normal)
+		return styles
+	})
+	
+	// #ifdef APP
+	// 生命周期
+	onMounted(()=>{
+		statusBarHeight.value = uni.getWindowInfo().statusBarHeight
+		listener.value = uni.createRequestPermissionListener()
+		listener.value!.onConfirm((callback: string[]) => {
+			callback.forEach((name: string)=>{
+				if (permDataC.value.has(name)){
+					showedConfigs.value.push(permDataC.value.get(name) as permConfig)
+				}
+			})
+			if (showedConfigs.value.length > 0) {
+				timeoutId.value = setTimeout(() => {
+					uiShowedConfigs.value = showedConfigs.value
+				    popEle.value?.open?.()
+				}, parseInt($snui.configs.aniTime.normal))
+			}
+		})
+		listener.value!.onComplete((callback: string[]) => {
+			showedConfigs.value = showedConfigs.value.filter((e: permConfig):boolean=>{
+				return !callback.includes(e.name)
+			})
+			nextTick(()=>{
+				if (showedConfigs.value.length == 0) {
+					clearTimeout(timeoutId.value)
+					popEle.value?.close?.()
+					setTimeout(() => {
+						showedConfigs.value = []
+						uiShowedConfigs.value = []
+					}, parseInt($snui.configs.aniTime.normal))
+				}
+			})
+		})
+	})
+	
+	onUnmounted(()=>{
+		listener.value?.stop()
+	})
+	// #endif
+</script>
+
+<style lang="scss">
+	.sn-perm-listener {
+		background-color: white;
+		border-radius: 10px;
+		min-height: 10px;
+		width: 90%;
+		margin-left: auto;
+		margin-right: auto;
+		&-row {
+			display: flex;
+			flex-direction: row;
+			align-items: center;
+			&-body {
+				flex: 1;
+				justify-content: center;
+				margin-left: 10px;
+			}
+		}
+	}
+</style>

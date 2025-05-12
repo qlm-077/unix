@@ -1,0 +1,165 @@
+<template>
+	<view class="sn-line" :style="[lineStylesC,customStyle]">
+		<view class="sn-line-border" 
+		:style="[borderStylesC, borderLeftStylesC]">
+		</view>
+		<slot>
+			<sn-text v-if="showTextC" 
+			class="sn-line-text" 
+			:text="dot?'•':text"
+			:color="textColorC" 
+			:size="textSizeC" 
+			:style="[customTextStyle]"></sn-text>
+		</slot>
+		<view v-if="showTextC||$slots['default']!=null" class="sn-line-border"
+		:style="[borderStylesC, borderRightStylesC]">
+		</view>
+	</view>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-line
+	 * @tutorial https://sinleui.pages.dev/components/sn-line
+	 * @description  Line 分割线
+	 *
+	 *- 用于在页面中创建分割线，可以包含文本。
+	 * @property {String} width    String | 分割线宽度
+	 * @property {String} height    String | 分割线高度
+	 * @property {String} lineColor    String | 分割线颜色
+	 * @property {String} textColor    String | 分割线文本颜色
+	 * @property {String} margin    String | 分割线外边距
+	 * @property {Boolean} dashed    Boolean | 是否显示为虚线
+	 * @property {Boolean} dot    Boolean | 是否显示为点状
+	 * @property {String} text    String | 分割线文本内容
+	 * @property {String} textSize    String | 分割线文本大小
+	 * @property {String} borderRadius    String | 分割线圆角大小
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义分割线样式
+	 * @property {UTSJSONObject} customTextStyle    UTSJSONObject | 自定义分割线文本样式
+	 */
+	// 依赖
+	import { $snui, useFormatProp } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-line'
+	})
+	
+	// SinleUI 配置
+	const snu = $snui.utils
+	const colors = $snui.colors
+
+	// 组件属性
+	const props = defineProps({
+		width: {
+			type: String,
+			default: '100%'
+		},
+		height: {
+			type: String,
+			default: '1px'
+		},
+		lineColor: {
+			type: String,
+			default: ''
+		},
+		textColor: {
+			type: String,
+			default: ''
+		},
+		margin: {
+			type: String,
+			default: '10px 0'
+		},
+		dashed: {
+			type: Boolean,
+			default: false
+		},
+		dot: {
+			type: Boolean,
+			default: false
+		},
+		text: {
+			type: String,
+			default: ''
+		},
+		textSize: {
+			type: String,
+			default: ''
+		},
+		borderRadius: {
+			type: String,
+			default: ''
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customTextStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+	})
+
+	// 计算属性
+	const textSizeC = computed((): string => {
+		return useFormatProp('font', props.textSize, $snui.configs.font.size(1))
+	})
+
+	const showTextC = computed(() : boolean => {
+		return !snu.isEmpty(props.text) || props.dot
+	})
+	
+	const lineColorC = computed((): string => {
+		return useFormatProp('color', props.lineColor, colors.value.line)
+	})
+	
+	const textColorC = computed((): string => {
+		return useFormatProp('color', props.textColor, colors.value.lineText)
+	})
+	
+	const lineStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('width', props.width)
+		styles.set('margin', props.margin)
+		styles.set('transition-duration',$snui.configs.aniTime.normal)
+		return styles
+	})
+	
+	const borderStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('borderBottomStyle', props.dashed?'dashed':'solid')
+		styles.set('borderBottomWidth', props.height)	
+		styles.set('borderBottomColor', lineColorC.value)
+		styles.set('transition-duration',$snui.configs.aniTime.normal)
+		return styles
+	})
+	
+	const borderLeftStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		if (showTextC.value || useSlots()['default']!=null){
+			styles.set('margin-right', '10px')
+		}
+		return styles
+	})
+	
+	const borderRightStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('margin-left', '10px')
+		return styles
+	})
+
+</script>
+
+<style lang="scss">
+	.sn-line {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		justify-content: center;
+
+		.sn-line-bg,
+		.sn-line-border {
+			flex: 1;
+		}
+	}
+</style>

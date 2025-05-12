@@ -1,0 +1,62 @@
+type StreetNumber = {
+	number : any[];
+	direction : any[];
+	distance : any[];
+	street : any[];
+}
+
+type Building = {
+	name : any[];
+	type : any[];
+}
+
+type Neighborhood = {
+	name : any[];
+	type : any[];
+}
+
+type AddressComponent = {
+	city : string;
+	province : string;
+	adcode : string;
+	district : string;
+	towncode : string;
+	streetNumber : StreetNumber;
+	country : string;
+	township : string;
+	businessAreas : any[][];
+	building : Building;
+	neighborhood : Neighborhood;
+	citycode : string;
+}
+
+type Regeocode = {
+	addressComponent : AddressComponent;
+	formatted_address : string;
+}
+
+export type regeoLocationInfoType = {
+	status : string;
+	regeocode : Regeocode;
+	info : string;
+	infocode : string;
+}
+
+export type locationInfoType = {
+	city : string;
+	province : string;
+	district : string;
+	township : string;
+	formatted_address : string;
+	longitude : number;
+	latitude : number
+}
+
+export type userInfo = {
+	avatar : string | null;
+	nickname : string;
+	username : string;
+	password : string;
+	email : string | null;
+	id: string;
+}

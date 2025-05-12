@@ -1,0 +1,117 @@
+<template>
+	<view class="sn-col" :style="[colStylesC, customStyle]">
+		<slot />
+	</view>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-col
+	 * @tutorial https://sinleui.pages.dev/components/sn-col
+	 * @description Col 垂直布局
+	 * 
+	 * - 用于快速设置栅格布局。
+	 * 
+	 * - 搭配 `sn-row` 组件使用更佳哦。
+	 * @property {String} gutter    String | 多个`sn-col`之间的间距
+	 * @property {Number} span    Number | 占用栅格数（共12栅格，随意分配）
+	 * @property {String} align    String | 侧轴子元素排列方式（flex布局中的align-items）
+	 * @property {String} justify    String | 主轴子元素排列方式（flex布局中的justify-content）
+	 * @property {Boolean} wrap    Boolean | 是否换行（flex布局中的flex-wrap）
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义垂直布局样式
+	 */
+	// 依赖
+	import { $snui } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-col'
+	})
+
+	// SinleUI 配置
+	const snu = $snui.utils;
+
+	// 组件属性
+	const props = defineProps({
+		gutter: {
+			type: String,
+			default: '0px'
+		},
+		span: {
+			type: Number,
+			default: 12
+		},
+		offset: {
+			type: Number,
+			default: 0
+		},
+		justify: {
+			type: String,
+			default: 'center'
+		},
+		align: {
+			type: String,
+			default: 'flex-start'
+		},
+		wrap: {
+			type: Boolean,
+			default: false
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+	})
+
+	const justifyC = computed(() : string => {
+		let justify = props.justify
+		if (justify == 'left' || justify == 'start') {
+			return 'flex-start'
+		} else if (justify == 'right' || justify == 'end') {
+			return 'flex-end'
+		} else if (justify == 'around' || justify == 'between') {
+			return `space-${justify}`
+		}
+
+		return justify
+	})
+
+	const alignItemsC = computed(() : string => {
+		let align = props.align
+		if (align == 'top' || align == 'start') {
+			return 'flex-start'
+		} else if (align == 'bottom' || align == 'end') {
+			return 'flex-end'
+		} else if (align == 'around' || align == 'between') {
+			return `space-${align}`
+		}
+
+		return align
+	})
+
+	const gutterC = computed(() : number => {
+		return Math.max(snu.getPx(props.gutter), 0)
+	})
+
+	const offsetC = computed(() : number => {
+		return Math.max(props.offset, 0)
+	})
+	
+	const colStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('width', `${100/12*props.span}%`)
+		styles.set('justify-content', justifyC.value)
+		styles.set('align-items', alignItemsC.value)
+		styles.set('padding-left', `${gutterC.value / 2}px`)
+		styles.set('padding-right', `${gutterC.value / 2}px`)
+		styles.set('margin-feft', `${100/12*offsetC.value}%`)
+		styles.set('flex-wrap', props.wrap ? 'wrap' : 'nowrap')
+		styles.set('transition-duration',$snui.configs.aniTime.normal)
+		return styles
+	})
+</script>
+
+<style lang="scss">
+	.sn-col {
+		display: flex;
+	}
+</style>

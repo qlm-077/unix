@@ -1,0 +1,42 @@
+{
+  "light": {
+    "navigationBarTextStyle": "black",
+    "navigationBarBackgroundColor": "#007AFF",
+    "backgroundColorContent": "#efeff4",
+    "backgroundColor": "#efeff4",
+
+    "tabBarColor": "#333333",
+    "tabBarSelectedColor": "#0e932e",
+    "tabBarBorderStyle": "black",
+    "tabBarBackgroundColor": "#F8F8F8",
+
+    "homeIconPath": "static/tabbar/hm_light.png",
+    "homeSelectedIconPath": "static/tabbar/hm_checked.png",
+    "listIconPath": "static/tabbar/tu_light.png",
+    "listSelectedIconPath": "static/tabbar/tu_checked.png",
+    "messageIconPath": "static/tabbar/mess_light.png",
+    "messageSelectedIconPath": "static/tabbar/mess_checked.png",
+    "userIconPath": "static/tabbar/u_light.png",
+    "userSelectedIconPath": "static/tabbar/u_checked.png"
+  },
+  "dark": {
+    "navigationBarTextStyle": "white",
+    "navigationBarBackgroundColor": "#272727",
+    "backgroundColor": "#21231e",
+    "backgroundColorContent": "#21231e",
+
+    "tabBarColor": "#f6f6f6",
+    "tabBarSelectedColor": "#0e932e",
+    "tabBarBorderStyle": "white",
+    "tabBarBackgroundColor": "#272727",
+
+    "homeIconPath": "static/tabbar/hm_dark.png",
+    "homeSelectedIconPath": "static/tabbar/hm_checked.png",
+    "listIconPath": "static/tabbar/tu_dark.png",
+    "listSelectedIconPath": "static/tabbar/tu_checked.png",
+    "messageIconPath": "static/tabbar/mess_dark.png",
+    "messageSelectedIconPath": "static/tabbar/mess_checked.png",
+    "userIconPath": "static/tabbar/u_dark.png",
+    "userSelectedIconPath": "static/tabbar/u_checked.png"
+  }
+}

@@ -1,0 +1,297 @@
+<template>
+	<view class="sn-picker-view"
+	:style="[pickerViewStylesC, customStyle]">
+		<view class="disabled-mask"
+		v-if="disabled"></view>
+		<picker-view class="sn-picker-view-view"
+		indicator-class="indicator-class"
+		:value="pickerValues"
+		:indicator-style="indicatorStyleC"
+		:mask-style="maskStyle"
+		:mask-top-style="maskTopStyle"
+		:mask-bottom-style="maskBottomStyle"
+		@change="onPickerViewChanged">
+			<picker-view-column
+			class="sn-picker-view-column"
+			v-for="(col,cIndex) in (data as SnDataItem[][])"
+			:key="cIndex"
+			:style="[{
+				marginLeft: cIndex == 0 ? '0' : halfColumnSpacing,
+				marginRight: cIndex == data.length - 1 ? '0' : halfColumnSpacing
+			} as Map<string,any>, customColumnStyle]">
+				<view class="sn-picker-view-item"
+				v-for="(item,iIndex) in (col as SnDataItem[])"
+				:style="[itemStylesC, customItemStyle]">
+					<sn-text align="center"
+					:color="(item.disabled??false)?disabledItemTextColorC:(model[cIndex]==iIndex?activeItemTextColorC:itemTextColorC)"
+					:size="itemTextSizeC"
+					:text="item.text ?? ''">
+					</sn-text>
+				</view>
+			</picker-view-column>
+		</picker-view>
+	</view>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-picker-view
+	 * @tutorial https://sinleui.pages.dev/components/sn-picker-view
+	 * @description  Picker View 选择器容器
+	 *
+	 *- 本组件是基于官方 picker-view 的封装，扩展了禁用项功能和样式，使用更加方便快捷
+	 * @property {Array<Number>} vModel    Array<Number> | 当前选中的选项索引数组
+	 * @property {Array<SnDataItem[][]>} data    Array<SnDataItem[][]> | 选择器容器数据数组，每个子数组代表一列
+	 * @property {Boolean} disabled    Boolean | 是否禁用选择器容器
+	 * @property {String} height    String | 选择器容器高度
+	 * @property {String} itemHeight    String | 选项高度
+	 * @property {String} itemBorderRadius    String | 选项圆角大小
+	 * @property {String} itemTextColor    String | 选项文字颜色
+	 * @property {String} itemTextSize    String | 选项文字大小
+	 * @property {String} activeItemTextColor    String | 激活选项文字颜色
+	 * @property {String} disabledItemTextColor    String | 禁用选项文字颜色
+	 * @property {String} columnSpacing    String | 列间距
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义选择器容器样式
+	 * @property {UTSJSONObject} customItemStyle    UTSJSONObject | 自定义选项样式
+	 * @property {UTSJSONObject} customColumnStyle    UTSJSONObject | 自定义列样式
+	 * @event {Function} change   (v:number[])=>void | 选项改变时触发
+	 */
+
+
+	// 依赖
+	import { $snui, SnDataItem, useFormatProp } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-picker-view'
+	})
+	
+	// SinleUI 配置
+	const snu = $snui.utils;
+	const colors = $snui.colors
+	
+	// 事件注册
+	const emit = defineEmits(['update:modelValue', 'change'])
+	
+	// 组件属性
+	const props = defineProps({
+		modelValue: {
+			type: Array as PropType<number[]>,
+			default: [] as number[]
+		},
+		data: {
+			type: Array as PropType<SnDataItem[][]>,
+			default: [] as SnDataItem[][]
+		},
+		disabled: {
+			type: Boolean,
+			default: false
+		},
+		height: {
+			type: String,
+			default: '250px'
+		},
+		itemHeight: {
+			type: String,
+			default: '50px'
+		},
+		itemBorderRadius: {
+			type: String,
+			default: ''
+		},
+		itemTextColor: {
+			type: String,
+			default: ''
+		},
+		itemTextSize: {
+			type: String,
+			default: '',
+		},
+		activeItemTextColor: {
+			type: String,
+			default: '',
+		},
+		disabledItemTextColor: {
+			type: String,
+			default: '',
+		},
+		columnSpacing: {
+			type: String,
+			default: '10px'
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customItemStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customColumnStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+	})
+	
+	// 基本变量
+	const scrollIntoViewId = ref('guangzhou')
+	const maskStyle = 'background: none !important;'
+	const maskTopStyle = 'background-image: none !important;'
+	const maskBottomStyle = 'background-image: none !important;'
+	const pickerValues = ref([] as number[])
+	const transporting = ref(false)
+	
+	function formatValue(value: number[]): number[] {
+		if (value.length < props.data.length) {
+			let delta = props.data.length - value.length
+			for (let i = 0; i < delta; i++) {
+				value.push(0)
+			}
+		} else if (value.length > props.data.length) {
+			value = value.slice(0, props.data.length)
+		}
+		return value
+	}
+	
+	const originValue = computed(():number[]=>{
+		let arr = [] as number[]
+		for (let i = 0; i < props.data.length; i++) {
+			arr.push(0)
+		}
+		return arr
+	})
+	
+	const lastValue = computed(():number[]=>{
+		let arr = [] as number[]
+		for (let i = 0; i < props.data.length; i++) {
+			arr.push(props.data[i].length-1)
+		}
+		return arr
+	})
+	
+	function setPickerValues(value: number[]) {
+		nextTick(()=>{
+			pickerValues.value = snu.deepClone(value)
+		})
+	}
+	
+	// 计算属性
+	const model = computed<number[]>({
+		get: () : number[] => props.modelValue,
+		set: (value : number[]) => {
+			value = formatValue(value)
+			setPickerValues(value)
+			emit('update:modelValue', value)
+			emit('change', value)
+		}
+	} as WritableComputedOptions<number[]>)
+	
+	watch(model, (v: number[], o:number[])=>{
+		let values = formatValue(v)
+		setPickerValues(values)
+	})
+	
+	
+	const theme = computed(():string=>$snui.configs.app.theme)
+	
+	const itemHeightN = computed((): number=>{
+		return snu.getPx(props.itemHeight)
+	})
+	
+	const halfColumnSpacing = computed((): string=>{
+		return snu.addPx(Math.max(0,snu.getPx(props.columnSpacing)/2))
+	})
+	
+	const itemBorderRadiusC = computed((): string=>{
+		return useFormatProp('radius',props.itemBorderRadius,$snui.configs.radius.normal)
+	})
+	
+	const disabledItemTextColorC = computed((): string=>{
+		return useFormatProp('color',props.disabledItemTextColor, colors.value.disabledText)
+	})
+	
+	const itemTextColorC = computed((): string=>{
+		return useFormatProp('color',props.itemTextColor, theme.value=='light'?colors.value.textLight:colors.value.lineText)
+	})
+	
+	const activeItemTextColorC = computed((): string=>{
+		return useFormatProp('color',props.activeItemTextColor, colors.value.text)
+	})
+	
+	const itemTextSizeC = computed((): string=>{
+		return useFormatProp('font',props.itemTextSize,$snui.configs.font.size(2))
+	})
+	
+	const indicatorStyleC = computed(():string=>{
+		let color = theme.value=='light' ? 0 : 255
+		return `height: ${props.itemHeight};background: rgba(${color},${color},${color},0.04);border-radius:${itemBorderRadiusC.value};`
+	})
+	
+	const pickerViewStylesC = computed(():Map<string,any>=>{
+		let styles = new Map<string,any>()
+		styles.set('height', props.height)
+		return styles
+	})
+	const itemStylesC = computed(():Map<string,any>=>{
+		let styles = new Map<string,any>()
+		styles.set('height', props.itemHeight)
+		styles.set('border-radius', itemBorderRadiusC.value)
+		return styles
+	})
+	
+	// 方法
+	function onPickerViewChanged(e:PickerViewChangeEvent){
+		if (transporting.value) return
+		e.detail.value.forEach((value: number,index: number)=>{
+			let item = props.data[index][value] as SnDataItem
+			if (item?.disabled ?? false) {
+				console.log('disabled item', model.value)
+				setPickerValues(snu.deepClone(model.value))
+			} else {
+				model.value[index] = value
+				model.value = model.value
+			}
+		})
+	}
+	
+	onBeforeMount(()=>{
+		model.value = formatValue(props.modelValue)
+	})
+</script>
+
+<style lang="scss">
+	.sn-picker-view {
+		width: 100%;
+		
+		&-view {
+			flex: 1;
+		}
+		
+		&-item {
+			justify-content: center;
+			align-items: center;
+		}
+	}
+	
+	// #ifndef APP
+	.indicator-class:before {
+		display: none;
+	}
+		
+	.indicator-class:after {	
+		display: none;
+	}
+	// #endif
+	
+	.disabled-mask {
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		opacity: 0;
+		z-index: 10;
+		// #ifdef WEB
+		cursor: not-allowed;
+		// #endif
+	}
+</style>

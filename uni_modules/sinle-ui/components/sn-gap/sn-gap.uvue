@@ -1,0 +1,102 @@
+<template>
+	<view class="sn-gap"
+	:style="[gapStylesC, customStyle]">
+	</view>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-gap
+	 * @tutorial https://sinleui.pages.dev/components/sn-gap
+	 * @description Gap 占位间隔
+	 * 
+	 * - 顾名思义，就是单纯用来占位的
+	 * @property {String} mode=[custom|statusbar|safearea]    String | 占位间隔模式。可选自定义高度、状态栏高度、安全区高度
+	 * @value custom 自定义高度
+	 * @value statusbar 状态栏高度
+	 * @value safearea 安全区高度
+	 * @property {String} height    String | 占位间隔高度（仅`mode`为`custom`时生效）。
+	 * @property {String} bgColor    String | 占位间隔背景颜色
+	 * @property {String} borderRadius    String | 占位间隔圆角大小
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义占位间隔样式
+	 */
+	// 依赖
+	import { $snui, useFormatProp } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-gap'
+	})
+	
+	// SinleUI 配置
+	const colors = $snui.colors
+	
+	// 组件属性
+	const props = defineProps({
+		height: {
+			type: String,
+			default: ''
+		},
+		mode: {
+			type: String,
+			default: 'custom'
+		},
+		bgColor: {
+			type: String,
+			default: ''
+		},
+		borderRadius: {
+			type: String,
+			default: ''
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+	})
+	
+	// 基本变量
+	const windowInfo = uni.getWindowInfo()
+	
+	// 计算属性
+	const bgColorC = computed(():string=>{
+		return useFormatProp('color', props.bgColor, colors.value.transparent)
+	})
+	
+	const borderRadiusC = computed(():string=>{
+		return useFormatProp('radius', props.borderRadius, $snui.configs.radius.normal)
+	})
+	
+	const modeC = computed(():string => {
+		let modes = ['custom', 'statusbar', 'safearea']
+		return modes.includes(props.mode) ? props.mode : 'custom'
+	})
+	
+	const heightC = computed(():string => {
+		switch (modeC.value){
+			case 'custom':
+				return props.height == '' ? '20px' : props.height
+			case 'statusbar':
+				return `${windowInfo.statusBarHeight}px`
+			case 'safearea':
+				return `${windowInfo.windowHeight - windowInfo.safeArea.height}px`
+			default:
+				return props.height == '' ? '20px' : props.height
+		}
+	})
+	
+	const gapStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('height', heightC.value)
+		styles.set('background', bgColorC.value)
+		styles.set('border-radius', borderRadiusC.value)
+		styles.set('transition-duration',$snui.configs.aniTime.normal)
+		return styles
+	})
+
+</script>
+
+<style lang="scss">
+	.sn-gap {
+		width: 100%;
+	}
+</style>

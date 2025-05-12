@@ -1,0 +1,224 @@
+<template>
+	<scroll-view v-if="scrollOn"
+	class="sn-page"
+	ref="scrollEle"
+	:bounces="bounces" 
+	:show-scrollbar="false"
+	:direction="direction"
+	:upper-threshold="upperThreshold"
+	:lower-threshold="lowerThreshold"
+	:scrollWithAnimation="scrollWithAnimation"
+	@refresherpulling="refresherpulling" 
+	@refresherrefresh="refresherrefresh" 
+	@refresherrestore="refresherrestore" 
+	@refresherabort="refresherabort" 
+	@scrolltoupper="scrolltoupper" 
+	@scrolltolower="scrolltolower" 
+	@scroll="scroll" 
+	@scrollend="scrollend" 
+	@startnestedscroll="startnestedscroll" 
+	@nestedprescroll="nestedprescroll" 
+	@stopnestedscroll="stopnestedscroll"
+	:style="[pageStylesC, customStyle]">
+		<slot></slot>
+	</scroll-view>
+	<view v-else 
+	class="sn-page" :style="[pageStylesC, customStyle]">
+		<slot></slot>
+	</view>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-page
+	 * @tutorial https://sinleui.pages.dev/components/sn-page
+	 * @description  Page 页面
+	 *
+	 *- 页面容器，是页面的根节点。使用页面容器可帮助您快速布局页面，无需手动管理滚动相关组件及事件。
+	 *
+	 *- 支持动态修改页面背景色、全局背景色。
+	 * @property {Boolean} scrollOn    Boolean | 是否开启滚动功能
+	 * @property {Number} scrollTop    Number | 设置竖向滚动条位置
+	 * @property {Boolean} scrollWithAnimation    Boolean | 滚动是否使用动画
+	 * @property {String} direction=[vertical|horizontal]    String | 滚动方向（vertical或horizontal）
+	 * @value vertical 纵向
+	 * @value horizontal 横向
+	 * @property {Number} upperThreshold Number | 距顶部/左边多远时，触发 scrolltoupper 事件
+	 * @property {Number} lowerThreshold  Number | 距底部/右边多远时，触发 scrolltolower 事件
+	 * @property {String} bgColor    String | 页面背景颜色
+	 * @property {String} padding    String | 页面内边距
+	 * @property {Boolean} bounces    Boolean | 是否启用回弹效果
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义页面样式
+	 * @event {Function} scrolltoupper   (e:UniScrollToUpperEvent)=>void | 滚动到顶部时触发
+	 * @event {Function} scrolltolower   (e:UniScrollToLowerEvent)=>void | 滚动到底部时触发
+	 * @event {Function} scroll   (e:UniScrollEvent)=>void | 滚动时触发
+	 * @event {Function} scrollend   (e:UniScrollEvent)=>void | 滚动结束时触发
+	 * @event {Function} refresherpulling   (event:UniRefresherEvent)=>void | 下拉刷新控件被下拉
+	 * @event {Function} refresherrefresh   (event:UniRefresherEvent)=>void | 下拉刷新被触发
+	 * @event {Function} refresherrestore   (event:UniRefresherEvent)=>void | 下拉刷新被复位
+	 * @event {Function} refresherabort   (event:UniRefresherEvent)=>void | 下拉刷新被中止
+	 * @event {Function} startnestedscroll   (event:UniStartNestedScrollEvent)=>Boolean | 子元素开始滚动时触发,returntrue表示与子元素开启滚动协商默认returnfalse!event={node}
+	 * @event {Function} nestedprescroll   (event:UniNestedPreScrollEvent)=>void | 子元素滚动时触发，可执行event.consumed(x,y)告知子元素deltaX、deltaY各消耗多少。子元素将执行差值后的deltaX、deltaY滚动距离。不执行consumed(x,y)则表示父元素不消耗deltaX、deltaY。event={deltaX,deltaY}
+	 * @event {Function} stopnestedscroll   (event:UniStopNestedScrollEvent)=>void | 子元素滚动结束或意外终止时触发
+	 */
+
+	// 依赖
+	import { $snui, useFormatProp } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-page'
+	})
+	
+	// SinleUI 配置
+	const colors = $snui.colors
+	
+	// 事件注册
+	const emit = defineEmits(['refresherpulling','refresherrefresh','refresherrestore','refresherabort','scrolltoupper','scrolltolower','scroll','scrollend','startnestedscroll','nestedprescroll','stopnestedscroll'])
+	
+	// 组件属性
+	const props = defineProps({
+		scrollOn: {
+			type: Boolean,
+			default: true
+		},
+		scrollTop: {
+			type: Number,
+			default: 0
+		},
+		scrollWithAnimation: {
+			type: Boolean,
+			default: true
+		},
+		direction:{
+			type: String,
+			default: 'vertical'
+		},
+		bgColor: { 
+			type: String,
+			default: ''
+		},
+		upperThreshold: {
+			type: Number,
+			default: 50
+		},
+		lowerThreshold: {
+			type: Number,
+			default: 50,
+		},
+		padding: {
+			type: String,
+			default: '0 15px'
+		},
+		bounces: {
+			type: Boolean,
+			default: true
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+	}) 
+	
+	// 基本变量
+	const updateBacktop = ref([(scrollTop:number)=>{}])
+	const scrollEle = ref(null as UniScrollViewElement | null)
+	
+	// 计算属性
+	const bgColorC = computed(():string=>{
+		return useFormatProp('color',props.bgColor, colors.value.page)
+	})
+	
+	const pageStylesC = computed(():Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('background', bgColorC.value)
+		styles.set('padding', props.padding)
+		styles.set('transition-duration',$snui.configs.aniTime.normal)
+		
+		return styles
+	})
+	// 方法
+	function updateBacktopStatus(scrollTop:number){
+		updateBacktop.value.forEach((update: (scrollTop:number)=>void)=>{
+			update(scrollTop)
+		})
+	}
+	
+	function scrollTo(x:number,y:number){
+		updateBacktopStatus(0)
+		if (scrollEle.value!= null){
+			// #ifdef APP
+			scrollEle.value!.setAttribute('scroll-top', `${x}`)
+			scrollEle.value!.setAttribute('scroll-left', `${y}`)
+			// #endif
+			// #ifndef APP
+			scrollEle.value!.scrollTop = x
+			scrollEle.value!.scrollLeft = y
+			// #endif
+		}
+	}
+	
+	function registerBacktop(update: (scrollTop:number)=>void){
+	   updateBacktop.value.push(update)
+	}
+	
+	// 页面事件
+	function refresherpulling(e: UniRefresherEvent){
+	   emit('refresherpulling',e)
+	}
+	function refresherrefresh(e: UniRefresherEvent){
+	   emit('refresherrefresh',e)
+	}
+	function refresherrestore(e: UniRefresherEvent){
+	   emit('refresherrestore',e)
+	}
+	function refresherabort(e: UniRefresherEvent){
+	   emit('refresherabort',e)
+	}
+	function scrolltoupper(e: UniScrollToUpperEvent){
+	   emit('scrolltoupper',e)
+	}
+	function scrolltolower(e: UniScrollToLowerEvent){
+	   emit('scrolltolower',e)
+	}
+	function scroll(e: UniScrollEvent){
+	   emit('scroll',e)
+	   updateBacktopStatus(e.detail.scrollTop)
+	}
+	
+	function scrollend(e: UniScrollEvent){
+	   emit('scrollend',e)
+	}
+	
+	function startnestedscroll(e: UniStartNestedScrollEvent){
+	   emit('startnestedscroll',e)
+	}
+	function nestedprescroll(e: UniNestedPreScrollEvent){
+	   emit('nestedprescroll',e)
+	}
+	function stopnestedscroll(e: UniStopNestedScrollEvent){
+	   emit('stopnestedscroll',e)
+	}
+	
+	defineExpose({
+		scrollTo,
+		registerBacktop
+	})
+	
+	// 生命周期
+	onLoad((_)=>{
+		let pages = getCurrentPages()
+		let uniPage = pages[pages.length-1]
+		let uniPageStyle = uniPage.getPageStyle()
+		uniPageStyle['navigationStyle'] = 'custom'
+		uniPageStyle['backgroundColorContent'] = bgColorC.value
+		uniPage.setPageStyle(uniPageStyle)
+	})
+</script>
+
+<style lang="scss">
+	.sn-page {
+		flex: 1;
+		height: 100%;
+		width: 100%;
+	}
+</style>

@@ -1,0 +1,208 @@
+<template>
+	<view class="sn-form-item"
+	:style="[customStyle]">
+		<view class="sn-form-item-body"
+		:style="bodyStylesC">
+			<view class="sn-form-item-label"
+			:style="labelStylesC">
+				<sn-text v-if="required"
+				class="sn-form-item-label-required"
+				text="*"
+				color="$error"
+				:size="labelSizeC"></sn-text>
+				<sn-text :text="label"
+				:color="labelColorC"
+				:size="labelSizeC"></sn-text>
+			</view>
+			<view class="sn-form-item-content">
+				<slot></slot>
+			</view>
+		</view>
+		<slot name="error"
+		v-if="showError&&!isValid">
+			<sn-alert type="error"
+			class="sn-form-item-error"
+			:text="hintMessage"></sn-alert>
+		</slot>
+		<sn-line v-if="showBorder&&typeC == 'embed'"
+		margin="15px 0 0 0"></sn-line>
+	</view>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-form-item
+	 * @tutorial https://sinleui.pages.dev/components/sn-form
+	 * @description Form 表单
+	 * 
+	 * - 用于数据收集及验证。
+	 * 
+	 * - 内置的数据验证器提供了丰富的场景支持，使得数据校验变得异常容易。同时支持自定义数据校验，满足您的各种需求。
+	 * 
+	 * - 分为两个组件：`sn-form` 和  `sn-form-item` 。
+	 * 
+	 * - `sn-form-item` 可以独立使用，但独立使用时功能和样式受一定限制
+	 * @property {String} type    String | 表单项样式类型。分为`embed`（嵌入式）和`float`（浮动式）（不为空则覆盖`sn-form`配置）
+	 * @value embed    嵌入式
+	 * @value float    浮动式
+	 * @property {String} label    String | 表单项标题
+	 * @property {String} labelColor    String | 表单项标题颜色（不为空则覆盖`sn-form`配置）
+	 * @property {String} labelSize    String | 表单项标题字体大小（不为空则覆盖`sn-form`配置）
+	 * @property {String} labelWidth    String | 表单项标题宽度（不为空则覆盖`sn-form`配置）
+	 * @property {String} field    String | 表单项名称
+	 * @property {[SnFormItemRule](https://sinleui.pages.dev/api/types/components#snformitemrule)} rule    [SnFormItemRule](https://sinleui.pages.dev/api/types/components#snformitemrule) | 表单项校验规则
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义表单项样式
+	 */
+	// 依赖
+	import { $snui, SnFormItemData, SnFormItemRule, SnFormItemVerifyResult, useFormatProp } from '../../index.uts'
+	import { useVerify } from './verify.uts'
+	
+	defineOptions({
+		name: 'sn-form-item'
+	})
+	
+	// SinleUI 配置
+	const snu = $snui.utils;
+	const colors = $snui.colors
+	const instance = getCurrentInstance()!
+	
+	// 组件属性
+	const props = defineProps({
+		type: {
+			type: String,
+			default: ''
+		},
+		field: {
+			type: String,
+			default: ''
+		},
+		rule: {
+			type: Object as PropType<SnFormItemRule>,
+			default: ():SnFormItemRule=>{
+				return {} as SnFormItemRule
+			}
+		},
+		label: {
+			type: String,
+			default: ''
+		},
+		labelColor: {
+			type: String,
+			default: ''
+		},
+		labelSize: {
+			type: String,
+			default: ''
+		},
+		labelWidth: {
+			type: String,
+			default: ''
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject as UTSJSONObject
+		}
+	})
+	
+	// 基本变量
+	const isValid = ref(true)
+	const hintMessage = ref('\u3000')
+	const type = inject('type',ref('embed'))
+	const labelColor = inject('labelColor',computed(():string=>colors.value.textLight))
+	const labelSize = inject('labelSize',computed(():string=>$snui.configs.font.size(3) as string))
+	const showBorder = inject('showBorder', ref(false))
+	const showError = inject('showError', ref(true))
+	
+	// 计算属性
+	const typeC = computed(():string=>{
+		return useFormatProp('other',props.type, type.value)
+	})
+	
+	const required = computed((): boolean=>props.rule.required ?? false)
+	
+	const labelColorC = computed((): string => {
+		return useFormatProp('color',props.labelColor, labelColor.value)
+	})
+	
+	const labelSizeC = computed((): string => {
+		return useFormatProp('font',props.labelSize, labelSize.value)
+	})
+	
+	const bodyStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		if (typeC.value == 'float') {
+			styles.set('padding', '10px 15px')
+			styles.set('background', colors.value.infoLight)
+			styles.set('border-radius', $snui.configs.radius.circle)
+		} else {
+			styles.set('padding', '0px')
+			styles.set('background', colors.value.transparent)
+			styles.set('border-radius', '')
+		}
+		styles.set('transition-duration', $snui.configs.aniTime.normal)
+		return styles
+	})
+	
+	
+	const labelStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('width', props.labelWidth)
+		return styles
+	})
+	
+	function verify(value : any, callback : (res : SnFormItemVerifyResult) => void){
+		return useVerify(isValid, hintMessage, props.field as string, props.rule, value, callback)
+	}
+	
+	function register(){
+		let that = instance.proxy!
+		let parent = snu.findParent(that, ['sn-form'])
+		let item = {
+			field: props.field as string,
+			instance: that
+		} as SnFormItemData
+		if (parent != null){
+			parent.$callMethod('register', item)
+		}
+	}
+	
+	defineExpose({
+		verify
+	})
+	
+	onMounted(()=>{
+		register()
+	})
+
+</script>
+
+<style lang="scss">
+	.sn-form-item {
+		width: 100%;
+		flex-direction: column;
+		padding-bottom: 15px;
+		
+		&-body {
+			flex-direction: row;
+		}
+		
+		&-error {
+			margin-top: 10px;
+		}
+		
+		&-label {
+			margin-right: 10px;
+			flex-direction: row;
+			align-items: center;
+			justify-content: flex-start;
+			
+			&-required {
+				margin-right: 5px;
+			}
+		}
+		&-content {
+			flex: 1;
+			align-items: flex-end;
+		}
+	}
+</style>

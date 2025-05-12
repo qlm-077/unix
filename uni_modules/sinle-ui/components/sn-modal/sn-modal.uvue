@@ -1,0 +1,587 @@
+<template>
+	<sn-overlay class="sn-modal-overlay"
+	ref="overlayEle"
+	:aniTime="`${aniTimeC}ms`"
+	:maskClose="maskClose"
+	:opacity="maskOpacity"
+	@clickMask="clickMask" 
+	:customStyle="overlayStylesC">
+		<view class="sn-modal"
+		:class="modalClassesC"
+		:style="modalStylesC"
+		@click.stop>
+			<view class="sn-modal-header"
+			ref="headerEle"
+			:style="headerStylesC">
+				<slot name="header">
+					<sn-text class="sn-modal-title"
+					bold
+					:text="title"
+					:font="titleFont"
+					:align="titleAlign"
+					:color="titleColorC"
+					:size="titleSizeC"></sn-text>
+				</slot>
+			</view>
+			<scroll-view class="sn-modal-body"
+			:show-scrollbar="false"
+			:bounces="false"
+			:scroll-top="scrollTop"
+			:style="[bodyStylesC, {
+				paddingBottom: $slots['content']!=null||showContentC?'15px':'0px'
+			}]">
+				<slot name="content">
+					<sn-text :text="content"
+					:font="contentFont"
+					:align="contentAlign"
+					:color="contentColorC"
+					:size="contentSizeC"
+					:style="contentStylesC"></sn-text>
+				</slot>
+			</scroll-view>
+			<slot v-if="showActions" 
+			name="actions">
+				<view v-if="buttonTypeC=='embed'" 
+				class="sn-modal-action-group">
+					<view v-if="showCancel"
+					class="sn-modal-action" 
+					@click="cancel" 
+					:style="actionLeftStylesC">
+						<sn-text align="center"
+						:text="cancelText" 
+						:size="cancelTextSizeC"
+						:color="disabled?colors.disabledText:cancelTextColorC"></sn-text>
+					</view>
+					<view v-if="showConfirm"
+					class="sn-modal-action" 
+					@click="confirm"
+					:style="actionRightStylesC">
+						<sn-text align="center"
+						bold
+						:text="confirmText"
+						:size="confirmTextSizeC"
+						:color="disabled?colors.disabledText:confirmTextColorC"></sn-text>
+					</view>
+				</view>
+				<view v-else-if="buttonTypeC=='float'"
+				:style="[floatButtonStylesC]">
+					<sn-button v-if="showCancel"
+					type="info" 
+					level="second" 
+					long
+					:disabled="disabled"
+					:text="cancelText"
+					:textSize="cancelTextSizeC"
+					@click="cancel"
+					:style="showConfirm?'margin-right: 10px':''">
+					</sn-button>
+					<sn-button v-if="showConfirm"
+					type="primary"
+					long
+					:disabled="disabled"
+					:text="confirmText"
+					:textSize="confirmTextSizeC"
+					@click="confirm"></sn-button>
+				</view>
+			</slot>
+		</view>
+	</sn-overlay>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-modal
+	 * @tutorial https://sinleui.pages.dev/components/sn-modal
+	 * @description  Modal 模态框
+	 *
+	 *- 用于创建弹出层，显示信息或进行交互。
+	 *
+	 *- 提供多种样式和交互方式。
+	 *
+	 *- 如果需要对话框，那么官方的 uni.showModal 应该足以满足你的需求。当你需要更自由地控制动画、插槽时，不妨试试本组件。
+	 * @property {String} title    String | 模态框标题
+	 * @property {String} titleAlign=[left|center|right]    String | 标题对齐方式
+	 * @value left
+	 * @value center
+	 * @value right
+	 * @property {String} titleSize    String | 标题字体大小
+	 * @property {String} titleFont    String | 标题字体样式
+	 * @property {String} titleColor    String | 标题颜色
+	 * @property {String} bgColor    String | 背景颜色
+	 * @property {String} borderRadius    String | 圆角大小
+	 * @property {String} content    String | 模态框内容
+	 * @property {String} contentAlign=[left|center|right]    String | 内容对齐方式
+	 * @value left
+	 * @value center
+	 * @value right
+	 * @property {String} contentSize    String | 内容字体大小
+	 * @property {String} contentColor    String | 内容颜色
+	 * @property {String} contentFont    String | 内容字体样式
+	 * @property {String} buttonType=[embed|float]    String | 按钮类型
+	 * @value embed
+	 * @value float
+	 * @property {String} buttonBorder    String | 按钮边框样式
+	 * @property {String} confirmText    String | 确定按钮文本
+	 * @property {String} confirmTextColor    String | 确定按钮文本颜色
+	 * @property {String} confirmTextSize    String | 确定按钮文本大小
+	 * @property {Boolean} showCancel    Boolean | 是否显示取消按钮
+	 * @property {Boolean} showConfirm    Boolean | 是否显示确定按钮
+	 * @property {String} cancelText    String | 取消按钮文本
+	 * @property {String} cancelTextColor    String | 取消按钮文本颜色
+	 * @property {String} cancelTextSize    String | 取消按钮文本大小
+	 * @property {String} position=[center|top|bottom|left|right]    String | 弹出位置
+	 * @value center
+	 * @value top
+	 * @value bottom
+	 * @value left
+	 * @value right
+	 * @property {String} aniTime    String | 动画时长（单位：ms）
+	 * @property {Boolean} maskClose    Boolean | 点击蒙层是否关闭
+	 * @property {Boolean} disabled    Boolean | 是否禁用
+	 * @property {Boolean} preventBack    Boolean | 是否阻止返回事件
+	 * @property {Number} maskOpacity    Number | 遮罩层透明度
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义模态框样式
+	 * @event {Function} clickMask   ()=>void | 点击遮罩时触发
+	 * @event {Function} confirm   ()=>void | 确认操作时触发
+	 * @event {Function} cancel   ()=>void | 取消操作时触发
+	 * @event {Function} close   ()=>void | 关闭时触发
+	 * @event {Function} open   ()=>void | 打开时触发
+	 */
+
+
+	// 依赖
+	import { $snui, useFormatProp } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-modal'
+	})
+	
+	// SinleUI 配置
+	const colors = $snui.colors
+	const snu = $snui.utils
+	
+	// 事件注册
+	const emit = defineEmits(['open', 'close', 'clickMask', 'confirm', 'cancel'])
+	
+	// 组件属性
+	const props = defineProps({
+		title: {
+			type: String,
+			default: ''
+		},
+		titleAlign: {
+			type: String,
+			default: 'center'
+		},
+		titleSize: {
+			type: String,
+			default: ''
+		},
+		titleFont: {
+			type: String,
+			default: ''
+		},
+		titleColor: {
+			type: String,
+			default: ''
+		},
+		bgColor: {
+			type: String,
+			default: ''
+		},
+		borderRadius: {
+			type: String,
+			default: ''
+		},
+		content: {
+			type: String,
+			default: ''
+		},
+		contentAlign: {
+			type: String,
+			default: 'center'
+		},
+		contentSize: {
+			type: String,
+			default: ''
+		},
+		contentColor: {
+			type: String,
+			default: ''
+		},
+		contentFont: {
+			type: String,
+			default: ''
+		},
+		buttonType: {
+			type: String,
+			default: 'embed'
+		},
+		buttonBorder: {
+			type: String,
+			default: ''
+		},
+		confirmText: {
+			type: String,
+			default: '确定'
+		},
+		confirmTextColor: {
+			type: String,
+			default: ''
+		},
+		confirmTextSize: {
+			type: String,
+			default: ''
+		},
+		showCancel: {
+			type: Boolean,
+			default: true
+		},
+		showConfirm: {
+			type: Boolean,
+			default: true
+		},
+		cancelText: {
+			type: String,
+			default: '取消'
+		},
+		cancelTextColor: {
+			type: String,
+			default: ''
+		},
+		cancelTextSize: {
+			type: String,
+			default: ''
+		},
+		position: {
+			type: String,
+			default: 'center'
+		},
+		aniTime: {
+			type: String,
+			default: ''
+		},
+		maskClose: {
+			type: Boolean,
+			default: false
+		},
+		disabled: {
+			type: Boolean,
+			default: false
+		},
+		preventBack: {
+			type: Boolean,
+			default: false
+		},
+		maskOpacity: {
+			type: Number,
+			default: 0.4
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+	})
+	
+	//基本变量
+	const id = snu.randomComId()
+	const showModal = ref(false)
+	const scrollTop = ref(0)
+	const maxHeight = ref(0)
+	const actionHeight = ref(50)
+	const headerHeight = ref(0)
+	const headerEle = ref(null as UniElement | null)
+	const overlayEle = ref(null as SnOverlayComponentPublicInstance | null)
+	
+	// 计算属性
+	const buttonTypeC = computed((): string =>{
+		let types = ['embed', 'float']
+		return types.includes(props.buttonType) ? props.buttonType : 'embed'
+	})
+		
+	const showActions = computed(() : boolean => {
+		return props.showCancel || props.showConfirm
+	})
+	
+	const aniOriginTime = computed(() : string => {
+		return useFormatProp('aniTime',props.aniTime, $snui.configs.aniTime.long)
+	})	
+	
+	const showContentC = computed(() : boolean => {
+		return !snu.isEmpty(props.content)
+	})
+	
+	const aniTimeC = computed(() : number => {
+		let aniTime = parseInt(aniOriginTime.value)
+		return aniTime > 100 ? aniTime- 100 : aniTime
+	})
+		
+	const theme = computed((): string => $snui.configs.app.theme)
+		
+	const titleSizeC = computed((): string => {
+		return useFormatProp('font', props.titleSize, `${$snui.utils.getPx($snui.configs.font.size(3)) + 1}px`)
+	})
+		
+	const titleColorC = computed((): string => {
+		return useFormatProp('color', props.titleColor, colors.value.title)
+	})
+		
+	const bgColorC = computed((): string => {
+		return useFormatProp('color', props.bgColor, colors.value[`${theme.value == 'light'?'front':'info'}`] as string)
+	})
+		
+	const contentColorC = computed((): string => {
+		return useFormatProp('color', props.contentColor, colors.value.text)
+	})
+		
+	const buttonBorderC = computed((): string => {
+		return useFormatProp('other', props.buttonBorder, `0.5px solid ${colors.value.line}`)
+	})
+		
+	const confirmTextColorC = computed((): string => {
+		return useFormatProp('color', props.confirmTextColor, colors.value.primaryDark)
+	})
+		
+	const confirmTextSizeC = computed((): string => {
+		return useFormatProp('font', props.confirmTextSize, $snui.configs.font.size(3))
+	})
+		
+	const cancelTextColorC = computed((): string => {
+		return useFormatProp('color', props.cancelTextColor, colors.value.text)
+	})
+		
+	const cancelTextSizeC = computed((): string => {
+		return useFormatProp('font', props.cancelTextSize, $snui.configs.font.size(3))
+	})
+		
+	const contentSizeC = computed((): string => {
+		return useFormatProp('font', props.contentSize, `${$snui.utils.getPx($snui.configs.font.baseSize) + 1}px`)
+	})
+	
+	const borderRadiusC = computed(():string=>{
+		return useFormatProp('radius', props.borderRadius, $snui.configs.radius.normal)
+	})
+	
+	const positionC = computed(() : string => {
+		let positions = ['center','top','bottom','left','right']
+		return positions.includes(props.position) ? props.position : 'center'
+	})
+	
+	const modalStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('max-height', `${maxHeight.value+10}px`)
+		styles.set('background', bgColorC.value)
+		styles.set('border-radius', borderRadiusC.value)
+		styles.set('padding-top', '32px')
+		styles.set('transition-duration',aniOriginTime.value)
+		if (buttonTypeC.value == 'float') {
+			styles.set('padding-bottom', '5px')
+		}
+		return styles
+	})
+	
+	const overlayStylesC = computed((): UTSJSONObject=>{
+		let centerPos = ['center', 'left', 'right']
+		return {
+			justifyContent: centerPos.includes(positionC.value)?'center':(positionC.value=='top'?'flex-start':'flex-end')
+		}
+	})
+	
+	const modalClassesC = computed((): Map<string, any>=>{
+		let classes = new Map<string, any>()
+		classes.set('animation', parseInt(aniOriginTime.value)> 0)
+		classes.set('hover', showModal.value)
+		classes.set(positionC.value, true)
+		return classes
+	})
+	
+	const headerStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('margin', '0px 24px 8px')
+		styles.set('transition-duration',`0ms`)
+		return styles
+	})
+
+	const contentStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('margin', '8px 24px 0px')
+		styles.set('transition-duration',`0ms`)
+		return styles
+	})
+	
+	const actionLeftStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('height', `${actionHeight.value}px`)
+		styles.set('background', bgColorC.value)
+		styles.set('border-top', buttonBorderC.value)
+		styles.set('border-right', buttonBorderC.value)
+		styles.set('margin-top', '10px')
+		styles.set('transition-duration',$snui.configs.aniTime.normal)
+		return styles
+	})
+		
+	const actionRightStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('height', `${actionHeight.value}px`)
+		styles.set('background', bgColorC.value)
+		styles.set('border-top', buttonBorderC.value)
+		styles.set('margin-top', '10px')
+		styles.set('transition-duration',$snui.configs.aniTime.normal)
+		return styles
+	})
+	
+	const floatButtonStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('margin-top', '10px')
+		styles.set('height', `${actionHeight.value}px`)
+		styles.set('padding', '0px 15px 5px')
+		styles.set('flex-direction', 'row')
+		styles.set('align-items', 'center')
+		styles.set('background', bgColorC.value)
+		
+		return styles
+	})
+	
+	const bodyStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		
+		styles.set('height', 'auto')
+		styles.set('max-height',`${maxHeight.value - actionHeight.value - headerHeight.value - 50}px`)
+		return styles
+	})
+	
+
+
+	// 方法
+	function open() {
+		scrollTop.value = 0;
+		overlayEle.value?.open?.()
+		emit('open')
+		snu.throttle(()=>{
+			showModal.value = true;
+			maxHeight.value = uni.getWindowInfo().windowHeight * 0.8
+			nextTick(()=>{
+				headerHeight.value = headerEle.value?.getBoundingClientRect()?.height ?? 0
+			})
+		}, 20, id)
+	}
+	
+	function close() {
+		overlayEle.value?.close?.()
+		showModal.value = false;
+		emit('close')
+	}
+	
+	function clickMask() {
+		if (!props.maskClose) return
+		showModal.value = false;
+		emit('clickMask')
+	}
+	
+	function cancel() {
+		if (!(props.disabled)) {
+			emit('cancel')
+			close()
+		}
+	}
+	
+	function confirm() {
+		if (!(props.disabled)) {
+			emit('confirm')
+			close()
+		}
+	}
+	
+	defineExpose({
+		open,
+		close,
+		confirm,
+		cancel
+	})
+	
+	onBackPress((_):boolean=>{
+		if (showModal.value) {
+			if (!props.preventBack){
+				close()
+			}
+			return true
+		} else {
+			return false
+		}
+	})
+</script>
+
+<style lang="scss">
+	.sn-modal {
+		margin: 0 auto;
+		max-width: 300px;
+		width: 80%;
+		min-height: 20px;
+		transition-property: transform, background-color, opacity, border-radius;
+	
+		&-overlay {
+			align-items: center;
+		}
+		
+		&-action-group {
+			flex-direction: row;
+			align-items: center;
+			flex: 1;	
+			.sn-modal-action {
+				flex: 1;
+				justify-content: center;
+			}
+		}
+	
+		&.animation {
+			&.center {
+				transform: scale(0.9) translateY(0px);
+				opacity: 0;
+				
+				&.hover {
+					transform: scale(1) translateY(0px);
+					opacity: 1;
+				}
+			}
+	
+			&.bottom {
+				transform: translateY(100%) scale(0.1);
+				opacity: 0;
+				&.hover {
+					transform: translateY(-10%) scale(1);
+					opacity: 1;
+				}
+			}
+	
+			&.top {
+				transform: translateY(-100%) scale(0.1);
+				opacity: 0;
+				&.hover {
+					transform: translateY(20%) scale(1);
+					opacity: 1;
+				}
+			}
+			
+			&.left {
+				transform: scale(0.5) translateX(-100%);
+				opacity: 0;
+				
+				&.hover {
+					transform: scale(1) translateX(0%);
+					opacity: 1;
+				}
+			}
+			
+			&.right {
+				transform: scale(0.5) translateX(100%);
+				opacity: 0;
+				
+				&.hover {
+					transform: scale(1) translateX(0%);
+					opacity: 1;
+				}
+			}
+			
+		}
+	}
+</style>

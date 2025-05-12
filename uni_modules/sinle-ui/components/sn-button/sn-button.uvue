@@ -1,0 +1,360 @@
+<template>
+	<view class="sn-button" 
+	ref="buttonEle" 
+	:class="{'sn-button-long':long, 'disabled':disabled, 'loading':loading}" 
+	@click="onClick" 
+	@touchstart="isHover = true" 
+	@touchend="isHover = false"
+	@touchcancel="isHover = false"
+	@mousedown="isHover = true"
+	@mouseup="isHover = false"
+	:style="[buttonStylesC,customStyle]" >
+		<sn-loading v-if="loading"
+		:class="!round?'sn-button-loading-noround':''" 
+		:iconColor="textColorC" 
+		:iconSize="textSizeC"></sn-loading>
+		<view v-if="$slots['default']!=null">
+			<slot v-if="!(round&&loading)">
+				<sn-text class="sn-button-text" 
+				:text="text" 
+				:color="textColorC"
+				:size="textSizeC" 
+				:font="textFontC" 
+				:style="[customTextStyle]"></sn-text>
+			</slot>
+		</view>
+		<slot v-else-if="!(round&&loading)">
+			<sn-text class="sn-button-text" 
+			:text="text" 
+			:color="textColorC"
+			:size="textSizeC" 
+			:font="textFontC"
+			:style="[customTextStyle]"></sn-text>
+		</slot>
+	</view>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-button
+	 * @tutorial https://sinleui.pages.dev/components/sn-button
+	 * @description Button 按钮
+	 * 
+	 * - 内置一些主题，设计样式更方便
+	 * @property {String} text    String | 按钮文本内容
+	 * @property {Boolean} disabled    Boolean | 是否禁用
+	 * @property {Boolean} loading    Boolean | 是否加载状态
+	 * @property {Boolean} long    Boolean | 是否长按钮
+	 * @property {Boolean} dashed    Boolean | 是否镂空且显示虚线边框
+	 * @property {Boolean} round    Boolean | 是否显示为圆形（为`true`时`borderRadius`强制设为`50%`）
+	 * @property {String} roundSize    String | 圆形按钮（`round=true`）的直径
+	 * @property {String} borderRadius    String | 按钮圆角大小
+	 * @property {String} padding    String | 按钮内边距
+	 * @property {String} type=[info|primary|success|error|warning]    String | 按钮主题样式类型
+	 * @value info 信息
+	 * @value primary 主要
+	 * @value success 成功
+	 * @value error 错误
+	 * @value warning 警告
+	 * @property {String} level=[first|second|third|least]    String | 按钮等级
+	 * @value first 第一等级
+	 * @value second 第二等级
+	 * @value third 第三等级
+	 * @value least 最小等级
+	 * @property {String} align    String | 按钮文本对齐方向
+	 * @property {String} textColor    String | 按钮文本颜色
+	 * @property {String} disabledTextColor    String | 禁用状态下按钮文本颜色
+	 * @property {String} bgColor    String | 按钮背景颜色
+	 * @property {String} activeBgColor    String | 按钮按下时背景颜色
+	 * @property {String} disabledBgColor    String | 禁用状态下按钮颜色
+	 * @property {String} textSize    String | 按钮文本大小
+	 * @property {String} textFont    String | 按钮文本字体
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义按钮样式
+	 * @property {UTSJSONObject} customTextStyle    UTSJSONObject | 自定义按钮文本样式
+	 */
+	
+	// 依赖
+	import { $snui, useFormatProp } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-button'
+	})
+
+	// SinleUI 配置
+	const snu = $snui.utils
+	const colors = $snui.colors
+	
+	// 事件注册
+	const emit = defineEmits(['click'])
+	
+	// 组件属性
+	const props = defineProps({
+		loading: {
+			type: Boolean,
+			default: false
+		},
+		disabled: {
+			type: Boolean,
+			default: false
+		},
+		text: {
+			type: String,
+			default: ""
+		},
+		align: {
+			type: String,
+			default: "center"
+		},
+		type: {
+			type: String,
+			default: "info"
+		},
+		level: {
+			type: String,
+			default: "first"
+		},
+		padding: {
+			type: String,
+			default: '12px'
+		},
+		borderRadius: {
+			type: String,
+			default: ''
+		},
+		textColor: {
+			type: String,
+			default: ""
+		},
+		disabledTextColor: {
+			type: String,
+			default: ""
+		},
+		bgColor: {
+			type: String,
+			default: ""
+		},
+		activeBgColor: {
+			type: String,
+			default: ""
+		},
+		disabledBgColor: {
+			type: String,
+			default: ""
+		},
+		long: {
+			type: Boolean,
+			default: false
+		},
+		round: {
+			type: Boolean,
+			default: false
+		},
+		roundSize: {
+			type: String,
+			default: "45px"
+		},
+		textFont: {
+			type: String,
+			default: ''
+		},
+		textSize: {
+			type: String,
+			default: ''
+		},
+		dashed: {
+			type: Boolean,
+			default: false
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customTextStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+	})
+
+	// 基本变量
+	const buttonEle = ref(null as UniElement | null)
+	const isHover = ref(false)
+
+	// 计算属性
+	const borderRadiusC = computed((): string => {
+		return useFormatProp('radius', props.borderRadius, $snui.configs.radius.normal)
+	})
+	
+	const textFontC = computed((): string => {
+		return useFormatProp('other', props.textFont, $snui.configs.font.mainFamily)
+	})
+	
+	const textSizeC = computed((): string => {
+		return useFormatProp('font', props.textSize, $snui.configs.font.size(3))
+	})
+	
+	const loadingC = computed(() : boolean => {
+		return props.loading
+	})
+
+	const levelC = computed(() : string => {
+		let types = ['first', 'second', 'third', 'least']
+		return types.includes(props.level) ? props.level : 'first'
+	})
+
+	const typeC = computed(() : string => {
+		let types = ['info', 'warning', 'error', 'success', 'primary']
+
+		return types.includes(props.type) ? props.type : 'info'
+	})
+	
+	const propActiveBgColorC = computed(() : string => {
+		return useFormatProp('color', props.activeBgColor, '')
+	})
+	
+	const propBgColorC = computed(() : string => {
+		return useFormatProp('color', props.bgColor, '')
+	})
+	
+	const propDisabledBgColorC = computed(() : string => {
+		return useFormatProp('color', props.disabledBgColor, colors.value.disabled)
+	})
+	
+	const propTextColorC = computed(() : string => {
+		return useFormatProp('color', props.textColor, '')
+	})
+	
+	const propDisabledTextColorC = computed(() : string => {
+		return useFormatProp('color', props.disabledTextColor, colors.value.disabledText)
+	})
+
+	const bgColorC = computed(() : string => {
+		let activeBgColor = propActiveBgColorC.value
+		let showActiveBgColor = !snu.isEmpty(activeBgColor)
+		if (!props.disabled) {
+			// 自动计算颜色
+			if (snu.isEmpty(props.bgColor)) {
+				// 虚线颜色
+				if (props.dashed) {
+					return isHover.value ? (showActiveBgColor ? activeBgColor : colors.value.info) : colors.value.transparent
+				}
+				
+				switch (levelC.value) {
+					case 'first':
+						return isHover.value ? (showActiveBgColor ? activeBgColor : colors.value[`${typeC.value}Active`] as string) : colors.value[`${typeC.value}`] as string
+					case 'second':
+						return isHover.value ? (showActiveBgColor ? activeBgColor : colors.value[`${typeC.value}LightActive`] as string) : colors.value[`${typeC.value}Light`] as string
+					case 'third':
+						return isHover.value ? (showActiveBgColor ? activeBgColor : colors.value.infoActive) : colors.value.info
+					case 'least':
+						return isHover.value ? (showActiveBgColor ? activeBgColor : colors.value.info) : colors.value.transparent
+					default:
+						return isHover.value ? (showActiveBgColor ? activeBgColor : colors.value[`${typeC.value}Active`] as string) : colors.value[`${typeC.value}`] as string
+				}
+			} else {
+				return isHover.value ? (showActiveBgColor ? activeBgColor : colors.value.infoActive) : propBgColorC.value
+			}
+		} else {
+			return propDisabledBgColorC.value
+		}
+	})
+
+	const textColorC = computed(() : string => {
+		if (!props.disabled) {
+			if (snu.isEmpty(props.textColor)) {
+				if (typeC.value == 'info') return colors.value.infoText
+				if (props.dashed) {
+					return colors.value[`${typeC.value}`] != null ? colors.value[`${typeC.value}`] as string : propTextColorC.value
+				}
+				return (levelC.value == 'first') ? colors.value[`${typeC.value}Text`] as string : colors.value[`${typeC.value}LightText`] as string
+			} else {
+				return propTextColorC.value
+			}
+		} else {
+			return propDisabledTextColorC.value
+		}
+	})
+	
+	const alignC = computed(() : string => {
+		let align = props.align
+		if (align == 'left' || align == 'start') {
+			return 'flex-start'
+		} else if (align == 'right' || align == 'end') {
+			return 'flex-end'
+		} else if (align == 'around' || align == 'between') {
+			return `space-${align}`
+		}
+	
+		return align
+	})
+	
+	const buttonStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		let size = props.round ? props.roundSize : ''
+		styles.set('height', size)
+		styles.set('width', size)
+		styles.set('background', bgColorC.value)
+		styles.set('border', props.dashed?`1px dashed ${textColorC.value}`:'')
+		styles.set('border-radius', props.round?$snui.configs.radius.circle:borderRadiusC.value)
+		styles.set('justifyContent', alignC.value)
+		styles.set('padding', props.round?0:props.padding)
+		styles.set('transition-duration',$snui.configs.aniTime.normal)
+		return styles
+	})
+	
+	// 方法
+	function onClick(event : UniPointerEvent) {
+		if (props.disabled) return
+		emit('click', event)
+	}
+
+	// 动态操作 DOM 以添加 Loading 动画
+	watch(loadingC, (nv : boolean) => {
+		if (buttonEle.value != null && !(props.round)) {
+			let ele = buttonEle.value as UniElement
+			let width = ele.getBoundingClientRect().width
+			let size = snu.getPx(props.textSize)
+			ele.style.setProperty('width', (width as number) + (nv ? size : -size))
+		}
+	})
+</script>
+
+<style lang="scss">
+	.sn-button-long {
+		flex: 1;
+		width: 100% !important;
+	}
+
+	.sn-button {
+		display: flex;
+		flex-direction: row;
+		justify-content: center;
+		align-items: center;
+		transform: scale(1);
+		transition-property: width, background-color, height, margin, border-radius;
+		// #ifdef WEB
+		cursor: pointer;
+		// #endif
+
+		&-text {
+			lines: 1;
+			text-overflow: ellipsis;
+			background-color: transparent;
+		}
+
+		&-loading-noround {
+			margin-right: 5px;
+		}
+	}
+	
+	.loading {
+		// #ifdef WEB
+		cursor: wait;
+		// #endif
+	}
+	
+	.disabled {
+		// #ifdef WEB
+		cursor: not-allowed;
+		// #endif
+	}
+</style>

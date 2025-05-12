@@ -1,0 +1,85 @@
+<template>
+	<sn-page :scroll-on="false" padding="0px" class="relative">
+		<sn-gap mode="statusbar"></sn-gap>
+		<view class="page-top h-200px absolute top-0"
+			:style="{backgroundImage: `linear-gradient(to bottom, ${$snui.colors.value.primary}, ${$snui.colors.value.page})`}">
+		</view>
+		<view class="flex-col p-x-20px">
+			<!-- <button @click="toast">123</button> -->
+			<sn-search borderRadius="30px" :customInputStyle="{height: '40px'}" readonly>
+				<template #prefix>
+					<view class="flex flex-row items-center p-r-8px m-r-8px prefixBorder" @click="chooseLocation">
+						<sn-icon name="map-pin-line" size="18px"></sn-icon>
+						<sn-text :text="location"></sn-text>
+					</view>
+				</template>
+			</sn-search>
+		</view>
+		<sn-perm-listener :data="permConfigs"></sn-perm-listener>
+	</sn-page>
+</template>
+
+<script setup>
+	import { $snui } from '@/uni_modules/sinle-ui';
+	import Toast from 'android.widget.Toast'
+	import { locationInfo, appAuthorize, getLocation, setAppAuthorize } from '@/store/index.uts'
+	const snu = $snui.utils
+	const permConfigs = getApp().globalData.permConfigs
+	// import { startRecording, stopRecording } from '@/uni_modules/lm-recording'
+	const emit = defineEmits(['tabUser'])
+	const location = computed(() : string | null => {
+		return ' ' + (locationInfo.value?.city ?? '点击授权')
+	})
+
+	onMounted(() => {
+		let { locationAuthorized } = appAuthorize.value!
+		if (locationAuthorized == 'authorized') {
+			getLocation()
+		}
+	})
+
+	const requestPerm = (perms : string[]) => {
+		snu.requestSystemPermission({
+			permissions: perms,
+			success: (res) => {
+				if (res) {
+					getLocation();
+					let AppAuthorize = uni.getAppAuthorizeSetting()
+					setAppAuthorize(AppAuthorize)
+				}
+			}
+		})
+	}
+	const toUser = () => {
+		emit('tabUser', 2);
+	}
+	const chooseLocation = () => {
+		let { locationAuthorized } = appAuthorize.value!
+		if (locationAuthorized == 'denied') {
+			requestPerm(['android.permission.ACCESS_FINE_LOCATION'])
+			return
+		}
+		if (locationAuthorized == 'authorized') {
+			uni.navigateTo({
+				url: '/pages/webPage/webPage?url=../../static/html/chooseLocation/index.html'
+			})
+		}
+	}
+
+	const show = () => {
+		
+	}
+	defineExpose({
+		show
+	})
+</script>
+
+<style lang="scss">
+	.page-top {
+		width: 100%;
+	}
+
+	.prefixBorder {
+		border-right: 1px solid #ccc;
+	}
+</style>

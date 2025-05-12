@@ -1,0 +1,160 @@
+import { SnFormItemVerifyResult, SnFormItemRule, $snui } from '../../index.uts'
+
+const snu = $snui.utils
+
+export function useVerify(isValid:Ref<boolean>, hintMessage:Ref<string>, field: string, itemRule:SnFormItemRule, value : any, callback : (res : SnFormItemVerifyResult) => void) {
+	let rule = itemRule
+	let type = rule.type
+	let valid = true
+	let message = rule.message
+	let empty = false
+	
+	if (typeof value == 'string') {
+		if (value as string=='') empty = true
+	} else if (Array.isArray(value)) {
+		if ((value as any[]).length == 0) empty = true
+	}
+	
+	// 验证前进行数据转换处理
+	if (rule.transform != null) {
+		value = rule.transform!(value)
+	}
+	
+	// 执行自定义验证方法
+	if (rule.valid != null) {
+		let msg = rule.valid!(value)
+		valid = msg.trim() == ''
+		message = valid ? message : msg
+	}
+	
+	// 验证正则表达式
+	if (rule.pattern != null && typeof value == 'string') {
+		if (!(rule.pattern as RegExp).test(value as string)) valid = false
+	}
+	
+	// 验证必填项
+	if (rule.required == true) {
+		// 对字符串进行额外判空
+		if (typeof value == 'string') {
+			if (snu.isEmpty(value as string)) valid = false
+		}
+	}
+
+	if (type != null) {
+		function check(type : string) {
+			if (typeof value != type) {
+				valid = false
+			}
+		}
+		switch (type) {
+			case 'string':
+				check('string')
+				break
+			case 'number':
+				if (!snu.isNumber(value)) {
+					valid = false
+				}
+				break
+			case 'boolean':
+				check('boolean')
+				break
+			case 'object':
+				check('object')
+				break
+			case 'array':
+				check('array')
+				break
+			case 'integer':
+				if (snu.isNumber(value)) {
+					if (!snu.isInteger(value as number)) {
+						valid = false
+					}
+				} else {
+					valid = false
+				}
+				break
+			case 'float':
+				if (snu.isNumber(value)) {
+					if (!snu.isFloat(value as number)) {
+						valid = false
+					}
+				} else {
+					valid = false
+				}
+				break
+			case 'enum':
+				if (rule.enum != null &&
+					!(rule.enum as any[]).includes(value)) {
+					valid = false
+				}
+				break
+			case 'url':
+				if (!empty&&!snu.isURL(value as string)) valid = false
+				break
+			case 'email':
+				if (!empty&&!snu.isEmail(value as string)) valid = false
+				break
+			case 'idcard':
+				if (!empty&&!snu.isIDCard(value as string)) valid = false
+				break
+			case 'phone':
+				if (!empty&&!snu.isPhone(value as string)) valid = false
+				break
+			case 'landline':
+				if (!empty&&!snu.isLandline(value as string)) valid = false
+				break
+			case 'qqnumber':
+				if (!empty&&!snu.isQQNumber(value as string)) valid = false
+				break
+			case 'abc':
+				if (!empty&&!snu.isAbc(value as string)) valid = false
+				break
+			case 'chinese':
+				if (!empty&&!snu.isChinese(value as string)) valid = false
+				break
+			case 'carnumber':
+				if (!empty&&!snu.isCarNumber(value as string)) valid = false
+				break
+			case 'ipv4':
+				if (!empty&&!snu.isIPv4(value as string)) valid = false
+				break
+			case 'ipv6':
+				if (!empty&&!snu.isIPv6(value as string)) valid = false
+				break
+		}
+	}
+	if (typeof value == 'string') {
+		if (rule.min != null && (value as string).length < (rule.min as number)) {
+			valid = false
+		}
+		if (rule.max != null && (value as string).length > (rule.max as number)) {
+			valid = false
+		}
+
+		// 如果同时设置 len, max, min，以len的结果为准
+		if (rule.len != null) {
+			if ((value as string).length != (rule.len as number)) {
+				valid = false
+			} else {
+				valid = true
+			}
+		}
+	}
+	if (snu.isNumber(value)) {
+		if (rule.min != null && (value as number) < (rule.min as number)) {
+			valid = false
+		}
+		if (rule.max != null && (value as number) > (rule.max as number)) {
+			valid = false
+		}
+	}
+
+	isValid.value = valid
+	hintMessage.value = message ?? ''
+
+	callback({
+		message,
+		valid,
+		field
+	} as SnFormItemVerifyResult)
+}

@@ -1,0 +1,125 @@
+<template>
+	<view class="sn-waterfall" 
+	ref="waterfallEle"
+	:style="[waterfallStylesC, customStyle]">
+		<slot></slot>
+	</view>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-waterfall
+	 * @tutorial https://sinleui.pages.dev/components/sn-waterfall
+	 * @description  Waterfall 瀑布流
+	 * 
+	 * - 用于实现瀑布流布局。
+	 * @property {Number} col    Number | 列数
+	 * @property {String} spacing    String | 子项间的间距
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义样式
+	 */
+	import { $snui, useResize, SnWaterfallItem } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-waterfall'
+	})
+	
+	// SinleUI 配置
+	const snu = $snui.utils;
+	const colors = $snui.colors
+	const instance = getCurrentInstance()!
+	
+	// 组件属性
+	const props = defineProps({
+		col: {
+			type: Number,
+			default: 2
+		},
+		spacing: {
+			type: String,
+			default: '10px'
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject as UTSJSONObject
+		}
+	})
+	
+	// 基本变量
+	const waterfallEle = ref(null as UniElement | null)
+	const itemList = ref([] as SnWaterfallItem[])
+	const width = ref(0)
+	const height = ref(0)
+	
+	const spacingC = computed(():number => {
+		return snu.getPx(props.spacing)
+	})
+	
+	const colC = computed(():number => {
+		return props.col
+	})
+	
+	provide('itemList', itemList)
+	provide('width', width)
+	provide('col', colC)
+	provide('spacing', spacingC)
+	
+	const waterfallStylesC = computed(():Map<string, any> => {
+		const styles = new Map<string, any>()
+		styles.set('height', snu.addPx(height.value))
+		return styles
+	})
+	
+	function calcHeight() {
+		if(itemList.value.length > 0) {
+			let item = itemList.value[itemList.value.length - 1]
+			if(item.height > 0) {
+				height.value = item.top + item.height + item.height / 2
+			}
+		} else {
+			height.value = 0
+		}
+	}
+	
+	function register(item : SnWaterfallItem) {
+		let index = itemList.value.findIndex((ele : SnWaterfallItem) : boolean => ele.id == item.id)
+		if (index != -1) {
+			itemList.value.splice(index, 1, item)
+		} else {
+			itemList.value.push(item)
+		}
+		calcHeight()
+	}
+	
+	function unregister(id : string) {
+		let index = itemList.value.findIndex((ele : SnWaterfallItem) : boolean => ele.id == id)
+		if (index != -1) {
+			itemList.value.splice(index, 1)
+		}
+		calcHeight()
+	}
+	
+	function init() {
+		uni.createSelectorQuery().in(instance.proxy!).select(`.sn-waterfall`).boundingClientRect().exec((res)=>{
+			if (res.length > 0) {
+				let node = res[0] as NodeInfo
+				width.value = node.width ?? uni.getWindowInfo().windowWidth
+			}
+		})
+	}
+	
+	onMounted(() => {
+		init()
+		useResize(waterfallEle.value, () => {
+			init()
+		})
+	})
+	
+	defineExpose({
+		register,
+		unregister
+	})
+</script>
+
+
+<style lang="scss">
+</style>

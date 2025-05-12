@@ -1,0 +1,228 @@
+<template>
+	<sn-overlay ref="overlayEle"
+	:renderMode="renderMode"
+	:aniTime="`${aniTimeC}ms`" 
+	:opacity="maskOpacity"
+	:maskClose="maskClose"
+	@clickMask="clickMask"
+	:customStyle="overlayStylesC">
+		<view class="sn-popup"
+		:class="popupClassesC" 
+		@click.stop 
+		:style="[popupStylesC, customStyle]">
+			<slot></slot>
+		</view>
+	</sn-overlay>
+</template>
+
+<script setup>
+	/**
+	 * @name sn-popup
+	 * @tutorial https://sinleui.pages.dev/components/sn-popup
+	 * @description  Popup 弹出层
+	 *
+	 *- 需要弹窗？试试它吧。
+	 *
+	 *- 请注意区分 Popup 和 Drawer。Popup 只控制动画和显隐逻辑，UI 需要自己写。而 Drawer 则是在 Popup 的基础上加了一层 UI 模板。
+	 * @property {String} renderMode=[v-if|v-show]    String | 弹出层的渲染方式（v-if或v-show）
+	 * @value v-if
+	 * @value v-show
+	 * @property {String} position=[center|top|bottom|left|right]    String | 弹出层位置（动画也会随之而变）
+	 * @value center
+	 * @value top
+	 * @value bottom
+	 * @value left
+	 * @value right
+	 * @property {String} aniTime    String | 动画持续时间
+	 * @property {Boolean} preventBack    Boolean | 是否阻止返回键关闭弹出层
+	 * @property {Boolean} maskClose    Boolean | 点击遮罩是否关闭弹出层
+	 * @property {Number} maskOpacity    Number | 遮罩透明度
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义弹出层样式
+	 * @event {Function} clickMask   ()=>void | 点击遮罩时触发
+	 * @event {Function} close   ()=>void | 关闭时触发
+	 * @event {Function} open   ()=>void | 打开时触发
+	 */
+
+
+	// 依赖
+	import { $snui, useFormatProp } from '../../index.uts'
+	
+	defineOptions({
+		name: 'sn-popup'
+	})
+	
+	// SinleUI 配置
+	const snu = $snui.utils;
+
+	// 事件注册
+	const emit = defineEmits(['open', 'close', 'clickMask'])
+
+	// 组件属性
+	const props = defineProps({
+		renderMode: {
+			type: String,
+			default: 'v-if'
+		},
+		position: {
+			type: String,
+			default: 'center'
+		},
+		aniTime: {
+			type: String,
+			default: $snui.configs.aniTime.long
+		},
+		preventBack: {
+			type: Boolean,
+			default: false
+		},
+		maskClose: {
+			type: Boolean,
+			default: true
+		},
+		maskOpacity: {
+			type: Number,
+			default: 0.3
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+	})
+
+	// 基本变量
+	const showPop = ref(false) // 控制弹出层
+	const overlayEle = ref(null as SnOverlayComponentPublicInstance | null)
+	const id = ref(snu.randomComId())
+	
+	// 计算属性
+	const positionC = computed(() : string => {
+		let positions = ['center','top','bottom','left','right']
+		return positions.includes(props.position) ? props.position : 'center'
+	})
+
+	const aniTimeOriginC = computed(() : string => {
+		return useFormatProp('aniTime', props.aniTime, $snui.configs.aniTime.long)
+	})
+	
+	const aniTimeC = computed(() : number => {
+		let t = parseInt(aniTimeOriginC.value)
+		return t > 100 ? t - 100 : t
+	})
+	
+	const overlayStylesC = computed((): UTSJSONObject=>{
+		let centerPos = ['center', 'left', 'right']
+		return {
+			justifyContent: centerPos.includes(positionC.value)?'center':(positionC.value=='top'?'flex-start':'flex-end')
+		}
+	})
+	
+	const popupStylesC = computed((): Map<string, any>=>{
+		const styles = new Map<string, any>()
+		styles.set('transition-duration',aniTimeOriginC.value)
+		styles.set('zIndex', $snui.configs.zIndex.popup)
+		return styles
+	})
+	
+	const popupClassesC = computed((): Map<string, any>=>{
+		let classes = new Map<string, any>()
+		classes.set('animation', parseInt(aniTimeOriginC.value) > 0)
+		classes.set('hover', showPop.value)
+		classes.set(positionC.value, true)
+		return classes
+	})
+
+	// 方法
+	function open() {
+		overlayEle.value?.open?.()
+		snu.throttle(()=>{
+			showPop.value = true
+		}, 20, id.value)
+		emit('open')
+	}
+
+	function close() {
+		showPop.value = false
+		overlayEle.value?.close?.()
+		emit('close')
+	}
+
+	function clickMask() {
+		showPop.value = false
+		emit('clickMask')
+	}
+	
+	defineExpose({
+		open,
+		close
+	})
+	
+	onBackPress((_):boolean=>{
+		if (showPop.value) {
+			if (!props.preventBack){
+				close()
+			}
+			return true
+		} else {
+			return false
+		}
+	})
+	
+</script>
+
+<style lang="scss">
+	.sn-popup {
+		width: 100%;
+
+		&.animation {
+			&.center {
+				transform: scale(0.9) translate(0px);
+				opacity: 0;
+
+				&.hover {
+					transform: scale(1) translate(0px);
+					opacity: 1;
+				}
+			}
+
+			&.bottom {
+				transform: translateY(100%) scale(0.1);
+				opacity: 0;
+
+				&.hover {
+					transform: translateY(-10%) scale(1);
+					opacity: 1;
+				}
+			}
+
+			&.top {
+				transform: translateY(-100%) scale(0.1);
+				opacity: 0;
+
+				&.hover {
+					transform: translateY(20%) scale(1);
+					opacity: 1;
+				}
+			}
+			
+			&.left {
+				transform: scale(0.5) translateX(-100%);
+				opacity: 0;
+			
+				&.hover {
+					transform: scale(1) translateX(0%);
+					opacity: 1;
+				}
+			}
+			
+			&.right {
+				transform: scale(0.5) translateX(100%);
+				opacity: 0;
+			
+				&.hover {
+					transform: scale(1) translateX(0%);
+					opacity: 1;
+				}
+			}
+		}
+	}
+</style>

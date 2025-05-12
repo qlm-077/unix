@@ -1,0 +1,457 @@
+<template>
+	<view class="sn-tabs" 
+	:id="id"
+	:style="[tabsStylesC, customStyle]">
+		<view ref="leftEle">
+			<slot name="left"></slot>
+		</view>
+		<scroll-view ref="scrollEle" class="sn-tabs-scroll"
+			direction="horizontal"
+			:scroll-into-view="scrollIntoViewId"
+			:scroll-with-animation="true"
+			:show-scrollbar="false">
+			<view class="sn-tabs-item"
+			v-for="(tab, index) in (data as SnTabParams[])"
+			ref="itemEles" 
+			:key="index"
+			:class="(tab.disabled ?? false) ?'disabled':''"
+			:id="tab.id"
+			@click="onClick(tab, index)"
+			:style="((index == model) ? [itemStylesC, customItemStyle] : [itemStylesC, customActiveItemStyle])">
+				<sn-text v-if="tab.badgeConfig == null"
+				class="sn-tabs-item-text"
+				align="center"
+				:text="tab.text"
+				:size="textSizeC"
+				:color="((tab.disabled ?? false) as boolean)?disabledTextColorC:(index==model?activeTextColorC:textColorC)"></sn-text>
+				<sn-badge v-else
+				:value="tab.badgeConfig!.value ?? 0"
+				:max="tab.badgeConfig!.max ?? -1"
+				:size="tab.badgeConfig!.size ?? ''"
+				:offset="tab.badgeConfig!.offset ?? 'translate(15px, -5px)'"
+				:mode="tab.badgeConfig!.mode ?? 'number'"
+				:text="tab.badgeConfig!.text ?? ''"
+				:showZero="tab.badgeConfig!.showZero ?? false"
+				:textColor="tab.badgeConfig!.textColor ?? ''"
+				:bgColor="tab.badgeConfig!.bgColor ?? ''">
+					<sn-text class="sn-tabs-item-text"
+					align="center"
+					:text="tab.text"
+					:size="textSizeC"
+					:color="((tab.disabled ?? false) as boolean)?disabledTextColorC:(index==model?activeTextColorC:textColorC)"
+					:style="[customTextStyle]"></sn-text>
+				</sn-badge>
+			</view>
+			<view class="sn-tabs-line"
+			:style="[lineStyle]"></view>
+		</scroll-view>
+		<view ref="rightEle">
+			<slot name="right"></slot>
+		</view>
+	</view>
+</template>
+
+<script setup>
+	
+	/**
+	 * @name sn-tabs
+	 * @tutorial https://sinleui.pages.dev/components/sn-tabs
+	 * @description  Tabs 标签页
+	 *
+	 *- 用于创建一个标签页组件，可以切换不同的标签页内容。
+	 *
+	 *- 支持自定义样式和标签页内容。
+	 * @property {Number} vModel    Number | 当前激活的标签页索引
+	 * @property {Boolean} scrollable    Boolean | 标签是否可滚动
+	 * @property {String} mode=[swipe|push]    String | 指示线移动动画模式。支持滑动式（`swipe`）和推压式（`push`）
+	 * @value swipe 滑动式
+	 * @value push  推压式
+	 * @property {Array<[SnTabParams](https://sinleui.pages.dev/api/types/components#sntabparams)>} data    Array<[SnTabParams](https://sinleui.pages.dev/api/types/components#sntabparams)> | 标签页数据数组，每个对象包含id和text属性
+	 * @property {String} width    String | 标签宽度
+	 * @property {String} height    String | 标签高度
+	 * @property {String} borderRadius    String | 标签圆角大小
+	 * @property {String} aniTime    String | 标签及指示线动画时长（单位：ms）
+	 * @property {String} bgColor    String | 标签背景颜色
+	 * @property {String} textColor    String | 标签文本颜色
+	 * @property {String} textSize    String | 标签文本大小
+	 * @property {String} disabledTextColor    String | 禁用状态文本颜色
+	 * @property {String} activeTextColor    String | 激活状态文本颜色
+	 * @property {String} itemPadding    String | 标签内边距
+	 * @property {String} lineColor    String | 激活状态下的指示线颜色
+	 * @property {String} lineWidth    String | 指示线宽度
+	 * @property {String} lineHeight    String | 指示线高度
+	 * @property {UTSJSONObject} customStyle    UTSJSONObject | 自定义样式
+	 * @property {UTSJSONObject} customItemStyle    UTSJSONObject | 自定义激活状态样式
+	 * @property {UTSJSONObject} customActiveItemStyle    UTSJSONObject | 自定义样式
+	 * @event {Function} change   (index:Number)=>Void | 标签页切换时触发。`index`即为标签页索引。
+	 */
+
+	
+	// 依赖
+	import { $snui, useFormatProp, SnTabParams } from '../../index.uts'
+	import { useResize } from '../../libs/use/useResize.uts'
+	
+	defineOptions({
+		name: 'sn-tabs'
+	})
+	
+	// SinleUI 配置
+	const snu = $snui.utils;
+	const colors = $snui.colors
+	
+	// 事件注册
+	const emit = defineEmits(['change'])
+
+	const model = defineModel({
+		type: Number,
+		default: 0
+	})
+	
+	// 组件属性
+	const props = defineProps({
+		scrollable :{
+			type: Boolean,
+			default: false
+		},
+		data: {
+			type: Array as PropType<SnTabParams[]>,
+			default: [] as SnTabParams[]
+		},
+		mode: {
+			type: String,
+			default: 'swipe'
+		},
+		width: {
+			type: String,
+			default: '100%'
+		},
+		height: {
+			type: String,
+			default: '40px'
+		},
+		bgColor: {
+			type: String,
+			default: ''
+		},
+		textColor: {
+			type: String,
+			default: ''
+		},
+		textSize: {
+			type: String,
+			default: ''
+		},
+		borderRadius: {
+			type: String,
+			default: '',
+		},
+		disabledTextColor: {
+			type: String,
+			default: ''
+		},
+		activeTextColor: {
+			type: String,
+			default: ''
+		},
+		itemPadding: {
+			type: String,
+			default: '12px'
+		},
+		lineColor: {
+			type: String,
+			default: ''
+		},
+		lineWidth: {
+			type: String,
+			default: ''
+		},
+		lineHeight: {
+			type: String,
+			default: '2px'
+		},
+		aniTime: {
+			type: String,
+			default: '',
+		},
+		customItemStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customTextStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customActiveItemStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		},
+		customStyle: {
+			type: Object as PropType<UTSJSONObject>,
+			default: {} as UTSJSONObject
+		}
+	})
+	
+	const id = snu.randomComId()
+	const scrollEle = ref(null as UniElement | null)
+	const leftEle = ref(null as UniElement | null)
+	const rightEle = ref(null as UniElement | null)
+	const itemEles = ref(null as UniElement[]| null)
+	const tabs = ref<SnTabParams[]>([] as SnTabParams[])
+	const tabIndex = ref(0)
+	const lastIndex = ref(0)
+	const lineLeft = ref(0)
+	const lineWidth = ref(20)
+	const totalWidth = ref(0)
+	const scrollIntoViewId = ref('')
+	
+	const bgColorC = computed(() : string => {
+		return useFormatProp('color', props.bgColor, colors.value.front)
+	})
+	
+	const modeC = computed(() : string => {
+		const modes = ['swipe', 'push']
+		return modes.includes(props.mode) ? props.mode : 'swipe'
+	})
+	
+	const widthC = computed(() : string => {
+		return useFormatProp('other', props.width, '100%')
+	})
+	
+	const heightC = computed(() : string => {
+		return useFormatProp('other', props.height, '40px')
+	})
+	
+	const borderRadiusC = computed(() : string => {
+		return useFormatProp('radius', props.borderRadius, $snui.configs.radius.normal)
+	})
+		
+	const textColorC = computed(() : string => {
+		return useFormatProp('color', props.textColor, colors.value.title)
+	})
+	
+	const textSizeC = computed(() : string => {
+		return useFormatProp('font', props.textSize, $snui.configs.font.size(2))
+	})
+	
+	const activeTextColorC = computed(() : string => {
+		return useFormatProp('color', props.activeTextColor, colors.value.primary)
+	})
+	
+	const itemPaddingC = computed(() : string => {
+		return useFormatProp('other', props.itemPadding, '12px')
+	})
+	
+	const disabledTextColorC = computed(() : string => {
+		return useFormatProp('color', props.disabledTextColor, colors.value.disabledText)
+	})
+	
+	const lineColorC = computed(() : string => {
+		return useFormatProp('color', props.lineColor, colors.value.primary)
+	})
+	
+	const lineHeightC = computed(() : string => {
+		return useFormatProp('other', props.lineHeight, '2px')
+	})
+	
+	const aniTimeC = computed(() : string => {
+		return useFormatProp('aniTime', props.aniTime, $snui.configs.aniTime.long)
+	})
+	
+	const tabsStylesC = computed(():Map<string, any> => {
+		let styles = new Map<string, any>()
+		styles.set('background', bgColorC.value)
+		styles.set('width', widthC.value)
+		styles.set('height', heightC.value)
+		styles.set('background', bgColorC.value)
+		styles.set('border-radius', borderRadiusC.value)
+		styles.set('transition-duration', aniTimeC.value)
+		return styles
+	})
+	
+	const lineStyle = computed(():Map<string, any> => {
+		let styles = new Map<string, any>()
+		styles.set('left', `${lineLeft.value}px`)
+		styles.set('width', `${lineWidth.value}px`)
+		styles.set('height', lineHeightC.value)
+		styles.set('border-radius', $snui.configs.radius.circle)
+		styles.set('background', lineColorC.value)
+		styles.set('transition-duration', aniTimeC.value)
+		return styles
+	})
+	
+	const itemStylesC = computed(():Map<string, any> => {
+		const styles = new Map<string, any>()
+		let padding = snu.getPx((itemPaddingC.value).split(' ')[0] as string)
+		if (!props.scrollable) {
+			styles.set('flex', `1`)
+		} else{
+			styles.set('padding-left', `${padding}px`)
+			styles.set('padding-right', `${padding}px`)
+		}
+		styles.set('transition-duration',$snui.configs.aniTime.normal)
+		
+		return styles
+	})
+	
+	
+	
+	function scrollTab() {
+		let node = itemEles.value![tabIndex.value]
+		let rect = node.getBoundingClientRect()
+		let left = scrollEle.value!.getBoundingClientRect().left - (leftEle.value?.getBoundingClientRect()?.width ?? 0)
+		let right = scrollEle.value!.getBoundingClientRect().right - (rightEle.value?.getBoundingClientRect()?.width ?? 0)
+		
+		if (left <= rect.left) {
+			let i = Math.max(0, tabIndex.value - 1)
+			scrollIntoViewId.value = itemEles.value![i].getAttribute('id') as string
+		} else if (right <= rect.right) {
+			let i = Math.min(itemEles.value!.length - 1, tabIndex.value + 1)
+			scrollIntoViewId.value = itemEles.value![i].getAttribute('id') as string
+		} else {
+			let i = Math.max(0, tabIndex.value - 1)
+			scrollIntoViewId.value = itemEles.value![i].getAttribute('id') as string
+		}
+	}
+	
+	function startAnimation(id : string) {
+		if (tabs.value.length == 0) return
+		
+	
+		let _totalWidth = 0
+		let _lineLeft = 0
+		let cur = false
+		
+		itemEles.value!.forEach((el : UniElement, _ : number) => {
+			let rect = el.getBoundingClientRect()
+			let nodeWidth = rect.width
+			_totalWidth += nodeWidth
+			if (id == el.getAttribute('id')!) {
+				cur = true
+			} else {
+				if(!cur) {
+					_lineLeft += nodeWidth
+				}
+			}
+		})
+		
+		totalWidth.value = _totalWidth
+		
+		let nodeWidth = itemEles.value![tabIndex.value].getBoundingClientRect().width
+		
+		let value = snu.getPx(props.lineWidth)
+		let _lineWidth = (value == 0 || isNaN(value)) ? nodeWidth * 0.6 : value
+		_lineLeft += (nodeWidth - _lineWidth) / 2
+		const aniTimeN = parseInt(aniTimeC.value)
+		
+		if(modeC.value == 'swipe') {
+			lineWidth.value = _lineWidth
+			lineLeft.value = _lineLeft
+		} else if (modeC.value == 'push') {
+			let _targetWidth = 0
+			itemEles.value!.forEach((el : UniElement, index : number) => {
+				if(lastIndex.value < tabIndex.value) {
+					if(index >= lastIndex.value && index <= tabIndex.value) {
+						_targetWidth += el.getBoundingClientRect().width * 0.7
+					}
+				} else {
+					if(index <= lastIndex.value && index >= tabIndex.value) {
+						_targetWidth += el.getBoundingClientRect().width * 0.7
+					}
+				}
+			})
+			
+			lineWidth.value = _targetWidth
+			
+			if(lastIndex.value > tabIndex.value) {
+				lineLeft.value = _lineLeft
+				setTimeout(() => {
+					lineWidth.value = _lineWidth
+				}, aniTimeN - 10);
+			} else {
+				setTimeout(() => {
+					lineWidth.value = _lineWidth
+					lineLeft.value = _lineLeft
+				}, aniTimeN - 10);
+			}
+		}
+			
+		scrollTab()
+	}
+	
+	
+	function onClick(item : SnTabParams, index : number) {
+		if (item.disabled == true) return
+		if (index == tabIndex.value) return
+		model.value = index
+	}
+	
+	watch(model, () => {
+		if (model.value == tabIndex.value) return
+		
+		lastIndex.value = tabIndex.value
+		tabIndex.value = model.value
+		
+		emit('change', tabIndex.value);
+		startAnimation(tabs.value[tabIndex.value].id)
+	})
+	
+	watch(():SnTabParams[]=>props.data, ()=>{
+		tabs.value = props.data
+	}, {
+		immediate: true,
+		deep: true
+	})
+	
+	onMounted(() => {
+		lastIndex.value = tabIndex.value
+		tabIndex.value = model.value
+		
+		nextTick(() => {
+			let index = tabs.value.findIndex((el : SnTabParams) : boolean => tabs.value.indexOf(el) == tabIndex.value)
+			if (index == -1) return
+			startAnimation(tabs.value[index].id)
+		})
+		
+		useResize(uni.getElementById(id), () => {
+			if(tabs.value.length == 0) return
+			startAnimation(tabs.value[tabIndex.value].id)
+		})
+	})
+	
+</script>
+
+
+<style lang="scss">
+	.sn-tabs {
+		width: 100%;
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		
+		&-scroll {
+			flex: 1;
+			height: 100%;
+			display: flex;
+			flex-direction: row;
+			flex-wrap: nowrap;
+			justify-content: flex-start;
+			align-items: center;
+			position: relative;
+		}
+		
+		&-item {
+			height: 100%;
+			display: flex;
+			flex-direction: row;
+			flex-wrap: nowrap;
+			justify-content: center;
+			align-items: center;
+		}
+		
+		&-line {
+			position: absolute;
+			bottom: 0;
+		}
+	}
+	
+</style>

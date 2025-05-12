@@ -1,0 +1,8 @@
+export class zIndexStyles {
+	readonly navTabBar = 100
+	readonly badge = 95
+	readonly float = 991
+	readonly overlay = 1000
+	readonly popup = 1001
+	readonly toast = 1002
+}
