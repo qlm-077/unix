@@ -17,7 +17,7 @@
 			setAppAuthorize(AppAuthorize)
 		},
 		onHide: function () {
-			console.log('App Hide')
+			console.log('App Hide') 
 		},
 		// #ifdef APP-ANDROID
 		onLastPageBackPress: function () {
