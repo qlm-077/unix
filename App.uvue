@@ -1,6 +1,7 @@
 <script lang="uts">
 	import theme from '@/common/theme/index.uts'
-	import { getLocation, setAppAuthorize } from './store'
+	import { setAppAuthorize } from './store'
+	import { init } from '@/uni_modules/lm-Amap'
 	let firstBackTime = 0
 	export default {
 		globalData: {
@@ -10,6 +11,7 @@
 		onLaunch: function () {
 			console.log('App Launch')
 			this.setPermConfigs()
+			init('63c465b55abbbdf42bf71f52aa727a10')
 		},
 		onShow: function () {
 			console.log('App Show')
@@ -17,7 +19,7 @@
 			setAppAuthorize(AppAuthorize)
 		},
 		onHide: function () {
-			console.log('App Hide') 
+			console.log('App Hide')
 		},
 		// #ifdef APP-ANDROID
 		onLastPageBackPress: function () {

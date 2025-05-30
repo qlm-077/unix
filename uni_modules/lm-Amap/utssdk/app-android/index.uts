@@ -1,0 +1,99 @@
+import AMapNavi from 'com.amap.api.navi.AMapNavi'
+import AMapLocationClient from 'com.amap.api.location.AMapLocationClient'
+import AMapLocationListener from "com.amap.api.location.AMapLocationListener";
+import AMapLocation from 'com.amap.api.location.AMapLocation';
+import AMapLocationClientOption from 'com.amap.api.location.AMapLocationClientOption'
+
+export type LocationResult = {
+	latitude : number;
+	longitude : number;
+	address : string;
+	details : locationDetails
+}
+type locationDetails = {
+	city : string,
+	country : string,
+	district : string,
+	province : string,
+	street : string,
+	streetNum : string
+}
+export type SuccessCallback = (res : LocationResult) => void
+export const init = (AmapKey : string) => {
+	AMapNavi.setApiKey(UTSAndroid.getAppContext()!, AmapKey)
+	AMapLocationClient.updatePrivacyShow(UTSAndroid.getAppContext()!, true, true)
+	AMapLocationClient.updatePrivacyAgree(UTSAndroid.getAppContext()!, true)
+}
+
+
+// 自定义定位监听
+class MyAMapLocationListener implements AMapLocationListener {
+	successCallback : SuccessCallback
+	locationClient : AMapLocationClient
+	isOnce : Boolean // 定位后是否停止
+
+	// 构造器
+	// constructor(successCallback: SuccessCallback){
+	//   this.successCallback = successCallback
+	// }
+
+	// 构造器
+	constructor(successCallback : SuccessCallback, locationClient : AMapLocationClient, isOnce : Boolean) {
+		this.locationClient = locationClient
+		this.successCallback = successCallback
+		this.isOnce = isOnce
+	}
+
+	override onLocationChanged(location : AMapLocation) {
+		console.log(location)
+		if (location != null) {
+			console.log("location 不为null", location.getErrorCode())
+			if (location.getErrorCode() == 0) {
+				// if (!new AMapLocationClientOption().isNeedAddress()) {
+				// 没有开启逆地理开关，主动调用逆地理接口，onReGeoLocation回调获取
+				// this.locationClient.getReGeoLocation(location);
+				// }
+				const result : LocationResult = {
+					latitude: location.getLatitude(),
+					longitude: location.getLongitude(),
+					address: location.getAddress(),
+					details: {
+						city: location.getCity(),
+						country: location.getCountry(),
+						district: location.getDistrict(),
+						province: location.getProvince(),
+						street: location.getStreet(),
+						streetNum: location.getStreetNum()
+					}
+				}
+				this.successCallback(result)
+			}
+		} else {
+			console.log("location 为null")
+		}
+
+		if (this.isOnce) {
+			this.locationClient.onDestroy()
+		}
+	}
+}
+
+export const getLocation = (hightAccuracy : boolean, successCallback : SuccessCallback) => {
+	// const { mode = true } = option
+	let mLocationClient = new AMapLocationClient(UTSAndroid.getAppContext()!);
+	const mLocationListener = new MyAMapLocationListener(successCallback, mLocationClient, true);
+	mLocationClient.setLocationListener(mLocationListener);
+	const locationClientSingleOption = new AMapLocationClientOption()
+	if (hightAccuracy) {
+		locationClientSingleOption.setLocationMode(AMapLocationClientOption.AMapLocationMode.Hight_Accuracy)
+	}
+	locationClientSingleOption.setNeedAddress(true);
+	//获取一次定位结果：该方法默认为false。
+	locationClientSingleOption.setOnceLocation(true)
+	//关闭缓存机制
+	locationClientSingleOption.setLocationCacheEnable(false)
+	//给定位客户端对象设置定位参数
+	mLocationClient.setLocationOption(locationClientSingleOption)
+	//启动定位
+	mLocationClient.startLocation()
+}

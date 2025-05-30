@@ -1,0 +1,16 @@
+{
+	"abis": [
+		"arm64-v8a",
+		"armeabi-v7a"
+	],
+	"dependencies": [
+		"com.amap.api:navi-3dmap:10.0.600_3dmap10.0.600"
+	],
+	"minSdkVersion": "21",
+	"project": {
+		"repositories": [
+			"maven { url 'https://maven.aliyun.com/repository/public' }",
+			"maven { url 'https://maven.aliyun.com/nexus/content/groups/public/' }"
+		]
+	}
+}

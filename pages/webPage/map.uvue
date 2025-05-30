@@ -1,0 +1,19 @@
+<template>
+	<view>
+		<lm-Amap ref="amap" :zoom="18"></lm-Amap>
+	</view>
+</template>
+
+<script setup>
+	import { LmAmapElement, mapParams } from "uts.sdk.modules.lmAmap"
+	import { locationInfo } from '@/store';
+	const amap = ref<LmAmapElement | null>(null)
+	// onMounted(() => {
+	// 	let { latitude, longitude } = locationInfo.value!;
+	// 	amap.value?.init({ latitude, longitude, zoom: 18, pitchAngle: 0, yawAngle: 0 } as mapParams)
+	// })
+</script>
+
+<style>
+
+</style>

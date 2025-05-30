@@ -17,6 +17,13 @@
 			"style": {
 				"navigationBarTitleText": ""
 			}
+		},
+		{
+			"path" : "pages/webPage/map",
+			"style" : 
+			{
+				"navigationBarTitleText" : ""
+			}
 		}
 	],
 	"globalStyle": {

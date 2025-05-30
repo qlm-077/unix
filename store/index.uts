@@ -2,31 +2,37 @@ import { regeoLocation, regeoLocationType } from "../utils";
 import { regeoLocationInfoType, locationInfoType, userInfo } from "./types";
 import { useUser } from "../service/user";
 import { RequestConfig } from '@/uni_modules/kux-request';
+import { getLocation as lmGetLoaction, LocationResult } from '@/uni_modules/lm-Amap'
 
-export const locationInfo = ref<locationInfoType | null>(null)
+export const locationInfo = ref<LocationResult | null>(null)
 export const appAuthorize = ref<GetAppAuthorizeSettingResult | null>(null)
 export const info = ref<userInfo | null>(null)
 export const token = ref<string | null>(null)
 
 
 export async function getLocation(data : regeoLocationType | null = null) {
-	if (data !== null) {
-		let info = await analysis(data)
-		console.log(info);
-		return;
-	}
-	uni.getLocation({
-		provider: 'system',
-		type: 'wgs84',
-		isHighAccuracy: true,
-		success: (res : GetLocationSuccess) => {
-			let { longitude, latitude } = res
-			analysis({ longitude, latitude } as regeoLocationType).then((info : locationInfoType | null) => {
-				console.log(info);
-				locationInfo.value = info
-			})
-		}
+	// if (data !== null) {
+	// 	let info = await analysis(data)
+	// 	console.log(info);
+	// 	return;
+	// }
+
+	lmGetLoaction(true, (res) => {
+		console.log(res);
+		locationInfo.value = res
 	})
+	// uni.getLocation({
+	// 	provider: 'system',
+	// 	type: 'wgs84',
+	// 	isHighAccuracy: true,
+	// 	success: (res : GetLocationSuccess) => {
+	// 		let { longitude, latitude } = res
+	// 		analysis({ longitude, latitude } as regeoLocationType).then((info : locationInfoType | null) => {
+	// 			console.log(info);
+	// 			locationInfo.value = info
+	// 		})
+	// 	}
+	// })
 }
 
 const analysis = (data : regeoLocationType) : Promise<locationInfoType | null> => {
