@@ -9,24 +9,35 @@ import LatLng from "com.amap.api.maps.model.LatLng"
 import CameraUpdateFactory from "com.amap.api.maps.CameraUpdateFactory"
 import CameraUpdate  from "com.amap.api.maps.CameraUpdate"
 import { getLocation } from '.'
-import CancelableCallback from 'com.amap.api.maps.AMap.CancelableCallback'
-export type mapParams ={
-	latitude: number,
-	longitude: number,
-	zoom: number,
-	pitchAngle: number,
-	yawAngle: number
+import { callBack, layerListToBitmap, markerIcon } from './utils'
+import BitmapDescriptorFactory from 'com.amap.api.maps.model.BitmapDescriptorFactory'
+import MarkerOptions from "com.amap.api.maps.model.MarkerOptions";
+import BitmapFactory from "android.graphics.BitmapFactory";
+import R from "uts.sdk.modules.lmAmap.R"
+import Bitmap from 'android.graphics.Bitmap';
+import OnCameraChangeListener from "com.amap.api.maps.AMap.OnCameraChangeListener"
+import Marker from 'com.amap.api.maps.model.Marker'
+import CameraPosition from 'com.amap.api.maps.model.CameraPosition'
+import Point from "android.graphics.Point";
+// console.log
+class cameraChange implements OnCameraChangeListener {
+	protected aMap: AMap | null = null;
+	protected marker: Marker | null = null;
+	constructor(aMap: AMap | null, marker: Marker | null){
+		this.aMap = aMap;
+		this.marker = marker;
+	}
+	override onCameraChangeFinish(param0: CameraPosition): void {
+		this.marker?.setAnchor(0.5.toFloat(), 1.0.toFloat());
+	}
+	override onCameraChange(cameraPosition: CameraPosition){
+		const screenPosition: Point = this.aMap?.getProjection().toScreenLocation(cameraPosition.target)!;
+		this.marker?.setPositionByPixels(screenPosition.x, screenPosition.y);
+		this.marker?.setAnchor(0.5.toFloat(), 1.2.toFloat());
+		// console.log(this.marker!)
+	}
 }
-let aMap:AMap | null = null ;
 
-class callBack implements CancelableCallback{
-	override onFinish() {
-		console.log('动画执行完成');
-	}
-	override onCancel() {
-		console.log('动画已取消');
-	}
-}
 export default {
 	name: "lm-Amap",
 	props:{
@@ -39,40 +50,51 @@ export default {
 		"zoom":{
 			handler(val:number){
 				const mCameraUpdate: CameraUpdate = CameraUpdateFactory.zoomTo(val.toFloat());
-				aMap?.moveCamera(mCameraUpdate)
+				this.aMap?.moveCamera(mCameraUpdate)
 			},
 			immediate: true
 		}
 	},
 	data() {
-		return {}
+		return {
+			aMap: null as AMap | null,
+			marker: null as Marker | null
+		}
 	},
-    expose: ['init'],
-	methods:{
-		init(data: mapParams){
-			console.log(data);
-			// const {latitude, longitude, zoom, pitchAngle, yawAngle} = data
-			// const mCameraUpdate: CameraUpdate = CameraUpdateFactory.newCameraPosition(new CameraPosition(new LatLng(latitude.toDouble(),longitude.toDouble()), zoom.toFloat(), pitchAngle.toFloat(), yawAngle.toFloat()));
-			// console.log(aMap,this.$el);
-			// aMap?.moveCamera(mCameraUpdate)
+	expose: ['addMarker'],
+	methods: {
+		addMarker(latlng: LatLng){
+			// aMap?.addMarker(new MarkerOptions().position(latlng).icon(BitmapDescriptorFactory.fromBitmap(marker)))
+			// Picasso.get().load("https://lf-flow-web-cdn.doubao.com/obj/flow-doubao/samantha/logo-icon-white-bg.png").resize(200,200).centerCrop().into(new markerIcon(this.aMap!,latlng))
+			const markerOption = new MarkerOptions();
+			markerOption.position(latlng);
+			const bitmap = BitmapFactory.decodeResource(this.$androidContext!.resources, R.drawable.ic_pin)
+			console.log(bitmap,R.drawable.ic_pin);
+			const resizedBitmap = Bitmap.createScaledBitmap(bitmap, 100, 100, true);
+			markerOption.icon(BitmapDescriptorFactory.fromBitmap(resizedBitmap));
+			markerOption.anchor(0.5.toFloat(), 1.0.toFloat());
+			this.marker = this.aMap?.addMarker(markerOption)
 		}
 	},
 	NVLoad(): MapView {
 		const map =  new MapView(this.$androidContext!)
 		map.onCreate(new Bundle())
-		aMap = map.getMap() as AMap
+		this.aMap = map.getMap() as AMap
 		return map
 	},
 	NVLayouted(){
-		const mapUiSetting = aMap?.getUiSettings()
+		const mapUiSetting = this.aMap?.getUiSettings()
 		mapUiSetting?.setZoomControlsEnabled(false)
+		mapUiSetting?.setGestureScaleByMapCenter(true);
 		getLocation( true, (res)=>{
-			console.log(res);
 			const { latitude, longitude } = res;
 			const latlng = new LatLng(latitude.toDouble(),longitude.toDouble())
 			const mCameraUpdate: CameraUpdate = CameraUpdateFactory.changeLatLng(latlng)
-			aMap?.animateCamera(mCameraUpdate, 200, new callBack())
+			this.aMap?.animateCamera(mCameraUpdate, 200, new callBack())
+			this.addMarker(latlng)
+			this.aMap?.setOnCameraChangeListener(new cameraChange(this.aMap!,this.marker!))
 		})
+		// this.aMap?.OnMapTouchListener()
 	}
 }
 </script>

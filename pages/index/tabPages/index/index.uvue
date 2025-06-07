@@ -28,11 +28,11 @@
 	import { locationInfo, appAuthorize, getLocation, setAppAuthorize } from '@/store/index.uts'
 	const snu = $snui.utils
 	const permConfigs = getApp().globalData.permConfigs
-	const cloudObj = uniCloud.importObject('index')
+	// const cloudObj = uniCloud.importObject('index')
 	// import { startRecording, stopRecording } from '@/uni_modules/lm-recording'
 	const emit = defineEmits(['tabUser'])
-	const location = computed(() : string | null => {
-		let { district } = locationInfo.value!!.details
+	const location = computed(() : string => {
+		let { district } = locationInfo.value!!.details!
 		return ' ' + (district ?? '点击授权')
 	})
 
@@ -69,7 +69,7 @@
 		}
 		if (locationAuthorized == 'authorized') {
 			uni.navigateTo({
-				url: '/pages/webPage/map' 
+				url: '/pages/webPage/map'
 			})
 			// uni.navigateTo({
 			// 	url: '/pages/webPage/webPage?url=../../static/html/chooseLocation/index.html'

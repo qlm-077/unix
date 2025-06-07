@@ -1,0 +1,57 @@
+import CancelableCallback from 'com.amap.api.maps.AMap.CancelableCallback'
+import Bitmap from 'android.graphics.Bitmap';
+import ContextCompat from "androidx.core.content.ContextCompat";
+import Canvas from 'android.graphics.Canvas';
+import AMap from "com.amap.api.maps.AMap" // AMap类
+import Target from 'com.squareup.picasso.Target'
+import Drawable from "android.graphics.drawable.Drawable";
+import BitmapDescriptorFactory from "com.amap.api.maps.model.BitmapDescriptorFactory";
+import MarkerOptions from "com.amap.api.maps.model.MarkerOptions"
+import LatLng from "com.amap.api.maps.model.LatLng"
+import LoadedFrom from "com.squareup.picasso.Picasso.LoadedFrom"
+
+export class callBack implements CancelableCallback {
+	override onFinish() {
+		console.log('动画执行完成');
+	}
+	override onCancel() {
+		console.log('动画已取消');
+	}
+};
+
+export const layerListToBitmap = (layerListResId : number) : Bitmap => {
+	const drawable = ContextCompat.getDrawable(UTSAndroid.getAppContext()!, layerListResId.toInt())!!
+	const bitmap = Bitmap.createBitmap(
+		drawable.intrinsicWidth,
+		drawable.intrinsicHeight,
+		Bitmap.Config.ARGB_8888
+	)
+	const canvas = Canvas(bitmap)
+	drawable.setBounds(0, 0, canvas.width, canvas.height)
+	drawable.draw(canvas)
+	return bitmap
+}
+
+export class markerIcon implements Target {
+	protected aMap : AMap | null = null
+	protected latlng : LatLng | null = null
+	constructor(aMap : AMap, latlng : LatLng) {
+		this.aMap = aMap
+		this.latlng = latlng
+	}
+	override onBitmapFailed(param0 : Exception, param1 : Drawable) : void {
+		// const defaultIcon = BitmapDescriptorFactory.defaultMarker();
+		console.log(345)
+		// this.aMap?.addMarker(new MarkerOptions().position(this.latlng!).icon(defaultIcon));
+	}
+	override onPrepareLoad(param0 : Drawable) : void {
+		console.log(123)
+	}
+	override onBitmapLoaded(bitmap : Bitmap | null, from : LoadedFrom) {
+		console.log(234);
+		// if (bitmap != null) {
+		// 	const icon = BitmapDescriptorFactory.fromBitmap(bitmap);
+		// 	this.aMap?.addMarker(new MarkerOptions().position(this.latlng!).icon(icon));
+		// }
+	}
+}

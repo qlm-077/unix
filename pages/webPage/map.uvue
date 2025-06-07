@@ -1,11 +1,11 @@
 <template>
 	<view>
-		<lm-Amap ref="amap" :zoom="18"></lm-Amap>
+		<lm-Amap ref="amap" :zoom="18" style="width: 100%;height: 60%;"></lm-Amap>
 	</view>
 </template>
 
 <script setup>
-	import { LmAmapElement, mapParams } from "uts.sdk.modules.lmAmap"
+	import { LmAmapElement } from "uts.sdk.modules.lmAmap"
 	import { locationInfo } from '@/store';
 	const amap = ref<LmAmapElement | null>(null)
 	// onMounted(() => {
