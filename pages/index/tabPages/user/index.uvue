@@ -24,6 +24,7 @@
 <script setup>
 	import { $snui } from '@/uni_modules/sinle-ui';
 	import { info } from '@/store';
+	import { VibrationUtil } from '@/uni_modules/lm-Vibrator'
 	const UserInfo = info
 	const refreshStatus = ref('refresh')
 	const refresherTriggered = computed(() => {
@@ -37,9 +38,14 @@
 	}
 
 	const toLogin = () => {
-		uni.navigateTo({
-			url: '/pages/login/login'
-		})
+		// let pattern = longArrayOf()
+		// VibrationUtil.vibratePattern([0, 300, 50, 100, 50, 50, 50, 150], 0)
+		// setTimeout(() => {
+		// 	VibrationUtil.cancelVibration()
+		// }, 10000)
+		// uni.navigateTo({
+		// 	url: '/pages/login/login'
+		// }) 
 	}
 	const show = () => {
 		// console.log('UserShow');

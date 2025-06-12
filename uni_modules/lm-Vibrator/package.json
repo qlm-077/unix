@@ -1,0 +1,55 @@
+{
+	"id": "lm-Vibrator",
+	"displayName": "lm-Vibrator",
+	"version": "1.0.0",
+	"description": "lm-Vibrator",
+	"keywords": [
+		"lm-Vibrator"
+	],
+	"repository": "",
+	"engines": {
+		"HBuilderX": "^3.6.8"
+	},
+	"dcloudext": {
+		"type": "uts",
+		"sale": {
+			"regular": {
+				"price": "0.00"
+			},
+			"sourcecode": {
+				"price": "0.00"
+			}
+		},
+		"contact": {
+			"qq": ""
+		},
+		"declaration": {
+			"ads": "",
+			"data": "",
+			"permissions": ""
+		},
+		"npmurl": ""
+	},
+	"uni_modules": {
+		"dependencies": [],
+		"encrypt": [],
+		"platforms": {
+			"cloud": {
+				"tcb": "u",
+				"aliyun": "u",
+				"alipay": "u"
+			},
+			"client": {
+				"Vue": {
+					"vue2": "u",
+					"vue3": "u"
+				},
+				"App": {
+					"app-android": "y",
+					"app-ios": "n",
+					"app-harmony": "n"
+				}
+			}
+		}
+	}
+}

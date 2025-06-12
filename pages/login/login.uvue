@@ -1,22 +1,45 @@
 <template>
-	<view>
-		
+	<view class="login-container">
+		<text class="title">欢迎来到 Uni-App X 登录</text>
+		<button class="login-button">一键登录</button>
+		<text class="tips">请确保您的手机已插入 SIM 卡并开启数据流量</text>
 	</view>
 </template>
 
-<script>
-	export default {
-		data() {
-			return {
-				
-			}
-		},
-		methods: {
-			
-		}
-	}
+<script setup lang="uts">
 </script>
 
-<style>
+<style lang="scss">
+	.login-container {
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		align-items: center;
+		height: 100%;
+		background-color: #f8f8f8;
+	}
 
+	.title {
+		font-size: 24px;
+		font-weight: bold;
+		margin-bottom: 40px;
+		color: #333;
+	}
+
+	.login-button {
+		width: 80%;
+		padding: 12px 0;
+		background-color: #007aff;
+		color: #ffffff;
+		border-radius: 8px;
+		font-size: 18px;
+		margin-bottom: 20px;
+	}
+
+	.tips {
+		font-size: 14px;
+		color: #999;
+		text-align: center;
+		padding: 0 20px;
+	}
 </style>

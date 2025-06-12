@@ -3,6 +3,7 @@ import { createSSRApp } from 'vue'
 import { $snui } from './uni_modules/sinle-ui'
 import { init } from './init.uts'
 import { setZPXConfig } from '@/uni_modules/z-paging-x/components/z-paging-x/config/index.uts'
+// import interceptors from './utils/http/interceptors'
 setZPXConfig({
 	//配置分页默认pageSize
 	'default-page-size': 10,

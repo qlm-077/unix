@@ -1,0 +1,48 @@
+import { useInterceptor } from '@/uni_modules/kux-request';
+import { RequestConfig } from '@/uni_modules/kux-request/utssdk/interface';
+
+const interceptors = useInterceptor();
+interceptors
+	.useRequestSync(async (options) : Promise<RequestConfig> => {
+		console.log('同步请求拦截', options.url);
+		// 在这里添加您的同步请求拦截逻辑，例如添加统一的 header
+		const header = options.header ?? {}
+		const defaultHeader = {
+			'Authorization': 'Bearer your_token_here' // 示例：添加授权 token
+		}
+		options.header = Object.assign(header, defaultHeader);
+		return options;
+	})
+	.useRequest((options) : RequestConfig => {
+		console.log('请求拦截', options);
+		// 在这里添加您的异步请求拦截逻辑
+		return options;
+	})
+	.useResponseXhr((res : any) : any => {
+		console.log('原始响应拦截', res);
+		const statusCode = res?.statusCode;
+
+		if (statusCode === 200) {
+			console.log('请求成功 (200)', res);
+			// 这里可以添加对成功响应的通用处理，例如解构数据或显示全局成功提示
+			return res; // 继续将成功响应传递给 .then() 回调
+		} else if (statusCode === 400) {
+			console.error('错误: 无效请求 (400)', res);
+			throw new Error('请求无效，请检查请求参数');
+		} else if (statusCode === 404) {
+			console.error('错误: 资源未找到 (404)', res);
+			throw new Error('请求的资源不存在');
+		} else if (statusCode === 500) {
+			console.error('错误: 服务器内部错误 (500)', res);
+			throw new Error('服务器发生未知错误');
+		} else if (statusCode === 501) {
+			console.error('错误: 功能未实现 (501)', res);
+			throw new Error('服务器不支持当前请求的功能');
+		} else {
+			// 处理其他非成功状态码，或者默认返回原始响应
+			console.warn(`未知或未处理的状态码: ${statusCode}`, res);
+			throw new Error(`请求失败，状态码: ${statusCode}`);
+		}
+	});
+
+export default interceptors;

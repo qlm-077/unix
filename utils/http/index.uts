@@ -1,0 +1,5 @@
+import { useRequest, UseOptions } from '@/uni_modules/kux-request';
+
+export const http = useRequest({
+	baseURL: '', // 在这里填写您的请求域名
+} as UseOptions); 
