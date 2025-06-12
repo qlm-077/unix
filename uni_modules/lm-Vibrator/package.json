@@ -1,14 +1,14 @@
 {
 	"id": "lm-Vibrator",
 	"displayName": "lm-Vibrator",
-	"version": "1.0.0",
-	"description": "lm-Vibrator",
+	"version": "1.0.1",
+	"description": "安卓可自定义震动api",
 	"keywords": [
-		"lm-Vibrator"
-	],
+        "vibrator,安卓,震动,api"
+    ],
 	"repository": "",
 	"engines": {
-		"HBuilderX": "^3.6.8"
+		"HBuilderX": "^4.01"
 	},
 	"dcloudext": {
 		"type": "uts",
@@ -24,9 +24,9 @@
 			"qq": ""
 		},
 		"declaration": {
-			"ads": "",
-			"data": "",
-			"permissions": ""
+			"ads": "无",
+			"data": "无",
+			"permissions": "android.permission.VIBRATE"
 		},
 		"npmurl": ""
 	},
@@ -35,20 +35,20 @@
 		"encrypt": [],
 		"platforms": {
 			"cloud": {
-				"tcb": "u",
-				"aliyun": "u",
-				"alipay": "u"
+				"tcb": "y",
+				"aliyun": "y",
+				"alipay": "y"
 			},
 			"client": {
 				"Vue": {
 					"vue2": "u",
-					"vue3": "u"
+					"vue3": "y"
 				},
 				"App": {
-					"app-android": "y",
-					"app-ios": "n",
-					"app-harmony": "n"
-				}
+                    "app-android": "y",
+                    "app-ios": "n",
+                    "app-harmony": "n"
+                }
 			}
 		}
 	}
