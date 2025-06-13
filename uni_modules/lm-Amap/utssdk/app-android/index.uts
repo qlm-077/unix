@@ -3,7 +3,12 @@ import AMapLocationClient from 'com.amap.api.location.AMapLocationClient'
 import AMapLocationListener from "com.amap.api.location.AMapLocationListener";
 import AMapLocation from 'com.amap.api.location.AMapLocation';
 import AMapLocationClientOption from 'com.amap.api.location.AMapLocationClientOption'
-
+import BitmapFactory from "android.graphics.BitmapFactory";
+import Bitmap from 'android.graphics.Bitmap';
+import Base64 from "android.util.Base64"
+import BitmapDescriptor from 'com.amap.api.maps.model.BitmapDescriptor'
+import LatLng from 'com.amap.api.maps.model.LatLng';
+import BitmapDescriptorFactory from 'com.amap.api.maps.model.BitmapDescriptorFactory';
 export type LocationResult = {
 	latitude : number;
 	longitude : number;
@@ -96,4 +101,15 @@ export const getLocation = (hightAccuracy : boolean, successCallback : SuccessCa
 	mLocationClient.setLocationOption(locationClientSingleOption)
 	//启动定位
 	mLocationClient.startLocation()
+}
+
+export const Base64ToBitmap = (base64 : string) : BitmapDescriptor => {
+	const str = base64.substring(base64.indexOf(',') + 1);
+	const decodedBytes = Base64.decode(str, Base64.DEFAULT);
+	const resizedBitmap = BitmapFactory.decodeByteArray(decodedBytes, 0, (decodedBytes as ByteArray).size);
+	return BitmapDescriptorFactory.fromBitmap(resizedBitmap)
+}
+
+export const toLatLng = (latitude : number, longitude : number) : LatLng => {
+	return new LatLng(latitude.toDouble(), longitude.toDouble())
 }

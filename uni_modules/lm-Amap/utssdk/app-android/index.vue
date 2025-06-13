@@ -19,6 +19,7 @@ import OnCameraChangeListener from "com.amap.api.maps.AMap.OnCameraChangeListene
 import Marker from 'com.amap.api.maps.model.Marker'
 import CameraPosition from 'com.amap.api.maps.model.CameraPosition'
 import Point from "android.graphics.Point";
+import BitmapDescriptor from 'com.amap.api.maps.model.BitmapDescriptor'
 // console.log
 class cameraChange implements OnCameraChangeListener {
 	protected aMap: AMap | null = null;
@@ -38,12 +39,22 @@ class cameraChange implements OnCameraChangeListener {
 	}
 }
 
+// type markerOption = {
+// 	latlng: LatLng;
+// 	icon: BitmapDescriptor
+// }
+
 export default {
 	name: "lm-Amap",
+	emits: ['mapLoad'],
 	props:{
 		zoom: {
 			type: Number,
 			default: 14
+		},
+		markers:{
+			type: Array,
+			default: []
 		}
 	},
 	watch:{
@@ -53,7 +64,13 @@ export default {
 				this.aMap?.moveCamera(mCameraUpdate)
 			},
 			immediate: true
-		}
+		},
+		// "markers":{
+		// 	handler(val:[]){
+		// 		console.log(val);
+		// 	},
+		// 	immediate: true
+		// }
 	},
 	data() {
 		return {
@@ -63,17 +80,18 @@ export default {
 	},
 	expose: ['addMarker'],
 	methods: {
-		addMarker(latlng: LatLng){
-			// aMap?.addMarker(new MarkerOptions().position(latlng).icon(BitmapDescriptorFactory.fromBitmap(marker)))
-			// Picasso.get().load("https://lf-flow-web-cdn.doubao.com/obj/flow-doubao/samantha/logo-icon-white-bg.png").resize(200,200).centerCrop().into(new markerIcon(this.aMap!,latlng))
+		addMarker(latlng: LatLng, icon: BitmapDescriptor){
 			const markerOption = new MarkerOptions();
 			markerOption.position(latlng);
+			markerOption.icon(icon);
+			markerOption.anchor(0.5.toFloat(), 1.0.toFloat());
+			this.marker = this.aMap?.addMarker(markerOption)
+		},
+		toBitmap(): BitmapDescriptor{
 			const bitmap = BitmapFactory.decodeResource(this.$androidContext!.resources, R.drawable.ic_pin)
 			console.log(bitmap,R.drawable.ic_pin);
 			const resizedBitmap = Bitmap.createScaledBitmap(bitmap, 100, 100, true);
-			markerOption.icon(BitmapDescriptorFactory.fromBitmap(resizedBitmap));
-			markerOption.anchor(0.5.toFloat(), 1.0.toFloat());
-			this.marker = this.aMap?.addMarker(markerOption)
+			return BitmapDescriptorFactory.fromBitmap(resizedBitmap)
 		}
 	},
 	NVLoad(): MapView {
@@ -86,14 +104,17 @@ export default {
 		const mapUiSetting = this.aMap?.getUiSettings()
 		mapUiSetting?.setZoomControlsEnabled(false)
 		mapUiSetting?.setGestureScaleByMapCenter(true);
-		getLocation( true, (res)=>{
-			const { latitude, longitude } = res;
-			const latlng = new LatLng(latitude.toDouble(),longitude.toDouble())
-			const mCameraUpdate: CameraUpdate = CameraUpdateFactory.changeLatLng(latlng)
-			this.aMap?.animateCamera(mCameraUpdate, 200, new callBack())
-			this.addMarker(latlng)
-			this.aMap?.setOnCameraChangeListener(new cameraChange(this.aMap!,this.marker!))
-		})
+		// getLocation( true, (res)=>{
+		// 	const { latitude, longitude } = res;
+		// 	const latlng = new LatLng(latitude.toDouble(),longitude.toDouble())
+		// 	console.log(latlng);
+		// 	// const mCameraUpdate: CameraUpdate = CameraUpdateFactory.changeLatLng(latlng)
+		// 	// this.aMap?.animateCamera(mCameraUpdate, 200, new callBack())
+		// 	this.addMarker(latlng, this.toBitmap())
+		// 	// this.aMap?.setOnCameraChangeListener(new cameraChange(this.aMap!,this.marker!))
+		// })
+		this.$emit('mapLoad')
+
 		// this.aMap?.OnMapTouchListener()
 	}
 }
